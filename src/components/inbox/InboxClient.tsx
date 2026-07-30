@@ -1,0 +1,201 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+
+type InboxDocument = {
+  id: string;
+  processing_status: string;
+  targy: string | null;
+  created_at: string;
+  document_file: { original_filename: string | null }[];
+  duplicate_of: { iktatoszam: string | null } | null;
+};
+
+const STATUS_LABEL: Record<string, { text: string; className: string }> = {
+  received: { text: "Feldolgozásra vár", className: "bg-gray-100 text-gray-700" },
+  extracting: { text: "AI feldolgozás…", className: "bg-blue-100 text-blue-700" },
+  needs_review: { text: "Ellenőrzésre vár", className: "bg-amber-100 text-amber-800" },
+  extraction_failed: { text: "Kinyerés sikertelen — kézi kitöltés", className: "bg-red-100 text-red-700" },
+  duplicate: { text: "Duplikátum", className: "bg-purple-100 text-purple-700" },
+};
+
+const ACTIVE_STATUSES = ["received", "extracting", "needs_review", "extraction_failed", "duplicate"];
+
+export function InboxClient() {
+  const [documents, setDocuments] = useState<InboxDocument[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [messages, setMessages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const supabaseRef = useRef(createSupabaseBrowserClient());
+
+  const load = useCallback(async () => {
+    const { data } = await supabaseRef.current
+      .from("document")
+      .select(
+        "id, processing_status, targy, created_at, document_file (original_filename), duplicate_of:document!document_duplicate_of_document_id_fkey (iktatoszam)"
+      )
+      .in("processing_status", ACTIVE_STATUSES)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (data) setDocuments(data as unknown as InboxDocument[]);
+  }, []);
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 4000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  const upload = useCallback(
+    async (files: FileList | File[]) => {
+      setUploading(true);
+      setMessages([]);
+      const formData = new FormData();
+      for (const file of Array.from(files)) formData.append("files", file);
+
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const body = await res.json();
+        if (!res.ok) {
+          setMessages([body.error ?? "A feltöltés nem sikerült."]);
+        } else {
+          const msgs: string[] = [];
+          for (const r of body.results ?? []) {
+            if (r.status === "duplicate") {
+              msgs.push(
+                `${r.filename}: már iktatott irat duplikátuma` +
+                  (r.duplicateOfIktatoszam ? ` (${r.duplicateOfIktatoszam})` : "") +
+                  " — nem kap új iktatószámot."
+              );
+            } else if (r.status === "rejected") {
+              msgs.push(`${r.filename}: ${r.reason}`);
+            }
+          }
+          setMessages(msgs);
+        }
+      } catch {
+        setMessages(["A feltöltés nem sikerült — hálózati hiba."]);
+      } finally {
+        setUploading(false);
+        load();
+      }
+    },
+    [load]
+  );
+
+  return (
+    <div className="mt-4 space-y-4">
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          if (e.dataTransfer.files.length > 0) upload(e.dataTransfer.files);
+        }}
+        onClick={() => fileInputRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") fileInputRef.current?.click();
+        }}
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors ${
+          dragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white hover:border-gray-400"
+        }`}
+      >
+        <p className="text-sm font-medium text-gray-700">
+          {uploading ? "Feltöltés…" : "Húzd ide az iratokat, vagy kattints a tallózáshoz"}
+        </p>
+        <p className="mt-1 text-xs text-gray-400">PDF, JPEG, PNG vagy WebP, max. 20 MB</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) upload(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {messages.length > 0 && (
+        <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+          {messages.map((m, i) => (
+            <p key={i}>{m}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <table className="w-full text-sm">
+          <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
+            <tr>
+              <th className="px-4 py-2">Fájl</th>
+              <th className="px-4 py-2">Tárgy</th>
+              <th className="px-4 py-2">Állapot</th>
+              <th className="px-4 py-2">Feltöltve</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {documents.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                  Nincs feldolgozás alatt álló irat.
+                </td>
+              </tr>
+            )}
+            {documents.map((doc) => {
+              const status = STATUS_LABEL[doc.processing_status] ?? {
+                text: doc.processing_status,
+                className: "bg-gray-100 text-gray-700",
+              };
+              const reviewable =
+                doc.processing_status === "needs_review" ||
+                doc.processing_status === "extraction_failed";
+              return (
+                <tr key={doc.id} className="border-b border-gray-100 last:border-0">
+                  <td className="px-4 py-2">
+                    {doc.document_file?.[0]?.original_filename ?? "—"}
+                  </td>
+                  <td className="px-4 py-2">{doc.targy ?? "—"}</td>
+                  <td className="px-4 py-2">
+                    <span className={`rounded-full px-2 py-0.5 text-xs ${status.className}`}>
+                      {status.text}
+                      {doc.processing_status === "duplicate" && doc.duplicate_of?.iktatoszam
+                        ? ` → ${doc.duplicate_of.iktatoszam}`
+                        : ""}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-gray-500">
+                    {new Date(doc.created_at).toLocaleString("hu-HU")}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    {reviewable && (
+                      <Link
+                        href={`/ellenorzes/${doc.id}`}
+                        className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                      >
+                        Ellenőrzés
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
