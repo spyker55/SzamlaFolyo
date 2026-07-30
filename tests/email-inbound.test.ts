@@ -144,31 +144,102 @@ describe("webhook signature", () => {
   });
 });
 
+// Captured verbatim from a real Resend delivery, so the parser is tested
+// against the provider's actual shape rather than a guess at it.
+const REAL_PAYLOAD = {
+  created_at: "2026-07-30T14:11:34.000Z",
+  type: "email.received",
+  data: {
+    attachments: [
+      {
+        content_disposition: "attachment",
+        content_id: "<f_ms7ldqb40>",
+        content_type: "application/pdf",
+        filename: "szamlasmall.pdf",
+        id: "4e0d4f91-9407-44b9-b57b-6e494749cded",
+      },
+    ],
+    bcc: [],
+    cc: [],
+    created_at: "2026-07-30T14:11:54.130Z",
+    email_id: "1fc62799-daf0-405e-93c2-b89a07a9cd70",
+    from: "krisztian.nyeste@gmail.com",
+    message_id: "<CANXBpChafk8t0Cfw+ngyjyyifSQ57fc=NwmXqMX2RifDf+GM4w@mail.gmail.com>",
+    received_for: ["6966eac4c2fc4360@iktato.szamlafolyo.hu"],
+    subject: "",
+    to: ["6966eac4c2fc4360@iktato.szamlafolyo.hu"],
+  },
+};
+
 describe("payload reading", () => {
-  it("reads the documented shape", () => {
-    expect(
-      parseInboundPayload({
-        type: "email.received",
-        data: {
-          email_id: "re_abc",
-          from: "szamla@nethely.hu",
-          to: ["abc123@iktato.szamlafolyo.hu"],
-          subject: "Számla",
-        },
-      })
-    ).toEqual({
-      emailId: "re_abc",
-      messageId: "re_abc",
-      from: "szamla@nethely.hu",
-      to: ["abc123@iktato.szamlafolyo.hu"],
-      subject: "Számla",
+  it("reads a real delivery", () => {
+    const parsed = parseInboundPayload(REAL_PAYLOAD);
+    expect(parsed.emailId).toBe("1fc62799-daf0-405e-93c2-b89a07a9cd70");
+    expect(parsed.from).toBe("krisztian.nyeste@gmail.com");
+    expect(parsed.to).toEqual(["6966eac4c2fc4360@iktato.szamlafolyo.hu"]);
+    // An empty subject is absent, not the string "".
+    expect(parsed.subject).toBeNull();
+    expect(parsed.attachments).toEqual([
+      {
+        id: "4e0d4f91-9407-44b9-b57b-6e494749cded",
+        filename: "szamlasmall.pdf",
+        contentType: "application/pdf",
+        disposition: "attachment",
+      },
+    ]);
+  });
+
+  it("resolves the tenant from a real delivery", () => {
+    expect(findInboxToken(parseInboundPayload(REAL_PAYLOAD).to, DOMAIN)).toBe(
+      "6966eac4c2fc4360"
+    );
+  });
+
+  it("prefers received_for, so a bcc'd copy still finds its tenant", () => {
+    const parsed = parseInboundPayload({
+      data: {
+        email_id: "re_x",
+        to: ["konyveles@masikceg.hu"],
+        received_for: ["abc123@iktato.szamlafolyo.hu"],
+      },
     });
+    expect(findInboxToken(parsed.to, DOMAIN)).toBe("abc123");
+  });
+
+  it("reads the documented shape", () => {
+    const parsed = parseInboundPayload({
+      type: "email.received",
+      data: {
+        email_id: "re_abc",
+        from: "szamla@nethely.hu",
+        to: ["abc123@iktato.szamlafolyo.hu"],
+        subject: "Számla",
+      },
+    });
+    expect(parsed.emailId).toBe("re_abc");
+    expect(parsed.subject).toBe("Számla");
+    expect(parsed.attachments).toEqual([]);
   });
 
   it("copes with camelCase and a single-string recipient", () => {
     const parsed = parseInboundPayload({ data: { emailId: "re_x", to: "a@b.hu, c@d.hu" } });
     expect(parsed.emailId).toBe("re_x");
     expect(parsed.to).toEqual(["a@b.hu", "c@d.hu"]);
+  });
+
+  it("marks an inline part so a signature logo is not ingested", () => {
+    const parsed = parseInboundPayload({
+      data: {
+        email_id: "re_x",
+        attachments: [
+          { id: "a1", filename: "logo.png", content_type: "image/png", content_disposition: "inline" },
+          { id: "a2", filename: "szamla.pdf", content_type: "application/pdf", content_disposition: "attachment" },
+        ],
+      },
+    });
+    expect(parsed.attachments.filter((a) => a.disposition === "inline").map((a) => a.id)).toEqual([
+      "a1",
+    ]);
   });
 
   it("returns nulls rather than throwing on an unexpected shape", () => {
@@ -178,6 +249,7 @@ describe("payload reading", () => {
       from: null,
       to: [],
       subject: null,
+      attachments: [],
     });
   });
 });

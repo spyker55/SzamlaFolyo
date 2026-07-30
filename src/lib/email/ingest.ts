@@ -97,10 +97,20 @@ export async function ingestInboundEmail(rawBody: string): Promise<IngestOutcome
     if (!parsed.emailId) throw new Error("payload carries no received email id");
 
     const attachments = await listReceivedAttachments(parsed.emailId, apiKey);
+
+    // The payload marks which parts are embedded in the message body. Without
+    // this every signature logo would arrive as a document of its own.
+    const inlineIds = new Set(
+      parsed.attachments
+        .filter((a) => a.disposition?.toLowerCase() === "inline" && a.id)
+        .map((a) => a.id as string)
+    );
+
     const documentIds: string[] = [];
     let rejected = 0;
 
     for (const attachment of attachments) {
+      if (attachment.id && inlineIds.has(attachment.id)) continue;
       if (!attachment.downloadUrl) {
         rejected++;
         continue;
