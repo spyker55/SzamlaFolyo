@@ -168,7 +168,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
       </div>
 
       {/* Right: extracted fields */}
-      <div ref={formRef} className="w-[26rem] shrink-0 overflow-y-auto rounded-lg border border-gray-200 bg-white p-4">
+      <div ref={formRef} className="w-[30rem] shrink-0 overflow-y-auto rounded-lg border border-gray-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Ellenőrzés</h1>
           <span className="text-xs text-gray-400">Enter = iktatás · Esc = vissza</span>
@@ -256,8 +256,11 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
+          {/* Two columns, not three: a native date control renders the full
+              "2026. 07. 30." plus its picker icon and needs ~165px — a third
+              of this panel clipped it. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
               {label("erkezett_at", "Érkezett")}
               <input
                 id="erkezett_at"
@@ -267,7 +270,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 className={fieldClass("erkezett_at")}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               {label("issue_date", "Kelt")}
               <input
                 id="issue_date"
@@ -277,7 +280,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 className={fieldClass("issue_date")}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               {label("due_date", "Határidő")}
               <input
                 id="due_date"
@@ -289,8 +292,10 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
-            <div>
+          {/* Currency is three characters; the amounts need the room instead
+              so a seven-digit HUF gross stays readable. */}
+          <div className="grid grid-cols-[1fr_1fr_1fr_4.5rem] gap-3">
+            <div className="min-w-0">
               {label("net_amount", "Nettó")}
               <input
                 id="net_amount"
@@ -300,7 +305,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 className={fieldClass("net_amount")}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               {label("vat_amount", "ÁFA")}
               <input
                 id="vat_amount"
@@ -310,7 +315,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 className={fieldClass("vat_amount")}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               {label("gross_amount", "Bruttó")}
               <input
                 id="gross_amount"
@@ -320,7 +325,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 className={fieldClass("gross_amount")}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               {label("currency", "Pénznem")}
               <input
                 id="currency"
