@@ -9,8 +9,9 @@ type InboxDocument = {
   processing_status: string;
   targy: string | null;
   created_at: string;
+  duplicate_of_document_id: string | null;
   document_file: { original_filename: string | null }[];
-  duplicate_of: { iktatoszam: string | null } | null;
+  duplicateOfIktatoszam?: string | null;
 };
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
@@ -28,21 +29,53 @@ export function InboxClient() {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabaseRef = useRef(createSupabaseBrowserClient());
 
   const load = useCallback(async () => {
-    const { data } = await supabaseRef.current
+    const { data, error } = await supabaseRef.current
       .from("document")
       .select(
-        "id, processing_status, targy, created_at, document_file (original_filename), duplicate_of:document!document_duplicate_of_document_id_fkey (iktatoszam)"
+        "id, processing_status, targy, created_at, duplicate_of_document_id, document_file (original_filename)"
       )
       .in("processing_status", ACTIVE_STATUSES)
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(100);
 
-    if (data) setDocuments(data as unknown as InboxDocument[]);
+    if (error) {
+      // A query failure must never masquerade as an empty inbox.
+      setLoadError("A lista betöltése nem sikerült: " + error.message);
+      return;
+    }
+    setLoadError(null);
+
+    const docs = (data ?? []) as unknown as InboxDocument[];
+
+    // Resolve the original iktatoszam for duplicates in a second query
+    // (PostgREST self-join embeds proved fragile).
+    const originalIds = [
+      ...new Set(
+        docs
+          .filter((d) => d.processing_status === "duplicate" && d.duplicate_of_document_id)
+          .map((d) => d.duplicate_of_document_id as string)
+      ),
+    ];
+    if (originalIds.length > 0) {
+      const { data: originals } = await supabaseRef.current
+        .from("document")
+        .select("id, iktatoszam")
+        .in("id", originalIds);
+      const byId = new Map((originals ?? []).map((o) => [o.id as string, o.iktatoszam as string | null]));
+      for (const d of docs) {
+        if (d.duplicate_of_document_id) {
+          d.duplicateOfIktatoszam = byId.get(d.duplicate_of_document_id) ?? null;
+        }
+      }
+    }
+
+    setDocuments(docs);
   }, []);
 
   useEffect(() => {
@@ -136,6 +169,12 @@ export function InboxClient() {
         </div>
       )}
 
+      {loadError && (
+        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+          {loadError}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
@@ -172,8 +211,8 @@ export function InboxClient() {
                   <td className="px-4 py-2">
                     <span className={`rounded-full px-2 py-0.5 text-xs ${status.className}`}>
                       {status.text}
-                      {doc.processing_status === "duplicate" && doc.duplicate_of?.iktatoszam
-                        ? ` → ${doc.duplicate_of.iktatoszam}`
+                      {doc.processing_status === "duplicate" && doc.duplicateOfIktatoszam
+                        ? ` → ${doc.duplicateOfIktatoszam}`
                         : ""}
                     </span>
                   </td>
