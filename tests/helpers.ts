@@ -4,24 +4,25 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 // anon key + password sign-in, so RLS and the RPCs are exercised exactly the
 // way the app exercises them. No service-role shortcuts.
 
-export const SUPABASE_URL = required("NEXT_PUBLIC_SUPABASE_URL");
-export const SUPABASE_ANON_KEY = required("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// These suites need a real project. Reading the flag instead of throwing on
+// import lets the offline suites run anywhere, while the live ones report
+// themselves as skipped rather than silently passing.
+export const hasLiveCredentials = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 export const TEST_PASSWORD = process.env.TEST_USER_PASSWORD ?? "SzamlafolyoTeszt1!";
 export const USER_A_EMAIL = process.env.TEST_USER_A_EMAIL ?? "teszt.a@szamlafolyo-test.hu";
 export const USER_B_EMAIL = process.env.TEST_USER_B_EMAIL ?? "teszt.b@szamlafolyo-test.hu";
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (!value) {
+export function anonClient(): SupabaseClient {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error(
-      `${name} is not set. Copy .env.test.example to .env.test and fill it in.`
+      "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. " +
+        "Copy .env.test.example to .env.test and fill it in."
     );
   }
-  return value;
-}
-
-export function anonClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

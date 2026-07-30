@@ -54,6 +54,19 @@ alkalmazás:
 A két teszt-user (`teszt.a@szamlafolyo-test.hu`, `teszt.b@szamlafolyo-test.hu`)
 a projektben seedelve van megerősített e-maillel.
 
+Ha nincs `.env.test`, ez a két suite **kihagyódik** (a vitest kiírja, hány
+tesztet hagyott ki — nem hamis zöld), az offline tesztek viszont futnak.
+Ez szándékos: a concurrency-suite futásonként 50 valódi iratot iktat abba a
+projektbe, amire mutat, ezért nem szabad minden pusholásnál a produkciós
+adatbázisra ereszteni. Amíg nincs külön staging Supabase projekt, ezt a kettőt
+kézzel, tudatosan kell futtatni.
+
+## CI
+
+A `main` közvetlenül élesbe deployol, ezért a `.github/workflows/ci.yml` az
+egyetlen kapu commit és éles között: típusellenőrzés, lint, a hálózat nélküli
+tesztek és build minden pusholásnál és pull requestnél.
+
 ## Üzemeltetési megjegyzések
 
 - A worker és a cron a Vercelen fut; a percenkénti cron Pro csomagot igényel.

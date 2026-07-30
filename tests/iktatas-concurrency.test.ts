@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ensureCompany,
   insertReviewableDocument,
+  hasLiveCredentials,
   signedInClient,
   USER_A_EMAIL,
 } from "./helpers";
@@ -12,7 +13,7 @@ import {
 
 const PARALLEL = 50;
 
-describe("gapless foszam allocation", () => {
+describe.skipIf(!hasLiveCredentials)("gapless foszam allocation (live project)", () => {
   it("allocates 50 consecutive foszams under full parallel load", async () => {
     const client = await signedInClient(USER_A_EMAIL);
     const companyId = await ensureCompany(client, "Teszt Kft. A");

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   anonClient,
   ensureCompany,
+  hasLiveCredentials,
   insertReviewableDocument,
   signedInClient,
   USER_A_EMAIL,
@@ -12,7 +13,7 @@ import {
 // Acceptance criterion: a user of another company must not see the first
 // company's documents in any way. Every path goes through the public API.
 
-describe("tenant isolation (RLS)", () => {
+describe.skipIf(!hasLiveCredentials)("tenant isolation (RLS) (live project)", () => {
   let clientA: SupabaseClient;
   let clientB: SupabaseClient;
   let companyA: string;

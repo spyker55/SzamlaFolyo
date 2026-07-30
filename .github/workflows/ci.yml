@@ -1,0 +1,38 @@
+name: CI
+
+# main deploys straight to production, so this is the only gate between a
+# commit and the live site.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Types
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      # No Supabase credentials here on purpose: the concurrency and RLS
+      # suites write 50 real documents per run, so they must not be pointed at
+      # the production project on every push. They skip themselves without
+      # credentials; run them by hand against a project you are willing to
+      # write to. Everything that needs no network runs here.
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
