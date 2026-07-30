@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse, after } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { kickExtraction } from "@/lib/jobs/kick";
+import { claimAndRunExtraction } from "@/lib/jobs/claim";
 
 const ALLOWED_MIME = new Set([
   "application/pdf",
@@ -13,7 +13,10 @@ const ALLOWED_MIME = new Set([
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 
-export const maxDuration = 60;
+// The response returns immediately; after() keeps the function alive while
+// the uploaded documents are extracted in-process (no HTTP self-call — that
+// would die on Vercel Deployment Protection).
+export const maxDuration = 300;
 
 type UploadResult = {
   filename: string;
@@ -175,10 +178,10 @@ export async function POST(request: Request) {
     toExtract.push(doc.id);
   }
 
-  // Kick the worker after the response is sent; the cron sweep is the safety net.
+  // Extract after the response is sent; the cron sweep is the safety net.
   after(async () => {
     for (const id of toExtract) {
-      await kickExtraction(id);
+      await claimAndRunExtraction(id);
     }
   });
 

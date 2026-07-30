@@ -12,7 +12,7 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
 - `supabase/migrations/` — a teljes séma és minden RLS policy, migrációnként. Séma-változtatás csak itt.
 - `src/lib/extraction/` — AI-kinyerés: verziózott prompt, zod-séma, determinisztikus validátorok (adószám-ellenőrzőszámjegy, nettó+ÁFA=bruttó, dátumok).
 - `src/app/api/upload` — feltöltés, szerveroldali sha256, duplikátum-jelzés.
-- `src/app/api/jobs/extract` — aszinkron kinyerő worker (claim-alapú, idempotens).
+- `src/lib/jobs/claim.ts` — claim-alapú, idempotens kinyerés-indítás; a feltöltés `after()`-je és a cron hívja, processen belül (nincs HTTP-önhívás).
 - `src/app/api/cron/sweep` — percenkénti söprés: elakadt/hibás feldolgozások újraindítása (max. 3 kísérlet).
 - `src/app/(app)/ellenorzes/[documentId]` — osztott ellenőrző képernyő; Enter = iktatás és ugrás a következőre.
 - Az iktatószám-kiosztás egyetlen Postgres-tranzakció (`iktat_document` RPC): `SELECT ... FOR UPDATE` az `iktatokonyv.next_foszam` soron — hézagmentes, ütközésmentes főszám garantált.
@@ -26,7 +26,7 @@ npm run dev
 ```
 
 Szükséges környezeti változók: lásd `.env.example`. A `SUPABASE_SERVICE_ROLE_KEY`,
-az `OPENROUTER_API_KEY`, a `WORKER_SECRET` és a `CRON_SECRET` csak szerveroldalon él.
+az `OPENROUTER_API_KEY` és a `CRON_SECRET` csak szerveroldalon él.
 A kinyerő modell az `EXTRACTION_MODEL`-lel váltható (OpenRouter slug; PDF/kép
 bemenet és tool-hívás támogatása kell).
 
