@@ -37,8 +37,12 @@ cp .env.test.example .env.test   # anon kulcs
 npm test
 ```
 
-A tesztek a Supabase projekt **publikus API-ján** futnak (anon kulcs + jelszavas
-bejelentkezés), tehát pontosan azt az utat gyakorolják, amit az alkalmazás:
+- `tests/amount.test.ts` — a magyar összegformátum oda-vissza alakítása
+  (`1 612 900,25`); hálózat és adatbázis nélkül fut.
+
+A másik két teszt a Supabase projekt **publikus API-ján** fut (anon kulcs +
+jelszavas bejelentkezés), tehát pontosan azt az utat gyakorolja, amit az
+alkalmazás:
 
 - `tests/iktatas-concurrency.test.ts` — 50 párhuzamos iktatás: a főszámok halmaza
   pontosan összefüggő tartomány, se hézag, se ütközés; rollback nem hagy lyukat;

@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { iktat, type IktatValues } from "@/lib/iktatas/actions";
+import { formatAmountHu, parseAmountHu } from "@/lib/format/amount";
 
 export type ReviewData = {
   documentId: string;
@@ -32,14 +33,6 @@ const DOC_KIND_OPTIONS = [
   { value: "egyeb", label: "Egyéb" },
 ];
 
-// Hungarian-tolerant number parsing: "1 234 567,89" → 1234567.89
-function parseAmount(raw: string): number | null {
-  const cleaned = raw.replace(/\s/g, "").replace(",", ".");
-  if (cleaned === "") return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : null;
-}
-
 export function ReviewClient({ data }: { data: ReviewData }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>(data.initial);
@@ -59,11 +52,30 @@ export function ReviewClient({ data }: { data: ReviewData }) {
     [data.confidence]
   );
 
-  const net = parseAmount(values.net_amount ?? "");
-  const vat = parseAmount(values.vat_amount ?? "");
-  const gross = parseAmount(values.gross_amount ?? "");
+  const amounts = useMemo(
+    () => ({
+      net: parseAmountHu(values.net_amount ?? ""),
+      vat: parseAmountHu(values.vat_amount ?? ""),
+      gross: parseAmountHu(values.gross_amount ?? ""),
+    }),
+    [values.net_amount, values.vat_amount, values.gross_amount]
+  );
+
+  const { net, vat, gross } = amounts;
   const amountMismatch =
-    net !== null && vat !== null && gross !== null && Math.abs(net + vat - gross) > 1;
+    net.ok &&
+    vat.ok &&
+    gross.ok &&
+    net.value !== null &&
+    vat.value !== null &&
+    gross.value !== null &&
+    Math.abs(net.value + vat.value - gross.value) > 1;
+
+  // Re-format on blur rather than while typing, so the caret is never moved
+  // out from under the user — and so they see how the value was read before
+  // it is stored.
+  const normalizeAmount = (field: string) => () =>
+    setValues((v) => ({ ...v, [field]: formatAmountHu(v[field] ?? "") }));
 
   const submit = useCallback(() => {
     if (pending) return;
@@ -71,6 +83,15 @@ export function ReviewClient({ data }: { data: ReviewData }) {
 
     if (!values.direction || !values.doc_kind) {
       setError("Az irány és az irat fajtája kötelező.");
+      return;
+    }
+
+    // An amount that cannot be read must never be stored as "no amount".
+    if (!net.ok || !vat.ok || !gross.ok) {
+      const bad = [!net.ok && "Nettó", !vat.ok && "ÁFA", !gross.ok && "Bruttó"].filter(Boolean);
+      setError(
+        `Nem értelmezhető összeg: ${bad.join(", ")}. Magyar formátumban, például: 1 612 900,25`
+      );
       return;
     }
 
@@ -85,9 +106,9 @@ export function ReviewClient({ data }: { data: ReviewData }) {
       direction: values.direction,
       doc_kind: values.doc_kind,
       melleklet_db: values.melleklet_db === "" ? 0 : Number(values.melleklet_db),
-      net_amount: parseAmount(values.net_amount ?? ""),
-      vat_amount: parseAmount(values.vat_amount ?? ""),
-      gross_amount: parseAmount(values.gross_amount ?? ""),
+      net_amount: net.value,
+      vat_amount: vat.value,
+      gross_amount: gross.value,
       currency: values.currency || null,
       kezelesi_feljegyzes: values.kezelesi_feljegyzes || null,
       irattari_jel: values.irattari_jel || null,
@@ -105,7 +126,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
         router.push("/iktatokonyv");
       }
     });
-  }, [data.documentId, pending, router, values]);
+  }, [data.documentId, pending, router, values, net, vat, gross]);
 
   // Enter = iktatás és ugrás a következőre; Esc = vissza a Beérkezőbe.
   useEffect(() => {
@@ -302,6 +323,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 inputMode="decimal"
                 value={values.net_amount ?? ""}
                 onChange={set("net_amount")}
+                onBlur={normalizeAmount("net_amount")}
                 className={fieldClass("net_amount")}
               />
             </div>
@@ -312,6 +334,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 inputMode="decimal"
                 value={values.vat_amount ?? ""}
                 onChange={set("vat_amount")}
+                onBlur={normalizeAmount("vat_amount")}
                 className={fieldClass("vat_amount")}
               />
             </div>
@@ -322,6 +345,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                 inputMode="decimal"
                 value={values.gross_amount ?? ""}
                 onChange={set("gross_amount")}
+                onBlur={normalizeAmount("gross_amount")}
                 className={fieldClass("gross_amount")}
               />
             </div>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReviewClient, type ReviewData } from "@/components/ellenorzes/ReviewClient";
+import { formatAmountHu } from "@/lib/format/amount";
 
 export default async function EllenorzesPage({
   params,
@@ -92,9 +93,11 @@ export default async function EllenorzesPage({
       direction: doc.direction ?? "",
       doc_kind: doc.doc_kind ?? "",
       melleklet_db: doc.melleklet_db != null ? String(doc.melleklet_db) : "0",
-      net_amount: num(doc.net_amount),
-      vat_amount: num(doc.vat_amount),
-      gross_amount: num(doc.gross_amount),
+      // Formatted on the server so the markup and the hydrated client state
+      // are the same string.
+      net_amount: amount(doc.net_amount),
+      vat_amount: amount(doc.vat_amount),
+      gross_amount: amount(doc.gross_amount),
       currency: doc.currency?.trim() ?? "",
       kezelesi_feljegyzes: doc.kezelesi_feljegyzes ?? "",
       irattari_jel: "",
@@ -108,6 +111,7 @@ function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function num(v: unknown): string {
-  return v == null ? "" : String(v);
+function amount(v: unknown): string {
+  if (v == null) return "";
+  return formatAmountHu(typeof v === "number" ? v : String(v));
 }
