@@ -10,8 +10,12 @@ type InboxDocument = {
   targy: string | null;
   created_at: string;
   duplicate_of_document_id: string | null;
+  source: string | null;
+  inbound_email_id: string | null;
   document_file: { original_filename: string | null }[];
   duplicateOfIktatoszam?: string | null;
+  senderAddress?: string | null;
+  senderKnown?: boolean;
 };
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
@@ -37,7 +41,8 @@ export function InboxClient() {
     const { data, error } = await supabaseRef.current
       .from("document")
       .select(
-        "id, processing_status, targy, created_at, duplicate_of_document_id, document_file (original_filename)"
+        "id, processing_status, targy, created_at, duplicate_of_document_id, source, " +
+          "inbound_email_id, document_file (original_filename)"
       )
       .in("processing_status", ACTIVE_STATUSES)
       .is("deleted_at", null)
@@ -72,6 +77,29 @@ export function InboxClient() {
         if (d.duplicate_of_document_id) {
           d.duplicateOfIktatoszam = byId.get(d.duplicate_of_document_id) ?? null;
         }
+      }
+    }
+
+    // Same shape as above: resolve the sending address with a plain second
+    // query rather than an embed.
+    const emailIds = [
+      ...new Set(docs.filter((d) => d.inbound_email_id).map((d) => d.inbound_email_id as string)),
+    ];
+    if (emailIds.length > 0) {
+      const { data: emails } = await supabaseRef.current
+        .from("inbound_email")
+        .select("id, mail_from, sender_known")
+        .in("id", emailIds);
+      const byId = new Map(
+        (emails ?? []).map((e) => [
+          e.id as string,
+          { from: e.mail_from as string | null, known: Boolean(e.sender_known) },
+        ])
+      );
+      for (const d of docs) {
+        const info = d.inbound_email_id ? byId.get(d.inbound_email_id) : undefined;
+        d.senderAddress = info?.from ?? null;
+        d.senderKnown = info?.known ?? false;
       }
     }
 
@@ -205,7 +233,20 @@ export function InboxClient() {
               return (
                 <tr key={doc.id} className="border-b border-gray-100 last:border-0">
                   <td className="px-4 py-2">
-                    {doc.document_file?.[0]?.original_filename ?? "—"}
+                    <div>{doc.document_file?.[0]?.original_filename ?? "—"}</div>
+                    {doc.inbound_email_id && (
+                      <div className="mt-0.5 text-xs text-gray-500">
+                        ✉ {doc.senderAddress ?? "e-mail"}
+                        {!doc.senderKnown && (
+                          <span
+                            className="ml-1 rounded bg-orange-100 px-1 py-0.5 text-orange-800"
+                            title="Ettől a feladótól még nem iktattál iratot. Ellenőrizd, mielőtt elfogadod."
+                          >
+                            ismeretlen feladó
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2">{doc.targy ?? "—"}</td>
                   <td className="px-4 py-2">

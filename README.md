@@ -14,6 +14,8 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
 - `src/app/api/upload` — feltöltés, szerveroldali sha256, duplikátum-jelzés.
 - `src/lib/jobs/claim.ts` — claim-alapú, idempotens kinyerés-indítás; a feltöltés `after()`-je és a cron hívja, processen belül (nincs HTTP-önhívás).
 - `src/app/api/cron/sweep` — percenkénti söprés: elakadt/hibás feldolgozások újraindítása (max. 3 kísérlet).
+- `src/lib/upload/store.ts` — egy helyen dől el, hogy egy beérkező fájlból irat lesz-e; a feltöltés és az e-mailes beérkeztetés is ezt hívja, hogy a duplikátumszabályok ne csússzanak szét.
+- `src/app/api/email/inbound` — Resend `email.received` webhook: aláírás-ellenőrzés, cég feloldása a cím tokenjéből, mellékletek iratként. Terv: `docs/email-beerkeztetes-terv.md`.
 - `src/app/(app)/ellenorzes/[documentId]` — osztott ellenőrző képernyő; Enter = iktatás és ugrás a következőre.
 - Az iktatószám-kiosztás egyetlen Postgres-tranzakció (`iktat_document` RPC): `SELECT ... FOR UPDATE` az `iktatokonyv.next_foszam` soron — hézagmentes, ütközésmentes főszám garantált.
 
