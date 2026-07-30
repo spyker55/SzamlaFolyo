@@ -52,7 +52,8 @@ alkalmazás:
   törlés senkinek.
 
 A két teszt-user (`teszt.a@szamlafolyo-test.hu`, `teszt.b@szamlafolyo-test.hu`)
-a projektben seedelve van megerősített e-maillel.
+a projektben seedelve van megerősített e-maillel. A jelszavuk **nincs a
+repóban** — állítsd be a `TEST_USER_PASSWORD`-öt a `.env.test`-ben.
 
 Ha nincs `.env.test`, ez a két suite **kihagyódik** (a vitest kiírja, hány
 tesztet hagyott ki — nem hamis zöld), az offline tesztek viszont futnak.

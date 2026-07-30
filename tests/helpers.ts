@@ -7,12 +7,17 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// No default password here on purpose: a working credential for a live
+// project must not live in the repository. Set TEST_USER_PASSWORD in
+// .env.test to run these suites.
+export const TEST_PASSWORD = process.env.TEST_USER_PASSWORD;
+
 // These suites need a real project. Reading the flag instead of throwing on
 // import lets the offline suites run anywhere, while the live ones report
 // themselves as skipped rather than silently passing.
-export const hasLiveCredentials = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
-
-export const TEST_PASSWORD = process.env.TEST_USER_PASSWORD ?? "SzamlafolyoTeszt1!";
+export const hasLiveCredentials = Boolean(
+  SUPABASE_URL && SUPABASE_ANON_KEY && TEST_PASSWORD
+);
 export const USER_A_EMAIL = process.env.TEST_USER_A_EMAIL ?? "teszt.a@szamlafolyo-test.hu";
 export const USER_B_EMAIL = process.env.TEST_USER_B_EMAIL ?? "teszt.b@szamlafolyo-test.hu";
 
@@ -29,6 +34,9 @@ export function anonClient(): SupabaseClient {
 }
 
 export async function signedInClient(email: string): Promise<SupabaseClient> {
+  if (!TEST_PASSWORD) {
+    throw new Error("TEST_USER_PASSWORD is not set; add it to .env.test.");
+  }
   const client = anonClient();
   const { error } = await client.auth.signInWithPassword({
     email,
