@@ -3,7 +3,7 @@
 Iktató- és ügykezelő webalkalmazás magyar kis- és középvállalkozásoknak.
 A beérkező iratokat AI olvassa be és iktatja — az ember csak ellenőriz és jóváhagy.
 
-**Stack:** Next.js (App Router, TypeScript) · Supabase (Postgres, Auth, Storage, RLS) · Anthropic API · Vercel
+**Stack:** Next.js (App Router, TypeScript) · Supabase (Postgres, Auth, Storage, RLS) · OpenRouter API (AI-kinyerés) · Vercel
 
 A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milestone-1-terv.md`.
 
@@ -26,7 +26,9 @@ npm run dev
 ```
 
 Szükséges környezeti változók: lásd `.env.example`. A `SUPABASE_SERVICE_ROLE_KEY`,
-az `ANTHROPIC_API_KEY`, a `WORKER_SECRET` és a `CRON_SECRET` csak szerveroldalon él.
+az `OPENROUTER_API_KEY`, a `WORKER_SECRET` és a `CRON_SECRET` csak szerveroldalon él.
+A kinyerő modell az `EXTRACTION_MODEL`-lel váltható (OpenRouter slug; PDF/kép
+bemenet és tool-hívás támogatása kell).
 
 ## Tesztek
 

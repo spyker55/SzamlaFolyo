@@ -1,12 +1,83 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { extractionResultSchema, extractionToolSchema, type ExtractionResult } from "./schema";
 import { combineConfidence, runValidators } from "./confidence";
 import { PROMPT_VERSION, SYSTEM_PROMPT, USER_PROMPT } from "./prompt";
 
-const MODEL = process.env.EXTRACTION_MODEL ?? "claude-sonnet-5";
+// Extraction runs through OpenRouter (OpenAI-compatible API).
+// Set EXTRACTION_MODEL to any OpenRouter slug that supports PDF/image input
+// and tool calling, e.g. "anthropic/claude-sonnet-5".
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
+const MODEL = process.env.EXTRACTION_MODEL ?? "anthropic/claude-sonnet-4.5";
 
-type ImageMediaType = "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+type OpenRouterResponse = {
+  model?: string;
+  choices?: {
+    message?: {
+      tool_calls?: { function?: { name?: string; arguments?: string } }[];
+    };
+  }[];
+  usage?: { cost?: number };
+  error?: { message?: string };
+};
+
+async function callOpenRouter(
+  mimeType: string,
+  filename: string,
+  base64: string
+): Promise<OpenRouterResponse> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
+
+  const filePart =
+    mimeType === "application/pdf"
+      ? {
+          type: "file",
+          file: { filename, file_data: `data:application/pdf;base64,${base64}` },
+        }
+      : {
+          type: "image_url",
+          image_url: { url: `data:${mimeType};base64,${base64}` },
+        };
+
+  const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "X-Title": "Szamlafolyo",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 2048,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: [filePart, { type: "text", text: USER_PROMPT }] },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "record_extraction",
+            description: "Rogziti az iratbol kinyert iktatasi mezoket.",
+            parameters: extractionToolSchema,
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "record_extraction" } },
+      usage: { include: true },
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as OpenRouterResponse | null;
+  if (!res.ok || !body) {
+    const detail = body?.error?.message ?? `HTTP ${res.status}`;
+    throw new Error(`OpenRouter request failed: ${detail}`);
+  }
+  if (body.error) {
+    throw new Error(`OpenRouter error: ${body.error.message}`);
+  }
+  return body;
+}
 
 // Runs one extraction over an already-claimed document (processing_status =
 // 'extracting'). Always writes an extraction row — raw_output is saved even
@@ -28,7 +99,7 @@ export async function runExtraction(documentId: string): Promise<void> {
 
   const { data: file, error: fileErr } = await admin
     .from("document_file")
-    .select("storage_path, mime_type")
+    .select("storage_path, mime_type, original_filename")
     .eq("document_id", documentId)
     .order("created_at", { ascending: true })
     .limit(1)
@@ -44,55 +115,36 @@ export async function runExtraction(documentId: string): Promise<void> {
 
   const base64 = Buffer.from(await blob.arrayBuffer()).toString("base64");
 
-  const contentBlock =
-    file.mime_type === "application/pdf"
-      ? {
-          type: "document" as const,
-          source: { type: "base64" as const, media_type: "application/pdf" as const, data: base64 },
-        }
-      : {
-          type: "image" as const,
-          source: {
-            type: "base64" as const,
-            media_type: (file.mime_type ?? "image/jpeg") as ImageMediaType,
-            data: base64,
-          },
-        };
-
-  const anthropic = new Anthropic();
-  let response: Anthropic.Message | null = null;
+  let response: OpenRouterResponse | null = null;
   let parsed: ExtractionResult | null = null;
   let parseError: string | null = null;
 
   try {
-    response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: 2048,
-      system: SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: [contentBlock, { type: "text", text: USER_PROMPT }] },
-      ],
-      tools: [
-        {
-          name: "record_extraction",
-          description: "Rogziti az iratbol kinyert iktatasi mezoket.",
-          input_schema: extractionToolSchema as Anthropic.Tool.InputSchema,
-        },
-      ],
-      tool_choice: { type: "tool", name: "record_extraction" },
-    });
-
-    const toolUse = response.content.find(
-      (b): b is Anthropic.ToolUseBlock => b.type === "tool_use"
+    response = await callOpenRouter(
+      file.mime_type ?? "application/pdf",
+      file.original_filename ?? "irat.pdf",
+      base64
     );
-    if (!toolUse) {
-      parseError = "no tool_use block in response";
+
+    const toolCall = response.choices?.[0]?.message?.tool_calls?.find(
+      (c) => c.function?.name === "record_extraction"
+    );
+    if (!toolCall?.function?.arguments) {
+      parseError = "no record_extraction tool call in response";
     } else {
-      const result = extractionResultSchema.safeParse(toolUse.input);
-      if (result.success) {
-        parsed = result.data;
-      } else {
-        parseError = "schema validation failed: " + result.error.message;
+      let args: unknown;
+      try {
+        args = JSON.parse(toolCall.function.arguments);
+      } catch {
+        parseError = "tool call arguments are not valid JSON";
+      }
+      if (args !== undefined) {
+        const result = extractionResultSchema.safeParse(args);
+        if (result.success) {
+          parsed = result.data;
+        } else {
+          parseError = "schema validation failed: " + result.error.message;
+        }
       }
     }
   } catch (err) {
@@ -146,6 +198,7 @@ export async function runExtraction(documentId: string): Promise<void> {
     field_confidence: fieldConfidence,
     started_at: startedAt,
     finished_at: new Date().toISOString(),
+    cost: response?.usage?.cost ?? null,
     error: parseError,
   });
 
