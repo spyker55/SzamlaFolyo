@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { kickExtraction } from "@/lib/jobs/kick";
+import { claimAndRunExtraction } from "@/lib/jobs/claim";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const STALE_RECEIVED_MS = 30 * 1000;
 const STALE_EXTRACTING_MS = 5 * 60 * 1000;
@@ -10,8 +10,9 @@ const MAX_ATTEMPTS = 3;
 const BATCH = 5;
 
 // Runs every minute (vercel.json). Two jobs:
-//  1. re-kick documents stuck in 'received' (a lost after()-kick),
-//  2. recover documents stuck in 'extracting' (crashed/timed-out worker).
+//  1. extract documents stuck in 'received' (upload after() lost or failed),
+//  2. recover documents stuck in 'extracting' (crashed/timed-out run).
+// Extraction happens in-process — no HTTP self-call.
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const admin = createSupabaseAdminClient();
   const now = Date.now();
 
-  // Crashed workers: release or fail the claim depending on attempts.
+  // Crashed runs: release or fail the claim depending on attempts.
   const { data: stuck } = await admin
     .from("document")
     .select("id, extraction_attempts")
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
       .eq("processing_status", "extracting");
   }
 
-  // Waiting documents: kick a batch sequentially (each call claims for itself).
+  // Waiting documents: process a batch (each claim is race-safe on its own).
   const { data: waiting } = await admin
     .from("document")
     .select("id")
@@ -48,12 +49,13 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: true })
     .limit(BATCH);
 
+  const outcomes: Record<string, string> = {};
   for (const doc of waiting ?? []) {
-    await kickExtraction(doc.id);
+    outcomes[doc.id] = await claimAndRunExtraction(doc.id);
   }
 
   return NextResponse.json({
     released: stuck?.length ?? 0,
-    kicked: waiting?.length ?? 0,
+    processed: outcomes,
   });
 }
