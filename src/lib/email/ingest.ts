@@ -81,15 +81,36 @@ export async function ingestInboundEmail(rawBody: string): Promise<IngestOutcome
     .select("id")
     .single();
 
+  let inboundEmailId: string;
+
   if (insertErr) {
-    // 23505 = unique violation: this delivery was already handled.
-    if (insertErr.code === "23505") {
+    if (insertErr.code !== "23505") {
+      throw new Error(`inbound_email insert failed: ${insertErr.message}`);
+    }
+
+    // 23505 = unique violation: we have seen this delivery before. A run that
+    // ended in 'rejected' is worth retrying though — that is exactly what a
+    // replay is for, and refusing it would leave the message permanently
+    // stuck with no way to recover it.
+    const { data: existing } = await admin
+      .from("inbound_email")
+      .select("id, status")
+      .eq("company_id", companyId)
+      .eq("provider_message_id", messageId)
+      .single();
+
+    if (!existing || existing.status !== "rejected") {
       return { status: "duplicate", documentIds: [], detail: messageId };
     }
-    throw new Error(`inbound_email insert failed: ${insertErr.message}`);
-  }
 
-  const inboundEmailId = inbound.id as string;
+    inboundEmailId = existing.id as string;
+    await admin
+      .from("inbound_email")
+      .update({ status: "received", error: null, raw_payload: payload })
+      .eq("id", inboundEmailId);
+  } else {
+    inboundEmailId = inbound.id as string;
+  }
 
   try {
     const apiKey = process.env.RESEND_API_KEY;
