@@ -18,6 +18,9 @@ export default async function AppLayout({
             <Link href="/inbox" className="text-gray-700 hover:text-blue-700">
               Beérkező
             </Link>
+            <Link href="/ugyek" className="text-gray-700 hover:text-blue-700">
+              Ügyek
+            </Link>
             <Link
               href="/iktatokonyv"
               className="text-gray-700 hover:text-blue-700"

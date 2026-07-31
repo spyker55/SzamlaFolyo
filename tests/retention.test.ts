@@ -204,3 +204,135 @@ describe.skipIf(!hasLiveCredentials)("retention rules (live project)", () => {
     expect(data!.iktatoszam).toBeNull();
   });
 });
+
+// The ugy screen lets a member edit an ugy, and ugy_update is a blanket
+// policy that allows every column — including foszam, which is half of the
+// iktatoszam on every irat filed under it. app.protect_ugy() is what actually
+// holds the line; these run it through the public API as a normal member.
+describe.skipIf(!hasLiveCredentials)("ugy guard (live project)", () => {
+  async function ugyWithIrat() {
+    const client = await signedInClient(USER_A_EMAIL);
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    const documentId = await insertReviewableDocument(client, companyId, "Ügy-őrzés teszt");
+    const { error } = await client.rpc("iktat_document", {
+      p_document_id: documentId,
+      p_values: {},
+    });
+    expect(error).toBeNull();
+
+    const { data } = await client
+      .from("document")
+      .select("ugy_id")
+      .eq("id", documentId)
+      .single();
+    return { client, ugyId: data!.ugy_id as string };
+  }
+
+  it("refuses to renumber an ugy", async () => {
+    const { client, ugyId } = await ugyWithIrat();
+    const { data: before } = await client
+      .from("ugy")
+      .select("foszam, ev")
+      .eq("id", ugyId)
+      .single();
+
+    for (const patch of [{ foszam: 999 }, { ev: 2099 }]) {
+      const { error } = await client.from("ugy").update(patch).eq("id", ugyId);
+      expect(error, JSON.stringify(patch)).not.toBeNull();
+      expect(error!.message).toContain("identity is immutable");
+    }
+
+    const { data: after } = await client
+      .from("ugy")
+      .select("foszam, ev")
+      .eq("id", ugyId)
+      .single();
+    expect(after).toEqual(before);
+  });
+
+  it("refuses to archive an ugy that was never closed", async () => {
+    const { client, ugyId } = await ugyWithIrat();
+
+    const { error } = await client
+      .from("ugy")
+      .update({ status: "irattarazott" })
+      .eq("id", ugyId);
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("status cannot go");
+  });
+
+  it("stamps closed_at on closing and clears it on reopening", async () => {
+    const { client, ugyId } = await ugyWithIrat();
+
+    await client.from("ugy").update({ status: "lezart" }).eq("id", ugyId);
+    const { data: closed } = await client
+      .from("ugy")
+      .select("closed_at")
+      .eq("id", ugyId)
+      .single();
+    expect(closed!.closed_at).not.toBeNull();
+
+    await client.from("ugy").update({ status: "folyamatban" }).eq("id", ugyId);
+    const { data: reopened } = await client
+      .from("ugy")
+      .select("closed_at")
+      .eq("id", ugyId)
+      .single();
+    expect(reopened!.closed_at).toBeNull();
+  });
+
+  it("refuses a new irat under a lezart ugy", async () => {
+    const { client, ugyId } = await ugyWithIrat();
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    await client.from("ugy").update({ status: "lezart" }).eq("id", ugyId);
+
+    const second = await insertReviewableDocument(client, companyId, "Lezárt ügybe");
+    const { error } = await client.rpc("iktat_document", {
+      p_document_id: second,
+      p_values: {},
+      p_ugy_id: ugyId,
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("no further irat");
+  });
+
+  it("freezes an archived ugy, and keeps closed_at when it comes back out", async () => {
+    const { client, ugyId } = await ugyWithIrat();
+
+    await client.from("ugy").update({ status: "lezart" }).eq("id", ugyId);
+    const { data: closed } = await client
+      .from("ugy")
+      .select("closed_at")
+      .eq("id", ugyId)
+      .single();
+
+    await client.from("ugy").update({ status: "irattarazott" }).eq("id", ugyId);
+    const { data: archived } = await client
+      .from("ugy")
+      .select("irattarba_helyezve_at, closed_at")
+      .eq("id", ugyId)
+      .single();
+    expect(archived!.irattarba_helyezve_at).not.toBeNull();
+    expect(archived!.closed_at).toBe(closed!.closed_at);
+
+    const { error } = await client
+      .from("ugy")
+      .update({ targy: "átírva az irattárból" })
+      .eq("id", ugyId);
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("irattarazott");
+
+    // Taking it back out keeps the day it was actually closed — that is a
+    // fact about the past, not about this moment.
+    await client.from("ugy").update({ status: "lezart" }).eq("id", ugyId);
+    const { data: out } = await client
+      .from("ugy")
+      .select("irattarba_helyezve_at, closed_at")
+      .eq("id", ugyId)
+      .single();
+    expect(out!.irattarba_helyezve_at).toBeNull();
+    expect(out!.closed_at).toBe(closed!.closed_at);
+  });
+});

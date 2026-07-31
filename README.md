@@ -24,6 +24,12 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   a díjbekérő és a rá kiállított számla összege megegyezik, **csak a számla számít** —
   különben duplán jelenne meg ugyanaz a tartozás. Az összegek pénznemenként külön
   adódnak össze, soha nem keverve.
+- `src/lib/ugy/status.ts` — az ügy állapotgépe. Ugyanaz a nyolc átmenet él a
+  TypeScriptben és az `app.protect_ugy()` triggerben, és teszt köti össze a
+  kettőt: a képernyő nem kínálhat olyan gombot, amit az adatbázis elutasít.
+  `folyamatban` soha nem ugorhat egyenesen az irattárba — előbb lezárás jön,
+  ez a tényleges ügyviteli sorrend. Az irattárazott ügy metaadata be van
+  fagyasztva, amíg ki nem veszik onnan.
 - `src/lib/export/` — könyvelői export. A `csv.ts` pontosvesszős, BOM-os,
   magyar tizedesvesszős CSV-t ír, mert a magyar Excel ezt olvassa számként; a
   szöveges cellákat formula-injekció ellen védi (`=`, `+`, `-`, `@` elé
@@ -68,6 +74,10 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
 - `tests/doc-kind.test.ts` — az irattípus-szótár és a `public.doc_kind` enum
   nem csúszhat szét: a teszt a **migrációs fájlokból építi újra** az enumot, és
   ahhoz hasonlítja a TypeScript-listát.
+- `tests/ugy-status.test.ts` — az ügy-állapotgép és a migráció nem csúszhat
+  szét: a teszt a `v_allowed` tömbből építi újra az engedélyezett átmeneteket,
+  és ahhoz hasonlítja a TypeScript-listát. A lista rendezését is fedi
+  (közelgő határidő elöl, határidő nélküli ügyek hátul).
 - `tests/export-csv.test.ts` — hónaphatárok (szökőév is), a magyar
   számformátum, a formula-injekció elleni védelem, és hogy a díjbekérő nem
   duplázza meg a könyvelendő összeget.
@@ -90,6 +100,9 @@ alkalmazás:
 - `tests/retention.test.ts` — iktatott iratot nem lehet soft-delete-elni, átszámozni,
   se visszaléptetni; egyedül `ervenytelenitve`-be léphet, az iktatószámát megtartva.
   Iktatás előtt viszont elvethető és visszaállítható, szám elégetése nélkül.
+  Ugyanez az **ügyre**: a főszám és az év nem írható át, lezáratlan ügyet nem
+  lehet irattárazni, az irattárazott ügy be van fagyasztva, és az irattárból
+  visszavett ügy megtartja az eredeti lezárási dátumát.
 - `tests/partner-dedup.test.ts` — adószám nélküli szállító nem kap minden
   iktatásnál új partner-sort (kis/nagybetű, ékezet, írásjel egyezik); a `Kft.`
   és a `Bt.` viszont **nem** olvad össze; a később megjelenő adószám a meglévő
