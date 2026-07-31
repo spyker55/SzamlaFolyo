@@ -62,30 +62,111 @@ describe.skipIf(!hasLiveCredentials)("retention rules (live project)", () => {
     expect(data!.iktatoszam).toBe(iktatoszam);
   });
 
-  it("allows érvénytelenítés, and nothing else, after iktatás", async () => {
+  it("refuses to move an iktatott irat anywhere but ervenytelenitve", async () => {
     const { client, documentId } = await iktatottDocument();
 
-    const backwards = await client
+    const { error } = await client
       .from("document")
       .update({ processing_status: "needs_review" })
       .eq("id", documentId);
-    expect(backwards.error).not.toBeNull();
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("can only move to ervenytelenitve");
+  });
 
-    // The one permitted transition — and the iktatószám survives it, because an
-    // érvénytelenített irat still occupies its number.
-    const { error } = await client
-      .from("document")
-      .update({ processing_status: "ervenytelenitve" })
-      .eq("id", documentId);
+  it("érvényteleníti az iratot, indoklással, az iktatószám megtartásával", async () => {
+    const { client, documentId, iktatoszam } = await iktatottDocument();
+
+    const { error } = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "Téves iktatás, az irat a másik céghez tartozik.",
+    });
     expect(error).toBeNull();
 
     const { data } = await client
       .from("document")
-      .select("iktatoszam, deleted_at")
+      .select(
+        "processing_status, iktatoszam, deleted_at, ervenytelenites_indoka, ervenytelenitve_at, ervenytelenitette"
+      )
       .eq("id", documentId)
       .single();
-    expect(data!.iktatoszam).not.toBeNull();
+
+    expect(data!.processing_status).toBe("ervenytelenitve");
+    // The number stays occupied: reissuing it would make the register lie.
+    expect(data!.iktatoszam).toBe(iktatoszam);
     expect(data!.deleted_at).toBeNull();
+    expect(data!.ervenytelenites_indoka).toContain("Téves iktatás");
+    expect(data!.ervenytelenitve_at).not.toBeNull();
+    expect(data!.ervenytelenitette).not.toBeNull();
+  });
+
+  it("requires a reason, and refuses a second érvénytelenítés", async () => {
+    const { client, documentId } = await iktatottDocument();
+
+    const empty = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "   ",
+    });
+    expect(empty.error).not.toBeNull();
+    expect(empty.error!.message).toContain("requires a reason");
+
+    const tooShort = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "hiba",
+    });
+    expect(tooShort.error).not.toBeNull();
+
+    const first = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "Duplikátum, tévedésből iktatva.",
+    });
+    expect(first.error).toBeNull();
+
+    const second = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "Még egyszer, másik indokkal.",
+    });
+    expect(second.error).not.toBeNull();
+    expect(second.error!.message).toContain("already ervenytelenitve");
+  });
+
+  it("seals the record of an érvénytelenítés", async () => {
+    const { client, documentId } = await iktatottDocument();
+
+    await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "Eredeti indoklás, ami nem írható át.",
+    });
+
+    // Neither rewriting the reason nor lifting the withdrawal is possible.
+    for (const patch of [
+      { ervenytelenites_indoka: "Átírt indok" },
+      { ervenytelenitve_at: null },
+      { ervenytelenitette: null },
+    ]) {
+      const { error } = await client.from("document").update(patch).eq("id", documentId);
+      expect(error, JSON.stringify(patch)).not.toBeNull();
+      expect(error!.message).toContain("cannot be changed");
+    }
+
+    const { data } = await client
+      .from("document")
+      .select("ervenytelenites_indoka")
+      .eq("id", documentId)
+      .single();
+    expect(data!.ervenytelenites_indoka).toContain("Eredeti indoklás");
+  });
+
+  it("refuses to érvénytelenít something that was never iktatva", async () => {
+    const client = await signedInClient(USER_A_EMAIL);
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    const documentId = await insertReviewableDocument(client, companyId, "Nem iktatott");
+
+    const { error } = await client.rpc("ervenytelenit_document", {
+      p_document_id: documentId,
+      p_indoklas: "Nem is kellene menjen.",
+    });
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("only an iktatott irat");
   });
 
   it("lets a document be discarded and restored before iktatás", async () => {

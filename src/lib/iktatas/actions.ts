@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type IktatValues = Record<string, string | number | null>;
@@ -45,6 +46,49 @@ export async function iktat(
     iktatoszam: (data as { iktatoszam: string }).iktatoszam,
     nextDocumentId: next?.id ?? null,
   };
+}
+
+export type ErvenytelenitResult = { ok: true } | { ok: false; error: string };
+
+// The one thing that may happen to an iktatott irat. The iktatószám stays
+// occupied and the ügy is left alone — see 20260730000015_ervenytelenites.sql
+// for why. Irreversible by design, which is why the UI asks twice.
+export async function ervenytelenit(
+  documentId: string,
+  indoklas: string
+): Promise<ErvenytelenitResult> {
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase.rpc("ervenytelenit_document", {
+    p_document_id: documentId,
+    p_indoklas: indoklas,
+  });
+
+  if (error) {
+    return { ok: false, error: hunErvenytelenitError(error.message) };
+  }
+
+  revalidatePath("/iktatokonyv");
+  return { ok: true };
+}
+
+function hunErvenytelenitError(message: string): string {
+  if (message.includes("requires a reason")) {
+    return "Az érvénytelenítéshez indoklás kell, legalább 5 karakter.";
+  }
+  if (message.includes("owner or admin")) {
+    return "Érvényteleníteni csak tulajdonos vagy adminisztrátor tud.";
+  }
+  if (message.includes("already ervenytelenitve")) {
+    return "Ez az irat már érvénytelenítve van.";
+  }
+  if (message.includes("only an iktatott irat")) {
+    return "Csak iktatott iratot lehet érvényteleníteni.";
+  }
+  if (message.includes("document not found")) {
+    return "Az irat nem található.";
+  }
+  return "Az érvénytelenítés nem sikerült: " + message;
 }
 
 function hunError(message: string): string {

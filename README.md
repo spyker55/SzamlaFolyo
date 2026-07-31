@@ -98,7 +98,11 @@ tesztek és build minden pusholásnál és pull requestnél.
 - **Iktatás előtt** az irat elvethető (`elvetve` + `deleted_at`): a Beérkezőből eltűnik,
   de megmarad és visszaállítható. Iktatószámot nem kapott, tehát nem hagy hézagot.
 - **Iktatás után** az irat fizikailag soha nem törölhető, és soft-delete sem érheti —
-  egyedül az `ervenytelenitve` állapotba léphet, az iktatószámát megtartva.
+  egyedül az `ervenytelenitve` állapotba léphet, az iktatószámát megtartva
+  (`ervenytelenit_document` RPC). Az érvénytelenítéshez **kötelező indoklás** kell,
+  és csak `owner` vagy `admin` végezheti. Az iktatószám nem kerül újra kiosztásra,
+  az ügyet pedig nem zárja le — az emberi döntés marad. Maga az érvénytelenítés
+  ténye, indoka és időpontja utólag nem módosítható és nem vonható vissza.
   Ezt az `app.protect_iktatott_document()` trigger tartja be, nem a jó szándék:
   a `document_update` policy minden mezőt engedne, ezért a szabály a triggerben él,
   ahol a service role és a `SECURITY DEFINER` függvények sem kerülhetik meg.

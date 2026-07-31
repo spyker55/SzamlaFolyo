@@ -14,6 +14,8 @@ type Row = {
   processing_status: string;
   direction: string | null;
   doc_kind: string | null;
+  ervenytelenites_indoka: string | null;
+  ervenytelenitve_at: string | null;
   partner: { name: string } | null;
   alszam: number | null;
   ugy: {
@@ -27,7 +29,7 @@ type Row = {
 };
 
 export default async function IktatokonyvPage() {
-  await requireMembership();
+  const { role } = await requireMembership();
   const supabase = await createSupabaseServerClient();
 
   const { data } = await supabase
@@ -35,6 +37,7 @@ export default async function IktatokonyvPage() {
     .select(
       `id, iktatoszam, irat_szama, targy, erkezett_at, melleklet_db, alszam,
        kezelesi_feljegyzes, processing_status, direction, doc_kind,
+       ervenytelenites_indoka, ervenytelenitve_at,
        partner:partner_id (name),
        ugy:ugy_id (foszam, ev, hatarido, irattari_jel, irattarba_helyezve_at,
          eloado:eloado_user_id (full_name, email))`
@@ -68,6 +71,8 @@ export default async function IktatokonyvPage() {
       ? d.ugy.irattarba_helyezve_at.slice(0, 10)
       : "",
     ervenytelen: d.processing_status === "ervenytelenitve",
+    ervenytelenitesIndoka: d.ervenytelenites_indoka ?? "",
+    ervenytelenitveAt: d.ervenytelenitve_at ? d.ervenytelenitve_at.slice(0, 10) : "",
     direction: d.direction ?? "",
     docKind: d.doc_kind ?? "",
   }));
@@ -75,7 +80,8 @@ export default async function IktatokonyvPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold">Iktatókönyv</h1>
-      <Iktatokonyv rows={rows} />
+      {/* Only owner and admin may withdraw an irat; the RPC checks this too. */}
+      <Iktatokonyv rows={rows} canErvenytelenit={role === "owner" || role === "admin"} />
     </div>
   );
 }
