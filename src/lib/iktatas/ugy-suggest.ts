@@ -5,9 +5,15 @@
 // which matters here, because accepting a suggestion stamps a permanent
 // iktatószám. A suggestion the user cannot check is worse than none.
 //
-// Partner comparison goes through the normalized *name*, not partner_id, on
-// purpose: a supplier with no Hungarian tax number gets a fresh partner row on
-// every iktatás today, so the same company legitimately holds several ids.
+// Partner comparison goes through the normalized *name*, not partner_id: the
+// document being reviewed often has no partner_id yet — extraction only links
+// one when the tax number already matches a known partner — so the name typed
+// into the form is the only thing available at this point.
+//
+// The normalization here is deliberately looser than app.normalize_company_name()
+// in the database, which resolves partners: this one also strips the legal form,
+// because a declined suggestion costs nothing, whereas merging "Nethely Kft."
+// into "Nethely Bt." would fuse two legal entities for good.
 
 export type UgyCandidateDocument = {
   docKind: string | null;
