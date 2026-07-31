@@ -63,6 +63,9 @@ alkalmazás:
   dupla iktatás tiltva. Ugyanez az **alszámra** is: 20 párhuzamos iktatás egyetlen
   ügy alá pontosan a 2..21 alszámokat osztja ki, mind ugyanazzal a főszámmal;
   lezárt ügy alá nem lehet iktatni.
+- `tests/retention.test.ts` — iktatott iratot nem lehet soft-delete-elni, átszámozni,
+  se visszaléptetni; egyedül `ervenytelenitve`-be léphet, az iktatószámát megtartva.
+  Iktatás előtt viszont elvethető és visszaállítható, szám elégetése nélkül.
 - `tests/partner-dedup.test.ts` — adószám nélküli szállító nem kap minden
   iktatásnál új partner-sort (kis/nagybetű, ékezet, írásjel egyezik); a `Kft.`
   és a `Bt.` viszont **nem** olvad össze; a később megjelenő adószám a meglévő
@@ -92,6 +95,12 @@ tesztek és build minden pusholásnál és pull requestnél.
 
 - A worker és a cron a Vercelen fut; a percenkénti cron Pro csomagot igényel.
 - Az iratok privát Storage bucketben (`iratok`), útvonal: `{company_id}/{document_id}/{fájlnév}`.
-- Iktatott irat fizikailag soha nem törölhető — csak érvénytelenítés (`deleted_at` + `ervenytelenitve`).
+- **Iktatás előtt** az irat elvethető (`elvetve` + `deleted_at`): a Beérkezőből eltűnik,
+  de megmarad és visszaállítható. Iktatószámot nem kapott, tehát nem hagy hézagot.
+- **Iktatás után** az irat fizikailag soha nem törölhető, és soft-delete sem érheti —
+  egyedül az `ervenytelenitve` állapotba léphet, az iktatószámát megtartva.
+  Ezt az `app.protect_iktatott_document()` trigger tartja be, nem a jó szándék:
+  a `document_update` policy minden mezőt engedne, ezért a szabály a triggerben él,
+  ahol a service role és a `SECURITY DEFINER` függvények sem kerülhetik meg.
 - A gépi kinyerés értékei (`extraction.parsed_fields`) soha nem íródnak felül;
   a kézi javítás külön sor a `field_correction` táblában.

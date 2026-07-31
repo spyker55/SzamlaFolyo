@@ -21,6 +21,9 @@ export async function claimAndRunExtraction(
     })
     .eq("id", documentId)
     .eq("processing_status", "received")
+    // A discarded document must not be claimed: extraction costs a real model
+    // call, and nobody is going to look at the result.
+    .is("deleted_at", null)
     .select("id, extraction_attempts")
     .maybeSingle();
 

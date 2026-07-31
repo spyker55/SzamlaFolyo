@@ -27,6 +27,7 @@ export async function GET(request: Request) {
     .from("document")
     .select("id, extraction_attempts")
     .eq("processing_status", "extracting")
+    .is("deleted_at", null)
     .lt("extraction_claimed_at", new Date(now - STALE_EXTRACTING_MS).toISOString());
 
   for (const doc of stuck ?? []) {
@@ -45,6 +46,8 @@ export async function GET(request: Request) {
     .from("document")
     .select("id")
     .eq("processing_status", "received")
+    // Discarded documents are not waiting for anything.
+    .is("deleted_at", null)
     .lt("created_at", new Date(now - STALE_RECEIVED_MS).toISOString())
     .order("created_at", { ascending: true })
     .limit(BATCH);

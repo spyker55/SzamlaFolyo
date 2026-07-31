@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DOC_KINDS, docKindLabel } from "@/lib/domain/doc-kind";
+import { elvet, visszaallit } from "@/lib/inbox/actions";
 import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
 
 type InboxDocument = {
@@ -29,6 +30,7 @@ const STATUS_LABEL: Record<string, { text: string; className: string }> = {
   needs_review: { text: "Ellenőrzésre vár", className: "bg-amber-100 text-amber-800" },
   extraction_failed: { text: "Kinyerés sikertelen — kézi kitöltés", className: "bg-red-100 text-red-700" },
   duplicate: { text: "Duplikátum", className: "bg-purple-100 text-purple-700" },
+  elvetve: { text: "Elvetve", className: "bg-gray-100 text-gray-500" },
 };
 
 const ACTIVE_STATUSES = ["received", "extracting", "needs_review", "extraction_failed", "duplicate"];
@@ -52,18 +54,24 @@ export function InboxClient() {
   const [messages, setMessages] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [kindFilter, setKindFilter] = useState("");
+  const [showDiscarded, setShowDiscarded] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabaseRef = useRef(createSupabaseBrowserClient());
 
   const load = useCallback(async () => {
-    const { data, error } = await supabaseRef.current
+    const base = supabaseRef.current
       .from("document")
       .select(
         "id, processing_status, targy, created_at, duplicate_of_document_id, source, " +
           "inbound_email_id, doc_kind, document_file (original_filename)"
-      )
-      .in("processing_status", ACTIVE_STATUSES)
-      .is("deleted_at", null)
+      );
+
+    const scoped = showDiscarded
+      ? base.eq("processing_status", "elvetve").not("deleted_at", "is", null)
+      : base.in("processing_status", ACTIVE_STATUSES).is("deleted_at", null);
+
+    const { data, error } = await scoped
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -148,7 +156,36 @@ export function InboxClient() {
     }
 
     setDocuments(docs);
-  }, []);
+  }, [showDiscarded]);
+
+  const discard = useCallback(
+    async (id: string) => {
+      if (
+        !window.confirm(
+          "Biztosan elveted ezt az iratot? A Beérkezőből eltűnik, de az „Elvetettek” nézetből visszaállítható."
+        )
+      ) {
+        return;
+      }
+      setBusyId(id);
+      const result = await elvet(id);
+      setBusyId(null);
+      setMessages(result.ok ? [] : [result.error]);
+      load();
+    },
+    [load]
+  );
+
+  const restore = useCallback(
+    async (id: string) => {
+      setBusyId(id);
+      const result = await visszaallit(id);
+      setBusyId(null);
+      setMessages(result.ok ? [] : [result.error]);
+      load();
+    },
+    [load]
+  );
 
   useEffect(() => {
     load();
@@ -226,6 +263,8 @@ export function InboxClient() {
 
   return (
     <div className="mt-4 space-y-4">
+      {/* Nothing to drop into the discarded list. */}
+      {!showDiscarded && (
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -263,6 +302,7 @@ export function InboxClient() {
           }}
         />
       </div>
+      )}
 
       {messages.length > 0 && (
         <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
@@ -278,32 +318,45 @@ export function InboxClient() {
         </div>
       )}
 
-      {kindOptions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={kindFilter}
-            onChange={(e) => setKindFilter(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
-            aria-label="Szűrés irat fajtájára"
-          >
-            <option value="">Minden fajta ({documents.length})</option>
-            {kindOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          {kindFilter && (
-            <button
-              type="button"
-              onClick={() => setKindFilter("")}
-              className="text-xs text-blue-600 hover:underline"
+      <div className="flex flex-wrap items-center gap-2">
+        {kindOptions.length > 0 && (
+          <>
+            <select
+              value={kindFilter}
+              onChange={(e) => setKindFilter(e.target.value)}
+              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              aria-label="Szűrés irat fajtájára"
             >
-              Szűrő törlése
-            </button>
-          )}
-        </div>
-      )}
+              <option value="">Minden fajta ({documents.length})</option>
+              {kindOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            {kindFilter && (
+              <button
+                type="button"
+                onClick={() => setKindFilter("")}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                Szűrő törlése
+              </button>
+            )}
+          </>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setShowDiscarded((v) => !v);
+            setKindFilter("");
+            setMessages([]);
+          }}
+          className="ml-auto text-xs text-gray-500 hover:underline"
+        >
+          {showDiscarded ? "← Vissza a beérkezőhöz" : "Elvetett iratok"}
+        </button>
+      </div>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
@@ -322,8 +375,10 @@ export function InboxClient() {
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                   {kindFilter
-                    ? "Nincs ilyen fajtájú irat a beérkezőben."
-                    : "Nincs feldolgozás alatt álló irat."}
+                    ? "Nincs ilyen fajtájú irat."
+                    : showDiscarded
+                      ? "Nincs elvetett irat."
+                      : "Nincs feldolgozás alatt álló irat."}
                 </td>
               </tr>
             )}
@@ -376,14 +431,36 @@ export function InboxClient() {
                   <td className="px-4 py-2 text-gray-500">
                     {new Date(doc.created_at).toLocaleString("hu-HU")}
                   </td>
-                  <td className="px-4 py-2 text-right">
-                    {reviewable && (
-                      <Link
-                        href={`/ellenorzes/${doc.id}`}
-                        className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                    {showDiscarded ? (
+                      <button
+                        type="button"
+                        onClick={() => restore(doc.id)}
+                        disabled={busyId === doc.id}
+                        className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                       >
-                        Ellenőrzés
-                      </Link>
+                        Visszaállítás
+                      </button>
+                    ) : (
+                      <>
+                        {reviewable && (
+                          <Link
+                            href={`/ellenorzes/${doc.id}`}
+                            className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                          >
+                            Ellenőrzés
+                          </Link>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => discard(doc.id)}
+                          disabled={busyId === doc.id}
+                          title="Elvetés — nem kap iktatószámot, később visszaállítható"
+                          className="ml-2 text-xs text-gray-400 hover:text-red-600 disabled:opacity-50"
+                        >
+                          Elvet
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>
