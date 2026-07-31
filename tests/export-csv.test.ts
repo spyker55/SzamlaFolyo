@@ -223,4 +223,39 @@ describe("bookkeeping flag", () => {
     expect(dijbekero).toContain('"nem"');
     expect(szamla).toContain('"igen"');
   });
+
+  it("says nem for a withdrawn invoice, which is the right kind but not bookable", () => {
+    const csv = toCsv([row({ docKind: "szamla", ervenytelen: true })]);
+    expect(csv.split("\r\n")[1]).toContain('"nem";"ÉRVÉNYTELENÍTVE"');
+  });
+
+  // The invariant that matters: whatever the column claims, adding those rows
+  // up in Excel must land on the number the app shows. The live July export
+  // broke this — a withdrawn invoice was flagged "igen", so the column summed
+  // to 520 730 while the header said 507 132.
+  it("agrees with the total: summing the igen rows reproduces it", () => {
+    const rows = [
+      row({ iktatoszam: "IKT/1-1/2026", docKind: "szamla", netAmount: 950, vatAmount: 256.5, grossAmount: 1207 }),
+      row({ iktatoszam: "IKT/2-1/2026", docKind: "szamla", netAmount: 385000, vatAmount: 103950, grossAmount: 488950 }),
+      row({ iktatoszam: "IKT/3-1/2026", docKind: "szallitolevel", netAmount: null, vatAmount: null, grossAmount: null, currency: null }),
+      row({ iktatoszam: "IKT/4-1/2026", docKind: "dijbekero", netAmount: 13598, vatAmount: 0, grossAmount: 13598, ervenytelen: true }),
+      row({ iktatoszam: "IKT/5-1/2026", docKind: "szamla", netAmount: 13598, vatAmount: 0, grossAmount: 13598, ervenytelen: true }),
+      row({ iktatoszam: "IKT/6-1/2026", docKind: "dijbekero", netAmount: 16975, vatAmount: 0, grossAmount: 16975 }),
+      row({ iktatoszam: "IKT/6-2/2026", docKind: "szamla", netAmount: 16975, vatAmount: 0, grossAmount: 16975 }),
+    ];
+
+    const grossColumn = COLUMNS.findIndex((c) => c.header === "Bruttó");
+    const bookableColumn = COLUMNS.findIndex((c) => c.header === "Könyvelendő");
+
+    const fromCsv = toCsv(rows)
+      .split("\r\n")
+      .slice(1)
+      .filter((line) => line !== "")
+      .map((line) => line.split(CSV_SEPARATOR))
+      .filter((cells) => cells[bookableColumn] === '"igen"')
+      .reduce((sum, cells) => sum + Number(cells[grossColumn].replace(",", ".")), 0);
+
+    expect(fromCsv).toBe(accountingTotals(rows)[0].gross);
+    expect(fromCsv).toBe(507132);
+  });
 });

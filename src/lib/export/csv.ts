@@ -65,7 +65,7 @@ export const COLUMNS: Column[] = [
   { header: "Ügy tárgya", value: (r) => r.ugyTargy },
   { header: "Előadó", value: (r) => r.eloado },
   { header: "Irattári jel", value: (r) => r.irattariJel },
-  { header: "Könyvelendő", value: (r) => (isAccountingDocument(r) ? "igen" : "nem") },
+  { header: "Könyvelendő", value: (r) => (isBookable(r) ? "igen" : "nem") },
   { header: "Státusz", value: (r) => (r.ervenytelen ? "ÉRVÉNYTELENÍTVE" : "Iktatva") },
   { header: "Érvénytelenítés indoka", value: (r) => r.ervenytelenitesIndoka },
   { header: "Fájl", value: (r) => r.fileName },
@@ -129,13 +129,20 @@ export function isAccountingDocument(row: ExportRow): boolean {
   return row.docKind !== null && ACCOUNTING_KINDS.includes(row.docKind);
 }
 
+// The Könyvelendő column and the total have to answer the same question. A
+// withdrawn invoice is the right kind of document but must not be booked, so
+// if the column said "igen" for it, a bookkeeper filtering on that column in
+// Excel would sum more than the header shows — and would trust the column.
+export function isBookable(row: ExportRow): boolean {
+  return isAccountingDocument(row) && !row.ervenytelen;
+}
+
 // Currencies are never mixed, and a withdrawn irat is not a cost — it is in
 // the CSV for the audit trail, but it must not move a total.
 export function accountingTotals(rows: ExportRow[]): CurrencyTotal[] {
   const map = new Map<string, CurrencyTotal>();
   for (const r of rows) {
-    if (r.ervenytelen) continue;
-    if (!isAccountingDocument(r)) continue;
+    if (!isBookable(r)) continue;
     // An irat with no amount at all would otherwise open a currency group of
     // pure zeroes.
     if (r.netAmount === null && r.vatAmount === null && r.grossAmount === null) continue;

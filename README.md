@@ -30,7 +30,10 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   aposztróf), a számoszlopokat viszont nem, különben a sztornó mínusza
   szövegbe fordulna. Az **összesítés csak a számviteli bizonylatokra** megy
   (számla, előlegszámla, helyesbítő, sztornó, nyugta): a díjbekérő és a rá
-  kiállított számla együtt kétszer vinné be ugyanazt a költséget. A `zip.ts`
+  kiállított számla együtt kétszer vinné be ugyanazt a költséget. A
+  „Könyvelendő" oszlop és az összesítés **ugyanarra a kérdésre felel** — az
+  érvénytelenített számla is „nem", különben az Excelben rászűrve többet
+  adna össze a könyvelő, mint amit az app kiír. Teszt őrzi. A `zip.ts`
   saját, tömörítés nélküli (STORE) ZIP-író — a PDF már tömörített, ezért a
   deflate csak CPU-t égetne, így pedig nincs új függőség.
 - `src/lib/iktatas/ugy-suggest.ts` — determinisztikus ügy-javaslat (nem modellhívás): azonos partner **és** azonos összeg, és a javaslat mindig megmondja, miért ajánlja. Semmi nincs előre kiválasztva.
