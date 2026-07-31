@@ -3,13 +3,15 @@ import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ReviewClient, type ReviewData } from "@/components/ellenorzes/ReviewClient";
 import { formatAmountHu } from "@/lib/format/amount";
+import { loadOpenUgyCandidates } from "@/lib/iktatas/ugy-candidates";
+import { suggestUgy, ugyLabel } from "@/lib/iktatas/ugy-suggest";
 
 export default async function EllenorzesPage({
   params,
 }: {
   params: Promise<{ documentId: string }>;
 }) {
-  await requireMembership();
+  const { companyId } = await requireMembership();
   const { documentId } = await params;
   const supabase = await createSupabaseServerClient();
 
@@ -75,6 +77,19 @@ export default async function EllenorzesPage({
     partnerTax = partner?.tax_number ?? null;
   }
 
+  // Which open ügy might this irat belong to? Deterministic — same partner,
+  // same amount — so the suggestion can state its own reason.
+  const candidates = await loadOpenUgyCandidates(supabase, companyId);
+  const ugySuggestions = suggestUgy(
+    {
+      partnerName: partnerName ?? str(parsed.partner_name),
+      grossAmount: doc.gross_amount === null ? null : Number(doc.gross_amount),
+      currency: doc.currency?.trim() ?? null,
+      docKind: doc.doc_kind ?? null,
+    },
+    candidates
+  );
+
   const data: ReviewData = {
     documentId: doc.id,
     fileUrl,
@@ -82,6 +97,8 @@ export default async function EllenorzesPage({
     fileName: file?.original_filename ?? null,
     confidence,
     tobbIratGyanu: Boolean(parsed.tobb_irat_gyanu),
+    ugySuggestions,
+    ugyOptions: candidates.map((c) => ({ id: c.id, label: ugyLabel(c) })),
     initial: {
       partner_name: partnerName ?? str(parsed.partner_name),
       partner_tax_number: partnerTax ?? str(parsed.partner_tax_number),

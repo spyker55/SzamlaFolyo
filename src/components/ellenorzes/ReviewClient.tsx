@@ -6,6 +6,7 @@ import { iktat, type IktatValues } from "@/lib/iktatas/actions";
 import { formatAmountHu, parseAmountHu } from "@/lib/format/amount";
 import { DOC_KIND_OPTIONS } from "@/lib/domain/doc-kind";
 import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
+import type { UgySuggestion } from "@/lib/iktatas/ugy-suggest";
 
 export type ReviewData = {
   documentId: string;
@@ -14,6 +15,10 @@ export type ReviewData = {
   fileName: string | null;
   confidence: Record<string, number>;
   tobbIratGyanu: boolean;
+  // Deterministic matches, strongest first; may be empty.
+  ugySuggestions: UgySuggestion[];
+  // Every open ügy, so the reviewer can file anywhere the suggestion missed.
+  ugyOptions: { id: string; label: string }[];
   initial: Record<string, string>;
 };
 
@@ -27,6 +32,9 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   const router = useRouter();
   const [values, setValues] = useState<Record<string, string>>(data.initial);
   const [error, setError] = useState<string | null>(null);
+  // "" = open a new ügy. A suggestion is never preselected: accepting one
+  // stamps a permanent iktatószám, so it takes a deliberate click.
+  const [ugyId, setUgyId] = useState("");
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLDivElement>(null);
   const firstLowConfRef = useRef<HTMLInputElement>(null);
@@ -105,7 +113,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
     };
 
     startTransition(async () => {
-      const result = await iktat(data.documentId, payload);
+      const result = await iktat(data.documentId, payload, ugyId || null);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -116,7 +124,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
         router.push("/iktatokonyv");
       }
     });
-  }, [data.documentId, pending, router, values, net, vat, gross]);
+  }, [data.documentId, pending, router, values, net, vat, gross, ugyId]);
 
   // Enter = iktatás és ugrás a következőre; Esc = vissza a Beérkezőbe.
   useEffect(() => {
@@ -191,6 +199,58 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             és külön feltölteni.
           </p>
         )}
+
+        {data.ugySuggestions.length > 0 && (
+          <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 p-2">
+            <p className="text-xs font-medium text-blue-900">
+              Lehet, hogy meglévő ügyhöz tartozik:
+            </p>
+            <ul className="mt-1 space-y-1">
+              {data.ugySuggestions.map((s) => (
+                <li key={s.ugyId}>
+                  <button
+                    type="button"
+                    onClick={() => setUgyId(ugyId === s.ugyId ? "" : s.ugyId)}
+                    className={`w-full rounded border px-2 py-1 text-left text-xs ${
+                      ugyId === s.ugyId
+                        ? "border-blue-500 bg-white font-medium text-blue-900"
+                        : "border-transparent text-blue-800 hover:bg-blue-100"
+                    }`}
+                  >
+                    {ugyId === s.ugyId ? "✓ " : ""}
+                    {s.label}
+                    {/* Always say why, so the reviewer can check the claim. */}
+                    <span className="block font-normal text-[11px] text-blue-600">{s.reason}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div className="mb-3">
+          <label htmlFor="ugy_id" className="text-xs font-medium text-gray-600">
+            Ügy
+          </label>
+          <select
+            id="ugy_id"
+            value={ugyId}
+            onChange={(e) => setUgyId(e.target.value)}
+            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          >
+            <option value="">Új ügy nyitása — új főszám</option>
+            {data.ugyOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-gray-500">
+            {ugyId
+              ? "Az irat a választott ügy következő alszámát kapja."
+              : "Az irat új főszámot kap, saját ügyet nyitva."}
+          </p>
+        </div>
 
         <div className="space-y-3">
           <div>

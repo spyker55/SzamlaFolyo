@@ -19,6 +19,7 @@ describe.skipIf(!hasLiveCredentials)("tenant isolation (RLS) (live project)", ()
   let companyA: string;
   let companyB: string;
   let docA: string;
+  let ugyA: string;
   let iktatoszamA: string;
 
   beforeAll(async () => {
@@ -38,6 +39,30 @@ describe.skipIf(!hasLiveCredentials)("tenant isolation (RLS) (live project)", ()
     });
     expect(error).toBeNull();
     iktatoszamA = (data as { iktatoszam: string }).iktatoszam;
+    ugyA = (data as { ugy_id: string }).ugy_id;
+  });
+
+  it("B cannot file its own document under A's ugy", async () => {
+    // p_ugy_id takes an arbitrary uuid from the client, so it is a tenancy
+    // boundary in its own right: guessing A's ugy id must not attach B's irat
+    // to A's foszam — nor reveal that the ugy exists.
+    const docB = await insertReviewableDocument(clientB, companyB, "Idegen ügy teszt");
+    const { error } = await clientB.rpc("iktat_document", {
+      p_document_id: docB,
+      p_values: {},
+      p_ugy_id: ugyA,
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("ugy not found");
+
+    const { data: after } = await clientB
+      .from("document")
+      .select("ugy_id, iktatoszam, processing_status")
+      .eq("id", docB)
+      .single();
+    expect(after!.ugy_id).toBeNull();
+    expect(after!.iktatoszam).toBeNull();
   });
 
   it("B cannot read A's documents — by id, by list, or by iktatoszam", async () => {

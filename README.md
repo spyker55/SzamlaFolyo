@@ -17,7 +17,8 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
 - `src/lib/upload/store.ts` — egy helyen dől el, hogy egy beérkező fájlból irat lesz-e; a feltöltés és az e-mailes beérkeztetés is ezt hívja, hogy a duplikátumszabályok ne csússzanak szét.
 - `src/app/api/email/inbound` — Resend `email.received` webhook: aláírás-ellenőrzés, cég feloldása a cím tokenjéből, mellékletek iratként. Terv: `docs/email-beerkeztetes-terv.md`.
 - `src/app/(app)/ellenorzes/[documentId]` — osztott ellenőrző képernyő; Enter = iktatás és ugrás a következőre.
-- Az iktatószám-kiosztás egyetlen Postgres-tranzakció (`iktat_document` RPC): `SELECT ... FOR UPDATE` az `iktatokonyv.next_foszam` soron — hézagmentes, ütközésmentes főszám garantált.
+- Az iktatószám-kiosztás egyetlen Postgres-tranzakció (`iktat_document` RPC): `SELECT ... FOR UPDATE` az `iktatokonyv.next_foszam` soron — hézagmentes, ütközésmentes főszám garantált. Meglévő ügy alá iktatva (`p_ugy_id`) ugyanez a fegyelem az ügy során: a következő **alszám** kiosztása is sorzár alatt történik.
+- `src/lib/iktatas/ugy-suggest.ts` — determinisztikus ügy-javaslat (nem modellhívás): azonos partner **és** azonos összeg. A partnert normalizált **név** alapján hasonlítja, nem `partner_id` szerint, mert adószám nélküli szállítónál ma minden iktatás új partner-sort hoz létre.
 
 ## Fejlesztés
 
@@ -58,10 +59,12 @@ alkalmazás:
 
 - `tests/iktatas-concurrency.test.ts` — 50 párhuzamos iktatás: a főszámok halmaza
   pontosan összefüggő tartomány, se hézag, se ütközés; rollback nem hagy lyukat;
-  dupla iktatás tiltva.
+  dupla iktatás tiltva. Ugyanez az **alszámra** is: 20 párhuzamos iktatás egyetlen
+  ügy alá pontosan a 2..21 alszámokat osztja ki, mind ugyanazzal a főszámmal;
+  lezárt ügy alá nem lehet iktatni.
 - `tests/rls-isolation.test.ts` — másik cég usere semmilyen úton nem látja, nem
-  módosítja és nem iktatja az első cég iratait; anon semmit nem lát; fizikai
-  törlés senkinek.
+  módosítja és nem iktatja az első cég iratait; a `p_ugy_id`-vel sem tudja a saját
+  iratát idegen ügy alá fűzni; anon semmit nem lát; fizikai törlés senkinek.
 
 A két teszt-user (`teszt.a@szamlafolyo-test.hu`, `teszt.b@szamlafolyo-test.hu`)
 a projektben seedelve van megerősített e-maillel. A jelszavuk **nincs a

@@ -13,13 +13,17 @@ export type IktatResult =
 // moving with Enter.
 export async function iktat(
   documentId: string,
-  values: IktatValues
+  values: IktatValues,
+  // null opens a new ügy with a fresh főszám; an id files the irat under that
+  // ügy as its next alszám.
+  ugyId: string | null = null
 ): Promise<IktatResult> {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase.rpc("iktat_document", {
     p_document_id: documentId,
     p_values: values,
+    p_ugy_id: ugyId,
   });
 
   if (error) {
@@ -49,6 +53,14 @@ function hunError(message: string): string {
   }
   if (message.includes("not reviewable")) {
     return "Ez az irat már nem iktatható (lehet, hogy közben más iktatta).";
+  }
+  if (message.includes("ugy not found")) {
+    return "A választott ügy nem található.";
+  }
+  // Checked before the iktatókönyv case below: this message does not say
+  // "closed", it names the ügy's own status.
+  if (message.includes("no further irat can be filed")) {
+    return "A választott ügy le van zárva, nem iktatható alá további irat.";
   }
   if (message.includes("closed")) {
     return "Az iktatókönyv le van zárva erre az évre.";
