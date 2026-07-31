@@ -1,9 +1,29 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildZip, crc32, zipEntryName } from "@/lib/export/zip";
+
+function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: number): number {
+  outer: for (let i = from; i <= haystack.length - needle.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+function occurrences(haystack: Uint8Array, needle: Uint8Array): number {
+  let count = 0;
+  let at = indexOfBytes(haystack, needle, 0);
+  while (at !== -1) {
+    count++;
+    at = indexOfBytes(haystack, needle, at + 1);
+  }
+  return count;
+}
 
 describe("crc32", () => {
   it("matches the reference value", () => {
@@ -81,8 +101,34 @@ describe("buildZip", () => {
     const extractedCsv = readFileSync(join(dir, "out", "napfeny_2026-07.csv"));
     expect(new TextDecoder().decode(extractedCsv)).toContain("16975,00");
 
-    const extractedPdf = readFileSync(join(dir, "out", "IKT-1-1-2026_díjbekérő.pdf"));
-    expect(new Uint8Array(extractedPdf)).toEqual(pdfLike);
+    // The file is found by extension, not by the name we put in: Info-ZIP
+    // rewrites a non-ASCII name according to the machine's locale, and on
+    // LANG=C.UTF-8 (what GitHub's runners set) it mangles it into mojibake.
+    // That is the extractor's business — what this test owns is that the
+    // bytes come back unchanged. The name itself is checked against the
+    // archive below, where we control the answer.
+    const extracted = readdirSync(join(dir, "out"));
+    expect(extracted).toHaveLength(2);
+    const pdfName = extracted.find((f) => f.endsWith(".pdf"));
+    expect(pdfName).toBeDefined();
+    expect(new Uint8Array(readFileSync(join(dir, "out", pdfName!)))).toEqual(pdfLike);
+  });
+
+  it("stores an accented filename as UTF-8 and says so in the flags", () => {
+    const name = "IKT-6-1-2026_díjbekérő.pdf";
+    const zip = buildZip([{ name, data: new Uint8Array([1, 2, 3]) }]);
+    const nameBytes = new TextEncoder().encode(name);
+
+    // Once in the local header, once in the central directory.
+    expect(occurrences(zip, nameBytes)).toBe(2);
+    // Straight after the 30-byte local file header, so it is the name field
+    // and not a coincidence somewhere in the payload.
+    expect(indexOfBytes(zip, nameBytes, 0)).toBe(30);
+
+    // Bit 11 of the general purpose flag: "the filename is UTF-8". Without it
+    // an extractor is entitled to read the bytes as CP437.
+    const view = new DataView(zip.buffer, zip.byteOffset, zip.byteLength);
+    expect(view.getUint16(6, true) & 0x0800).toBe(0x0800);
   });
 
   it("writes an empty archive rather than a corrupt one", () => {
