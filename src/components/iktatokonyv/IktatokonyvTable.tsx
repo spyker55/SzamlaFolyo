@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DOC_KIND_OPTIONS } from "@/lib/domain/doc-kind";
+import { DOC_KIND_OPTIONS, docKindLabel } from "@/lib/domain/doc-kind";
 
 export type IktatokonyvRow = {
   id: string;
@@ -27,9 +27,12 @@ const DIRECTION_LABEL: Record<string, string> = {
   belso: "Belső",
 };
 
-// The classic Excel columns, exactly as they are kept today:
+// The classic Excel columns:
 // Sorszám · Előadó · Irattári jel · Érkezett · Beküldő · Irat száma ·
 // Mellékletek db · Tárgy · Kezelési feljegyzések · Határidő · Irattárba helyezés
+//
+// Típus is the one addition, placed next to the sender and the document's own
+// number because it qualifies the same thing those two identify.
 export function Iktatokonyv({ rows }: { rows: IktatokonyvRow[] }) {
   const [query, setQuery] = useState("");
   const [direction, setDirection] = useState("");
@@ -95,6 +98,7 @@ export function Iktatokonyv({ rows }: { rows: IktatokonyvRow[] }) {
               <th className="px-3 py-2">Irattári jel</th>
               <th className="px-3 py-2">Érkezett</th>
               <th className="px-3 py-2">Beküldő neve</th>
+              <th className="px-3 py-2">Típus</th>
               <th className="px-3 py-2">Irat száma</th>
               <th className="px-3 py-2">Mell. db</th>
               <th className="px-3 py-2">Tárgy</th>
@@ -106,7 +110,7 @@ export function Iktatokonyv({ rows }: { rows: IktatokonyvRow[] }) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-3 py-8 text-center text-gray-400">
+                <td colSpan={12} className="px-3 py-8 text-center text-gray-400">
                   Nincs iktatott irat.
                 </td>
               </tr>
@@ -123,6 +127,7 @@ export function Iktatokonyv({ rows }: { rows: IktatokonyvRow[] }) {
                 <td className="px-3 py-2">{r.irattariJel}</td>
                 <td className="px-3 py-2">{r.erkezett}</td>
                 <td className="px-3 py-2">{r.bekuldo}</td>
+                <td className="px-3 py-2">{docKindLabel(r.docKind)}</td>
                 <td className="px-3 py-2">{r.iratSzama}</td>
                 <td className="px-3 py-2 text-center">{r.mellekletDb}</td>
                 <td className="max-w-xs truncate px-3 py-2" title={r.targy}>
