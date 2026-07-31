@@ -39,8 +39,15 @@ cp .env.test.example .env.test   # anon kulcs
 npm test
 ```
 
+Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
+
 - `tests/amount.test.ts` — a magyar összegformátum oda-vissza alakítása
-  (`1 612 900,25`); hálózat és adatbázis nélkül fut.
+  (`1 612 900,25`).
+- `tests/iktatoszam-order.test.ts` — az iktatószám numerikus sorrendje
+  (`IKT/10` a `IKT/9` **után** jön, nem előtte).
+- `tests/email-inbound.test.ts` — webhook-aláírás (hamisítás, visszajátszás,
+  hiányzó fejléc), címzett-feloldás és payload-olvasás. A payload-teszt egy
+  **valódi Resend-kézbesítés** szó szerinti másolatán fut, nem kitalált alakon.
 
 A másik két teszt a Supabase projekt **publikus API-ján** fut (anon kulcs +
 jelszavas bejelentkezés), tehát pontosan azt az utat gyakorolja, amit az
