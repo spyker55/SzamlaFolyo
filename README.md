@@ -18,6 +18,12 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
 - `src/app/api/email/inbound` — Resend `email.received` webhook: aláírás-ellenőrzés, cég feloldása a cím tokenjéből, mellékletek iratként. Terv: `docs/email-beerkeztetes-terv.md`.
 - `src/app/(app)/ellenorzes/[documentId]` — osztott ellenőrző képernyő; Enter = iktatás és ugrás a következőre.
 - Az iktatószám-kiosztás egyetlen Postgres-tranzakció (`iktat_document` RPC): `SELECT ... FOR UPDATE` az `iktatokonyv.next_foszam` soron — hézagmentes, ütközésmentes főszám garantált. Meglévő ügy alá iktatva (`p_ugy_id`) ugyanez a fegyelem az ügy során: a következő **alszám** kiosztása is sorzár alatt történik.
+- `src/lib/fizetes/schedule.ts` — fizetési naptár: mi van nyitva és mikor jár le.
+  Csak **bejövő**, iktatott, nem érvénytelenített irat számít tartozásnak; a nyugta
+  nem (az a pénztárnál már kifizetett), a díjbekérő viszont igen. Ha egy ügyön belül
+  a díjbekérő és a rá kiállított számla összege megegyezik, **csak a számla számít** —
+  különben duplán jelenne meg ugyanaz a tartozás. Az összegek pénznemenként külön
+  adódnak össze, soha nem keverve.
 - `src/lib/iktatas/ugy-suggest.ts` — determinisztikus ügy-javaslat (nem modellhívás): azonos partner **és** azonos összeg, és a javaslat mindig megmondja, miért ajánlja. Semmi nincs előre kiválasztva.
 - `app.resolve_partner()` — partner-feloldás adószám, majd normalizált név alapján. A normalizálás kisbetűsít, ékezetet és írásjelet távolít el, de a **cégformát nem** vágja le: a `Kft.` és a `Bt.` két külön jogi személy. Adószám nélküli élő partnereknél részleges unique index garantálja, hogy egy névhez egy sor tartozzon.
 

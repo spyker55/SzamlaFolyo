@@ -24,6 +24,9 @@ export default async function AppLayout({
             >
               Iktatókönyv
             </Link>
+            <Link href="/fizetesek" className="text-gray-700 hover:text-blue-700">
+              Fizetések
+            </Link>
           </nav>
           <div className="ml-auto flex items-center gap-4 text-sm text-gray-500">
             <span>{membership.companyName}</span>
