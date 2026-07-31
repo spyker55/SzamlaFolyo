@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { iktat, type IktatValues } from "@/lib/iktatas/actions";
 import { formatAmountHu, parseAmountHu } from "@/lib/format/amount";
+import { DOC_KIND_OPTIONS } from "@/lib/domain/doc-kind";
+import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
 
 export type ReviewData = {
   documentId: string;
@@ -15,22 +17,10 @@ export type ReviewData = {
   initial: Record<string, string>;
 };
 
-const REVIEW_THRESHOLD = 0.85;
-
 const DIRECTION_OPTIONS = [
   { value: "bejovo", label: "Bejövő" },
   { value: "kimeno", label: "Kimenő" },
   { value: "belso", label: "Belső" },
-];
-
-const DOC_KIND_OPTIONS = [
-  { value: "level", label: "Levél" },
-  { value: "szamla", label: "Számla" },
-  { value: "dijbekero", label: "Díjbekérő" },
-  { value: "szerzodes", label: "Szerződés" },
-  { value: "teljesites", label: "Teljesítés" },
-  { value: "nyilatkozat", label: "Nyilatkozat" },
-  { value: "egyeb", label: "Egyéb" },
 ];
 
 export function ReviewClient({ data }: { data: ReviewData }) {

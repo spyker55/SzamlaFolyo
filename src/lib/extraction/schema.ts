@@ -1,15 +1,11 @@
 import { z } from "zod";
+import { DOC_KINDS } from "@/lib/domain/doc-kind";
 
 export const DIRECTIONS = ["bejovo", "kimeno", "belso"] as const;
-export const DOC_KINDS = [
-  "level",
-  "szamla",
-  "dijbekero",
-  "szerzodes",
-  "teljesites",
-  "nyilatkozat",
-  "egyeb",
-] as const;
+
+// Re-exported so extraction callers keep one import, but the vocabulary itself
+// lives in @/lib/domain/doc-kind next to its Hungarian labels.
+export { DOC_KINDS };
 
 export const EXTRACTED_FIELDS = [
   "partner_name",
@@ -94,7 +90,14 @@ export const extractionToolSchema = {
       type: ["string", "null"],
       enum: [...DOC_KINDS, null],
       description:
-        "szamla: szamviteli bizonylat; dijbekero: fizetesi keres, ami NEM szamla; level: kiserolevel, ertesites; egyeb: ha nem egyertelmu",
+        "Az irat fajtaja. szamla: szamviteli bizonylat sorszammal es AFA-bontassal; " +
+        "elolegszamla: elolegrol kiallitott szamla; helyesbito_szamla: korabbi szamlat modosit, " +
+        "hivatkozik az eredeti sorszamara; sztorno_szamla: korabbi szamlat ervenytelenit, " +
+        "az osszegek negativak; dijbekero: fizetesi keres, ami NEM szamla (proforma, elolegbekero); " +
+        "nyugta: kiskereskedelmi nyugta, nincs rajta vevo adoszama; szallitolevel: aru atadas-atvetel, " +
+        "jellemzoen osszeg nelkul; arajanlat, megrendeles, szerzodes, teljesites (teljesitesigazolas); " +
+        "banki_kivonat: bankszamlakivonat; hatosagi: NAV, onkormanyzat, birosag, hatosagi hatarozat vagy felszolitas; " +
+        "level: kiserolevel, ertesites; nyilatkozat; egyeb: csak ha tenyleg egyik sem illik ra",
     },
     melleklet_db: {
       type: ["integer", "null"],

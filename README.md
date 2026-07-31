@@ -45,6 +45,9 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   (`1 612 900,25`).
 - `tests/iktatoszam-order.test.ts` — az iktatószám numerikus sorrendje
   (`IKT/10` a `IKT/9` **után** jön, nem előtte).
+- `tests/doc-kind.test.ts` — az irattípus-szótár és a `public.doc_kind` enum
+  nem csúszhat szét: a teszt a **migrációs fájlokból építi újra** az enumot, és
+  ahhoz hasonlítja a TypeScript-listát.
 - `tests/email-inbound.test.ts` — webhook-aláírás (hamisítás, visszajátszás,
   hiányzó fejléc), címzett-feloldás és payload-olvasás. A payload-teszt egy
   **valódi Resend-kézbesítés** szó szerinti másolatán fut, nem kitalált alakon.

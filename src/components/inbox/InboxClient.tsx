@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { DOC_KINDS, docKindLabel } from "@/lib/domain/doc-kind";
+import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
 
 type InboxDocument = {
   id: string;
@@ -12,10 +14,13 @@ type InboxDocument = {
   duplicate_of_document_id: string | null;
   source: string | null;
   inbound_email_id: string | null;
+  doc_kind: string | null;
   document_file: { original_filename: string | null }[];
   duplicateOfIktatoszam?: string | null;
   senderAddress?: string | null;
   senderKnown?: boolean;
+  // undefined = no finished extraction yet, so nothing to be uncertain about.
+  docKindConfidence?: number;
 };
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
@@ -28,12 +33,25 @@ const STATUS_LABEL: Record<string, { text: string; className: string }> = {
 
 const ACTIVE_STATUSES = ["received", "extracting", "needs_review", "extraction_failed", "duplicate"];
 
+// Sentinel for the "no type at all" filter option; "" already means "no filter".
+const NO_KIND = "__nincs__";
+
+// Flagged only once the document is actually waiting for a human: before that
+// there is no type yet, and after a failed extraction the status already says
+// the whole thing needs filling in by hand.
+function isTypeUncertain(doc: InboxDocument): boolean {
+  if (doc.processing_status !== "needs_review") return false;
+  if (!doc.doc_kind) return true;
+  return doc.docKindConfidence !== undefined && doc.docKindConfidence < REVIEW_THRESHOLD;
+}
+
 export function InboxClient() {
   const [documents, setDocuments] = useState<InboxDocument[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabaseRef = useRef(createSupabaseBrowserClient());
 
@@ -42,7 +60,7 @@ export function InboxClient() {
       .from("document")
       .select(
         "id, processing_status, targy, created_at, duplicate_of_document_id, source, " +
-          "inbound_email_id, document_file (original_filename)"
+          "inbound_email_id, doc_kind, document_file (original_filename)"
       )
       .in("processing_status", ACTIVE_STATUSES)
       .is("deleted_at", null)
@@ -103,6 +121,32 @@ export function InboxClient() {
       }
     }
 
+    // How sure the model was about the type. Same rule as the review screen:
+    // only finished, successful extractions count, and the newest one wins.
+    if (docs.length > 0) {
+      const { data: extractions } = await supabaseRef.current
+        .from("extraction")
+        .select("document_id, field_confidence")
+        .in(
+          "document_id",
+          docs.map((d) => d.id)
+        )
+        .is("error", null)
+        .not("parsed_fields", "is", null)
+        .order("finished_at", { ascending: true });
+
+      const confidenceByDoc = new Map<string, number | undefined>();
+      for (const e of extractions ?? []) {
+        const combined = (e.field_confidence as { combined?: Record<string, number> } | null)
+          ?.combined;
+        // Ascending order means a later row overwrites an earlier one.
+        confidenceByDoc.set(e.document_id as string, combined?.doc_kind);
+      }
+      for (const d of docs) {
+        d.docKindConfidence = confidenceByDoc.get(d.id);
+      }
+    }
+
     setDocuments(docs);
   }, []);
 
@@ -148,6 +192,37 @@ export function InboxClient() {
     },
     [load]
   );
+
+  // Only the types actually present are offered: an inbox of four items should
+  // not hand the user a sixteen-entry dropdown. The count rides along in the
+  // label because a filter whose size you cannot see is a guess.
+  const kindOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const d of documents) {
+      const key = d.doc_kind ?? NO_KIND;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const options = DOC_KINDS.filter((k) => counts.has(k)).map((k) => ({
+      value: k as string,
+      label: `${docKindLabel(k)} (${counts.get(k)})`,
+    }));
+    if (counts.has(NO_KIND)) {
+      options.push({ value: NO_KIND, label: `Nincs típus (${counts.get(NO_KIND)})` });
+    }
+    // Keep the active filter selectable even after its last document leaves,
+    // otherwise the select would silently show a blank.
+    if (kindFilter && !options.some((o) => o.value === kindFilter)) {
+      options.push({ value: kindFilter, label: `${docKindLabel(kindFilter)} (0)` });
+    }
+    return options;
+  }, [documents, kindFilter]);
+
+  const visible = useMemo(() => {
+    if (!kindFilter) return documents;
+    if (kindFilter === NO_KIND) return documents.filter((d) => !d.doc_kind);
+    return documents.filter((d) => d.doc_kind === kindFilter);
+  }, [documents, kindFilter]);
 
   return (
     <div className="mt-4 space-y-4">
@@ -203,11 +278,39 @@ export function InboxClient() {
         </div>
       )}
 
+      {kindOptions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={kindFilter}
+            onChange={(e) => setKindFilter(e.target.value)}
+            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            aria-label="Szűrés irat fajtájára"
+          >
+            <option value="">Minden fajta ({documents.length})</option>
+            {kindOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          {kindFilter && (
+            <button
+              type="button"
+              onClick={() => setKindFilter("")}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Szűrő törlése
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
             <tr>
               <th className="px-4 py-2">Fájl</th>
+              <th className="px-4 py-2">Típus</th>
               <th className="px-4 py-2">Tárgy</th>
               <th className="px-4 py-2">Állapot</th>
               <th className="px-4 py-2">Feltöltve</th>
@@ -215,14 +318,16 @@ export function InboxClient() {
             </tr>
           </thead>
           <tbody>
-            {documents.length === 0 && (
+            {visible.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  Nincs feldolgozás alatt álló irat.
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                  {kindFilter
+                    ? "Nincs ilyen fajtájú irat a beérkezőben."
+                    : "Nincs feldolgozás alatt álló irat."}
                 </td>
               </tr>
             )}
-            {documents.map((doc) => {
+            {visible.map((doc) => {
               const status = STATUS_LABEL[doc.processing_status] ?? {
                 text: doc.processing_status,
                 className: "bg-gray-100 text-gray-700",
@@ -246,6 +351,17 @@ export function InboxClient() {
                           </span>
                         )}
                       </div>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    {docKindLabel(doc.doc_kind)}
+                    {isTypeUncertain(doc) && (
+                      <span
+                        className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-xs text-amber-800"
+                        title="Az AI nem biztos az irat fajtájában — nézd meg az ellenőrzésnél."
+                      >
+                        bizonytalan
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2">{doc.targy ?? "—"}</td>

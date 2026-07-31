@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DOC_KIND_OPTIONS } from "@/lib/domain/doc-kind";
 
 export type IktatokonyvRow = {
   id: string;
@@ -24,16 +25,6 @@ const DIRECTION_LABEL: Record<string, string> = {
   bejovo: "Bejövő",
   kimeno: "Kimenő",
   belso: "Belső",
-};
-
-const DOC_KIND_LABEL: Record<string, string> = {
-  level: "Levél",
-  szamla: "Számla",
-  dijbekero: "Díjbekérő",
-  szerzodes: "Szerződés",
-  teljesites: "Teljesítés",
-  nyilatkozat: "Nyilatkozat",
-  egyeb: "Egyéb",
 };
 
 // The classic Excel columns, exactly as they are kept today:
@@ -84,9 +75,9 @@ export function Iktatokonyv({ rows }: { rows: IktatokonyvRow[] }) {
           className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
         >
           <option value="">Minden fajta</option>
-          {Object.entries(DOC_KIND_LABEL).map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
+          {DOC_KIND_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>
