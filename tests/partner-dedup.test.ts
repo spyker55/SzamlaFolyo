@@ -131,3 +131,135 @@ describe.skipIf(!hasLiveCredentials)("partner resolution (live project)", () => 
     expect(await partnerIdOf(client, first)).toBe(await partnerIdOf(client, second));
   });
 });
+
+// The partner screen offers merging as a button, so the whole safety of the
+// feature is that merge_partner() moves the iratok in the same transaction and
+// that unmerge_partner() can put back exactly what was moved. None of that can
+// be checked without a database — the guard is a trigger and two RPCs.
+describe.skipIf(!hasLiveCredentials)("partner merge (live project)", () => {
+  async function twoPartners(client: Awaited<ReturnType<typeof signedInClient>>) {
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    const suffix = uniqueSuffix();
+
+    const keptDoc = await iktatWithPartner(client, companyId, `Marad ${suffix}`, {
+      partner_name: `Marado Partner ${suffix} Kft.`,
+    });
+    const mergedDoc = await iktatWithPartner(client, companyId, `Beolvad ${suffix}`, {
+      partner_name: `Beolvado Partner ${suffix} Kft.`,
+    });
+
+    return {
+      companyId,
+      survivorId: await partnerIdOf(client, keptDoc),
+      loserId: await partnerIdOf(client, mergedDoc),
+      mergedDoc,
+    };
+  }
+
+  it("moves the iratok, retires the loser, and can be undone exactly", async () => {
+    const client = await signedInClient(USER_A_EMAIL);
+    const { survivorId, loserId, mergedDoc } = await twoPartners(client);
+
+    const merged = await client.rpc("merge_partner", {
+      p_survivor_id: survivorId,
+      p_loser_id: loserId,
+    });
+    expect(merged.error).toBeNull();
+    const mergeId = (merged.data as { merge_id: string }).merge_id;
+    expect((merged.data as { document_count: number }).document_count).toBeGreaterThan(0);
+
+    expect(await partnerIdOf(client, mergedDoc)).toBe(survivorId);
+
+    const { data: loser } = await client
+      .from("partner")
+      .select("deleted_at, merged_into_partner_id")
+      .eq("id", loserId)
+      .single();
+    expect(loser!.deleted_at).not.toBeNull();
+    expect(loser!.merged_into_partner_id).toBe(survivorId);
+
+    // History, not deletion: the row is still there and still says what it was.
+    const undone = await client.rpc("unmerge_partner", { p_merge_id: mergeId });
+    expect(undone.error).toBeNull();
+
+    expect(await partnerIdOf(client, mergedDoc)).toBe(loserId);
+
+    const { data: restored } = await client
+      .from("partner")
+      .select("deleted_at, merged_into_partner_id")
+      .eq("id", loserId)
+      .single();
+    expect(restored!.deleted_at).toBeNull();
+    expect(restored!.merged_into_partner_id).toBeNull();
+
+    const second = await client.rpc("unmerge_partner", { p_merge_id: mergeId });
+    expect(second.error).not.toBeNull();
+    expect(second.error!.message).toContain("already undone");
+  });
+
+  it("refuses to merge two different adószám", async () => {
+    const client = await signedInClient(USER_A_EMAIL);
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    const stamp = String(Date.now()).slice(-7);
+
+    const a = await iktatWithPartner(client, companyId, `Adószám A ${stamp}`, {
+      partner_name: `Egyik Ceg ${stamp} Kft.`,
+      partner_tax_number: `1${stamp}-2-42`,
+    });
+    const b = await iktatWithPartner(client, companyId, `Adószám B ${stamp}`, {
+      partner_name: `Masik Ceg ${stamp} Kft.`,
+      partner_tax_number: `2${stamp}-2-42`,
+    });
+
+    const { error } = await client.rpc("merge_partner", {
+      p_survivor_id: await partnerIdOf(client, a),
+      p_loser_id: await partnerIdOf(client, b),
+    });
+
+    expect(error).not.toBeNull();
+    expect(error!.message).toContain("different tax numbers");
+  });
+
+  it("freezes a merged-away partner until the merge is undone", async () => {
+    const client = await signedInClient(USER_A_EMAIL);
+    const { survivorId, loserId } = await twoPartners(client);
+
+    const merged = await client.rpc("merge_partner", {
+      p_survivor_id: survivorId,
+      p_loser_id: loserId,
+    });
+    expect(merged.error).toBeNull();
+
+    const edit = await client.from("partner").update({ name: "Átírva" }).eq("id", loserId);
+    expect(edit.error).not.toBeNull();
+    expect(edit.error!.message).toContain("undo the merge");
+
+    // And the column itself is not something a plain UPDATE may touch.
+    const byHand = await client
+      .from("partner")
+      .update({ merged_into_partner_id: loserId })
+      .eq("id", survivorId);
+    expect(byHand.error).not.toBeNull();
+    expect(byHand.error!.message).toContain("merge_partner()");
+
+    await client.rpc("unmerge_partner", {
+      p_merge_id: (merged.data as { merge_id: string }).merge_id,
+    });
+  });
+
+  it("refuses to move a partner to another company", async () => {
+    const client = await signedInClient(USER_A_EMAIL);
+    const companyId = await ensureCompany(client, "Teszt Kft. A");
+    const doc = await iktatWithPartner(client, companyId, `Céghatár ${uniqueSuffix()}`, {
+      partner_name: `Ceghatar Partner ${uniqueSuffix()} Kft.`,
+    });
+    const partnerId = await partnerIdOf(client, doc);
+
+    const { error } = await client
+      .from("partner")
+      .update({ company_id: "00000000-0000-0000-0000-000000000001" })
+      .eq("id", partnerId);
+
+    expect(error).not.toBeNull();
+  });
+});

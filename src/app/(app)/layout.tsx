@@ -27,6 +27,9 @@ export default async function AppLayout({
             >
               Iktatókönyv
             </Link>
+            <Link href="/partnerek" className="text-gray-700 hover:text-blue-700">
+              Partnerek
+            </Link>
             <Link href="/fizetesek" className="text-gray-700 hover:text-blue-700">
               Fizetések
             </Link>

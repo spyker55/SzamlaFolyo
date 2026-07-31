@@ -30,6 +30,18 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   `folyamatban` soha nem ugorhat egyenesen az irattárba — előbb lezárás jön,
   ez a tényleges ügyviteli sorrend. Az irattárazott ügy metaadata be van
   fagyasztva, amíg ki nem veszik onnan.
+- `src/lib/partner/` — a partnertörzs. Az `identity.ts` két dolgot tükröz az
+  adatbázisból: a névnormalizálást (`app.normalize_company_name()`) és a
+  **törzsszám**-összehasonlítást (`app.tax_number_core()`). Az adószám ÁFA-kódja
+  és megyekódja változhat egy cég élete során, a törzsszám nem — ezért az dönti
+  el, hogy ugyanarról az adóalanyról van-e szó. Az adószám ellenőrző számjegyét
+  ellenőrzi is (9-7-3-1-9-7-3 súlyozás, a register három valódi számláján
+  igazolva). A `bank-account.ts` az IBAN-t a mod-97 szabály szerint **elutasítja**,
+  ha rossz, a magyar GIRO-szám blokk-ellenőrzőjét viszont csak **figyelmezteti**:
+  jó elgépelés-jelző, de egy téves validátor soha ne álljon egy valódi utalás
+  útjába. A `duplicates.ts` javaslatot ad, nem cselekszik — és a cégformát
+  **összehasonlítja**, nem levágja, mert a „Nethely Kft." és a „Nethely Bt."
+  két cég.
 - `src/lib/export/` — könyvelői export. A `csv.ts` pontosvesszős, BOM-os,
   magyar tizedesvesszős CSV-t ír, mert a magyar Excel ezt olvassa számként; a
   szöveges cellákat formula-injekció ellen védi (`=`, `+`, `-`, `@` elé
@@ -78,6 +90,12 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   szét: a teszt a `v_allowed` tömbből építi újra az engedélyezett átmeneteket,
   és ahhoz hasonlítja a TypeScript-listát. A lista rendezését is fedi
   (közelgő határidő elöl, határidő nélküli ügyek hátul).
+- `tests/partner-identity.test.ts` — a névnormalizálás a **migrációból
+  kiolvasott** `translate()` betűpárokhoz van kötve, hogy a képernyő és az
+  unique index ne állapítson meg mást két sorról; az adószám ellenőrző
+  számjegye három valódi, a registerben iktatott számla adószámán; az IBAN
+  négy publikált mintán, plusz egy elrontott ellenőrző számon; és hogy eltérő
+  törzsszámú cégeket a duplikátumkereső **soha** nem ajánl összevonásra.
 - `tests/export-csv.test.ts` — hónaphatárok (szökőév is), a magyar
   számformátum, a formula-injekció elleni védelem, és hogy a díjbekérő nem
   duplázza meg a könyvelendő összeget.
@@ -106,7 +124,11 @@ alkalmazás:
 - `tests/partner-dedup.test.ts` — adószám nélküli szállító nem kap minden
   iktatásnál új partner-sort (kis/nagybetű, ékezet, írásjel egyezik); a `Kft.`
   és a `Bt.` viszont **nem** olvad össze; a később megjelenő adószám a meglévő
-  partnerre íródik, nem hoz létre másodikat.
+  partnerre íródik, nem hoz létre másodikat. Az **összevonás** is itt fut:
+  átviszi az iratokat és az ügyeket, nyugdíjazza a beolvasztott sort, és a
+  `unmerge_partner()` pontosan azokat a sorokat viszi vissza, amelyeket
+  elmozdított; eltérő adószámú cégeket az adatbázis elutasít; összevont
+  partner nem szerkeszthető, és partner nem költöztethető másik céghez.
 - `tests/rls-isolation.test.ts` — másik cég usere semmilyen úton nem látja, nem
   módosítja és nem iktatja az első cég iratait; a `p_ugy_id`-vel sem tudja a saját
   iratát idegen ügy alá fűzni; anon semmit nem lát; fizikai törlés senkinek.
@@ -149,5 +171,19 @@ tesztek és build minden pusholásnál és pull requestnél.
   utazik ugyanaz a CSV is — az archívum önmagában értelmezhető. Az egész
   archívum memóriában áll össze, ezért 100 MB-nál és 2000 iratnál a route
   inkább elutasítja a kérést, mint hogy a függvény kifogyjon a memóriából.
+- A **partnertörzs** (`/partnerek`) szerkeszthető, ezért az `app.protect_partner()`
+  trigger őrzi: a partner nem költöztethető másik céghez (a `partner_update`
+  policy engedné, és egy két céghez tartozó user átvihetné a sort úgy, hogy a
+  régi cég iratai továbbra is rá mutatnak). Az összevonás egyetlen tranzakció
+  (`merge_partner` RPC): átviszi az iratokat és az ügyeket, nyugdíjazza a
+  beolvasztott sort, és feljegyzi, **pontosan mely sorokat mozdította el** —
+  ezért a `unmerge_partner` vissza tudja adni őket, és csak őket. Két eltérő
+  **törzsszám** összevonását az adatbázis elutasítja: az két adóalany. Az
+  összevonás `owner`/`admin` jog, mint az érvénytelenítés. Az összevonás
+  ténye sosem törlődik, csak „visszavonva" jelet kap.
+- Az összevonás az **irattárazott ügy** `partner_id`-jét is átírja — ez az egyetlen
+  kivétel az irattárazott ügy befagyasztása alól, mert egy nyugdíjazott
+  duplikátumra mutató archív ügy pont az a rendetlenség, amit az összevonás
+  megszüntet. Minden más mező marad fagyva.
 - A gépi kinyerés értékei (`extraction.parsed_fields`) soha nem íródnak felül;
   a kézi javítás külön sor a `field_correction` táblában.

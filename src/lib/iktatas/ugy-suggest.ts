@@ -60,7 +60,11 @@ const MAX_SUGGESTIONS = 3;
 // Money is NUMERIC(18,4); this is a rounding tolerance, not a fuzzy match.
 const AMOUNT_TOLERANCE = 0.01;
 
-const LEGAL_SUFFIX = /(spolsro|sro|kft|bt|zrt|nyrt|kkt|gmbh|ltd|llc|inc|bv|oy|ab|spa|sa|ag)$/;
+// Shared with src/lib/partner/duplicates.ts, which uses the same vocabulary
+// for the opposite purpose: this file strips the legal form to match loosely,
+// that one compares it to keep "Nethely Kft." and "Nethely Bt." apart.
+export const LEGAL_SUFFIX =
+  /(spolsro|sro|kft|bt|zrt|nyrt|kkt|gmbh|ltd|llc|inc|bv|oy|ab|spa|sa|ag)$/;
 
 // "Websupport s. r. o." and "Websupport S.R.O." are the same supplier.
 // Over-stripping is harmless because both sides go through the same funnel;

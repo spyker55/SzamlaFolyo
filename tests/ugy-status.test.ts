@@ -23,16 +23,17 @@ const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
 // offer a button the database will refuse.
 function transitionsFromMigration(): string[] {
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
-  const found: string[] = [];
+  // app.protect_ugy() is re-created by later migrations, so only the last
+  // definition is the one running. Reading every block and concatenating them
+  // would compare the union of every version this function ever had.
+  let latest: string | null = null;
   for (const file of files) {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
     const block = /v_allowed\s+constant\s+text\[\]\s*:=\s*array\[([^\]]*)\]/i.exec(sql);
-    if (!block) continue;
-    for (const m of block[1].matchAll(/'([a-z_]+)->([a-z_]+)'/g)) {
-      found.push(`${m[1]}->${m[2]}`);
-    }
+    if (block) latest = block[1];
   }
-  return found;
+  if (latest === null) return [];
+  return [...latest.matchAll(/'([a-z_]+)->([a-z_]+)'/g)].map((m) => `${m[1]}->${m[2]}`);
 }
 
 describe("ugy status machine", () => {
@@ -132,5 +133,35 @@ describe("iktat_document still refuses closed and archived ugyek", () => {
     // If this check ever moves or changes shape, acceptsNewIrat() above is
     // guessing rather than mirroring, and this test should fail loudly.
     expect(sql).toMatch(/v_ugy\.status\s+in\s*\(\s*'lezart'\s*,\s*'irattarazott'\s*\)/);
+  });
+});
+
+describe("the archived ügy stays frozen except for a partner merge", () => {
+  function latestProtectUgy(): string {
+    const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort();
+    let latest = "";
+    for (const file of files) {
+      const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
+      const at = sql.lastIndexOf("create or replace function app.protect_ugy()");
+      if (at >= 0) latest = sql.slice(at);
+    }
+    return latest;
+  }
+
+  it("lets a merge move partner_id and nothing else", () => {
+    // A partner merge has to reach archived ügyek: leaving one pointing at
+    // the retired duplicate is the mess the merge exists to clear up. The
+    // carve-out is exactly one column wide, and this is what says so.
+    const sql = latestProtectUgy();
+    expect(sql).toContain("v_frozen := old");
+    expect(sql).toMatch(/current_setting\('app\.partner_merge', true\)/);
+    expect(sql).toMatch(/v_frozen\.partner_id\s*:=\s*new\.partner_id/);
+    expect(sql).toMatch(/if new is distinct from v_frozen then/);
+  });
+
+  it("still refuses to renumber an ügy, merge or no merge", () => {
+    const sql = latestProtectUgy();
+    expect(sql).toMatch(/new\.foszam is distinct from old\.foszam/);
+    expect(sql).toContain("ugy identity is immutable");
   });
 });
