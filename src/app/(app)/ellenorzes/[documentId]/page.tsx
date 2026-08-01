@@ -5,6 +5,7 @@ import { ReviewClient, type ReviewData } from "@/components/ellenorzes/ReviewCli
 import { formatAmountHu } from "@/lib/format/amount";
 import { loadOpenUgyCandidates } from "@/lib/iktatas/ugy-candidates";
 import { suggestUgy, ugyLabel } from "@/lib/iktatas/ugy-suggest";
+import { EmptyState } from "@/components/ui/page";
 
 export default async function EllenorzesPage({
   params,
@@ -28,8 +29,10 @@ export default async function EllenorzesPage({
 
   if (doc.processing_status !== "needs_review" && doc.processing_status !== "extraction_failed") {
     return (
-      <div className="p-8 text-center text-gray-500">
-        Ez az irat már nem vár ellenőrzésre (állapot: {doc.processing_status}).
+      <div className="card">
+        <EmptyState hint="Ha tévedésből nyitottad meg, a Beérkezőben megtalálod a többi iratot.">
+          Ez az irat már nem vár ellenőrzésre (állapot: {doc.processing_status}).
+        </EmptyState>
       </div>
     );
   }

@@ -8,6 +8,7 @@ import {
   withoutSupersededDijbekero,
   type PayableDocument,
 } from "@/lib/fizetes/schedule";
+import { PageHeader } from "@/components/ui/page";
 
 type Row = {
   id: string;
@@ -132,7 +133,10 @@ export default async function PartnerekPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Partnerek</h1>
+      <PageHeader
+        title="Partnerek"
+        description="A szállítók és vevők törzsadatai, a hozzájuk tartozó iratokkal és nyitott tartozással."
+      />
       <PartnerekClient
         partners={rows}
         duplicates={duplicates.map((d) => ({

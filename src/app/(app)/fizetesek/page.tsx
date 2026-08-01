@@ -2,6 +2,7 @@ import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FizetesekClient } from "@/components/fizetes/FizetesekClient";
 import { buildSchedule, PAYABLE_KINDS, type PayableDocument } from "@/lib/fizetes/schedule";
+import { PageHeader } from "@/components/ui/page";
 
 type Row = {
   id: string;
@@ -68,7 +69,10 @@ export default async function FizetesekPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Fizetési naptár</h1>
+      <PageHeader
+        title="Fizetési naptár"
+        description="A még ki nem fizetett bejövő bizonylatok, határidő szerint csoportosítva. A díjbekérő eltűnik a listából, amint megjön a rá kiállított számla."
+      />
       <FizetesekClient
         schedule={schedule}
         today={today}

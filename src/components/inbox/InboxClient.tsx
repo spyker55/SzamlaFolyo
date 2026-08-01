@@ -6,6 +6,8 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DOC_KINDS, docKindLabel } from "@/lib/domain/doc-kind";
 import { elvet, visszaallit } from "@/lib/inbox/actions";
 import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
+import { EmptyState } from "@/components/ui/page";
+import { IconInbox, IconMail, IconUpload } from "@/components/ui/icons";
 
 type InboxDocument = {
   id: string;
@@ -25,12 +27,12 @@ type InboxDocument = {
 };
 
 const STATUS_LABEL: Record<string, { text: string; className: string }> = {
-  received: { text: "Feldolgozásra vár", className: "bg-gray-100 text-gray-700" },
-  extracting: { text: "AI feldolgozás…", className: "bg-blue-100 text-blue-700" },
-  needs_review: { text: "Ellenőrzésre vár", className: "bg-amber-100 text-amber-800" },
-  extraction_failed: { text: "Kinyerés sikertelen — kézi kitöltés", className: "bg-red-100 text-red-700" },
-  duplicate: { text: "Duplikátum", className: "bg-purple-100 text-purple-700" },
-  elvetve: { text: "Elvetve", className: "bg-gray-100 text-gray-500" },
+  received: { text: "Feldolgozásra vár", className: "badge-slate" },
+  extracting: { text: "AI feldolgozás…", className: "badge-blue" },
+  needs_review: { text: "Ellenőrzésre vár", className: "badge-amber" },
+  extraction_failed: { text: "Kinyerés sikertelen — kézi kitöltés", className: "badge-red" },
+  duplicate: { text: "Duplikátum", className: "badge-violet" },
+  elvetve: { text: "Elvetve", className: "badge-slate" },
 };
 
 const ACTIVE_STATUSES = ["received", "extracting", "needs_review", "extraction_failed", "duplicate"];
@@ -282,14 +284,17 @@ export function InboxClient() {
         onKeyDown={(e) => {
           if (e.key === "Enter") fileInputRef.current?.click();
         }}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors ${
-          dragOver ? "border-blue-500 bg-blue-50" : "border-gray-300 bg-white hover:border-gray-400"
+        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
+          dragOver
+            ? "border-blue-500 bg-blue-50"
+            : "border-slate-300 bg-white hover:border-blue-400 hover:bg-slate-50"
         }`}
       >
-        <p className="text-sm font-medium text-gray-700">
+        <IconUpload className={`h-7 w-7 ${dragOver ? "text-blue-600" : "text-slate-300"}`} />
+        <p className="text-sm font-medium text-slate-700">
           {uploading ? "Feltöltés…" : "Húzd ide az iratokat, vagy kattints a tallózáshoz"}
         </p>
-        <p className="mt-1 text-xs text-gray-400">PDF, JPEG, PNG vagy WebP, max. 20 MB</p>
+        <p className="note">PDF, JPEG, PNG vagy WebP, max. 20 MB</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -305,7 +310,7 @@ export function InboxClient() {
       )}
 
       {messages.length > 0 && (
-        <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="alert alert-warn space-y-1">
           {messages.map((m, i) => (
             <p key={i}>{m}</p>
           ))}
@@ -313,7 +318,7 @@ export function InboxClient() {
       )}
 
       {loadError && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <div className="alert alert-error" role="alert">
           {loadError}
         </div>
       )}
@@ -324,7 +329,7 @@ export function InboxClient() {
             <select
               value={kindFilter}
               onChange={(e) => setKindFilter(e.target.value)}
-              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+              className="control w-auto"
               aria-label="Szűrés irat fajtájára"
             >
               <option value="">Minden fajta ({documents.length})</option>
@@ -338,7 +343,7 @@ export function InboxClient() {
               <button
                 type="button"
                 onClick={() => setKindFilter("")}
-                className="text-xs text-blue-600 hover:underline"
+                className="btn btn-ghost btn-sm"
               >
                 Szűrő törlése
               </button>
@@ -352,54 +357,59 @@ export function InboxClient() {
             setKindFilter("");
             setMessages([]);
           }}
-          className="ml-auto text-xs text-gray-500 hover:underline"
+          className="btn btn-ghost btn-sm ml-auto"
         >
           {showDiscarded ? "← Vissza a beérkezőhöz" : "Elvetett iratok"}
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
+      <div className="card table-scroll">
+        <table className="tbl">
+          <thead className="thead">
             <tr>
-              <th className="px-4 py-2">Fájl</th>
-              <th className="px-4 py-2">Típus</th>
-              <th className="px-4 py-2">Tárgy</th>
-              <th className="px-4 py-2">Állapot</th>
-              <th className="px-4 py-2">Feltöltve</th>
-              <th className="px-4 py-2" />
+              <th className="th">Fájl</th>
+              <th className="th">Típus</th>
+              <th className="th">Tárgy</th>
+              <th className="th">Állapot</th>
+              <th className="th">Feltöltve</th>
+              <th className="th" />
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                  {kindFilter
-                    ? "Nincs ilyen fajtájú irat."
-                    : showDiscarded
-                      ? "Nincs elvetett irat."
-                      : "Nincs feldolgozás alatt álló irat."}
+                <td colSpan={6}>
+                  <EmptyState icon={<IconInbox className="h-8 w-8" />}>
+                    {kindFilter
+                      ? "Nincs ilyen fajtájú irat."
+                      : showDiscarded
+                        ? "Nincs elvetett irat."
+                        : "Nincs feldolgozás alatt álló irat."}
+                  </EmptyState>
                 </td>
               </tr>
             )}
             {visible.map((doc) => {
               const status = STATUS_LABEL[doc.processing_status] ?? {
                 text: doc.processing_status,
-                className: "bg-gray-100 text-gray-700",
+                className: "badge-slate",
               };
               const reviewable =
                 doc.processing_status === "needs_review" ||
                 doc.processing_status === "extraction_failed";
               return (
-                <tr key={doc.id} className="border-b border-gray-100 last:border-0">
-                  <td className="px-4 py-2">
-                    <div>{doc.document_file?.[0]?.original_filename ?? "—"}</div>
+                <tr key={doc.id} className="trow">
+                  <td className="td">
+                    <div className="font-medium text-slate-800">
+                      {doc.document_file?.[0]?.original_filename ?? "—"}
+                    </div>
                     {doc.inbound_email_id && (
-                      <div className="mt-0.5 text-xs text-gray-500">
-                        ✉ {doc.senderAddress ?? "e-mail"}
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-slate-500">
+                        <IconMail className="h-3.5 w-3.5" />
+                        {doc.senderAddress ?? "e-mail"}
                         {!doc.senderKnown && (
                           <span
-                            className="ml-1 rounded bg-orange-100 px-1 py-0.5 text-orange-800"
+                            className="badge badge-orange"
                             title="Ettől a feladótól még nem iktattál iratot. Ellenőrizd, mielőtt elfogadod."
                           >
                             ismeretlen feladó
@@ -408,36 +418,36 @@ export function InboxClient() {
                       </div>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2">
+                  <td className="td whitespace-nowrap">
                     {docKindLabel(doc.doc_kind)}
                     {isTypeUncertain(doc) && (
                       <span
-                        className="ml-1 rounded bg-amber-100 px-1 py-0.5 text-xs text-amber-800"
+                        className="badge badge-amber ml-1.5"
                         title="Az AI nem biztos az irat fajtájában — nézd meg az ellenőrzésnél."
                       >
                         bizonytalan
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2">{doc.targy ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${status.className}`}>
+                  <td className="td">{doc.targy ?? "—"}</td>
+                  <td className="td">
+                    <span className={`badge ${status.className}`}>
                       {status.text}
                       {doc.processing_status === "duplicate" && doc.duplicateOfIktatoszam
                         ? ` → ${doc.duplicateOfIktatoszam}`
                         : ""}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-gray-500">
+                  <td className="td whitespace-nowrap text-slate-500">
                     {new Date(doc.created_at).toLocaleString("hu-HU")}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-right">
+                  <td className="td whitespace-nowrap text-right">
                     {showDiscarded ? (
                       <button
                         type="button"
                         onClick={() => restore(doc.id)}
                         disabled={busyId === doc.id}
-                        className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        className="btn btn-secondary btn-sm"
                       >
                         Visszaállítás
                       </button>
@@ -446,7 +456,7 @@ export function InboxClient() {
                         {reviewable && (
                           <Link
                             href={`/ellenorzes/${doc.id}`}
-                            className="rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                            className="btn btn-primary btn-sm"
                           >
                             Ellenőrzés
                           </Link>
@@ -456,7 +466,7 @@ export function InboxClient() {
                           onClick={() => discard(doc.id)}
                           disabled={busyId === doc.id}
                           title="Elvetés — nem kap iktatószámot, később visszaállítható"
-                          className="ml-2 text-xs text-gray-400 hover:text-red-600 disabled:opacity-50"
+                          className="btn btn-ghost btn-sm ml-1 hover:text-red-600"
                         >
                           Elvet
                         </button>

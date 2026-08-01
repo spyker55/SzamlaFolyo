@@ -147,14 +147,10 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   }, []);
 
   const fieldClass = (field: string) =>
-    `mt-1 w-full rounded-md border px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500 ${
-      lowConfidence(field)
-        ? "border-amber-400 bg-amber-50"
-        : "border-gray-300 bg-white"
-    }`;
+    `control ${lowConfidence(field) ? "border-amber-400 bg-amber-50" : ""}`;
 
   const label = (field: string, text: string) => (
-    <label htmlFor={field} className="flex items-center gap-1 text-xs font-medium text-gray-600">
+    <label htmlFor={field} className="flabel flex items-center gap-1">
       {text}
       {lowConfidence(field) && (
         <span title="Alacsony konfidencia — ellenőrizd!" className="text-amber-600">
@@ -165,9 +161,9 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   );
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4">
+    <div className="flex h-[calc(100vh-7rem)] min-h-[34rem] flex-col gap-4 lg:flex-row">
       {/* Left: the original document */}
-      <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+      <div className="card min-h-64 flex-1 overflow-hidden bg-slate-100">
         {data.fileUrl ? (
           data.fileMimeType === "application/pdf" ? (
             <iframe src={data.fileUrl} title={data.fileName ?? "Irat"} className="h-full w-full" />
@@ -180,38 +176,39 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             />
           )
         ) : (
-          <div className="flex h-full items-center justify-center text-gray-400">
+          <div className="flex h-full items-center justify-center text-slate-400">
             A fájl nem tölthető be.
           </div>
         )}
       </div>
 
       {/* Right: extracted fields */}
-      <div ref={formRef} className="w-[30rem] shrink-0 overflow-y-auto rounded-lg border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Ellenőrzés</h1>
-          <span className="text-xs text-gray-400">Enter = iktatás · Esc = vissza</span>
+      <div
+        ref={formRef}
+        className="card card-pad w-full shrink-0 overflow-y-auto lg:w-[30rem]"
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Ellenőrzés</h1>
+          <span className="note">Enter = iktatás · Esc = vissza</span>
         </div>
 
         {data.tobbIratGyanu && (
-          <p className="mb-3 rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="alert alert-warn mb-3 text-xs">
             Ez a fájl több különálló iratot tartalmazhat. Iktatás előtt érdemes szétválasztani
             és külön feltölteni.
           </p>
         )}
 
         {data.ugySuggestions.length > 0 && (
-          <div className="mb-3 rounded-md border border-blue-200 bg-blue-50 p-2">
-            <p className="text-xs font-medium text-blue-900">
-              Lehet, hogy meglévő ügyhöz tartozik:
-            </p>
+          <div className="alert alert-info mb-3 p-2">
+            <p className="px-1 text-xs font-semibold">Lehet, hogy meglévő ügyhöz tartozik:</p>
             <ul className="mt-1 space-y-1">
               {data.ugySuggestions.map((s) => (
                 <li key={s.ugyId}>
                   <button
                     type="button"
                     onClick={() => setUgyId(ugyId === s.ugyId ? "" : s.ugyId)}
-                    className={`w-full rounded border px-2 py-1 text-left text-xs ${
+                    className={`w-full rounded-lg border px-2 py-1.5 text-left text-xs transition-colors ${
                       ugyId === s.ugyId
                         ? "border-blue-500 bg-white font-medium text-blue-900"
                         : "border-transparent text-blue-800 hover:bg-blue-100"
@@ -220,7 +217,9 @@ export function ReviewClient({ data }: { data: ReviewData }) {
                     {ugyId === s.ugyId ? "✓ " : ""}
                     {s.label}
                     {/* Always say why, so the reviewer can check the claim. */}
-                    <span className="block font-normal text-[11px] text-blue-600">{s.reason}</span>
+                    <span className="block text-[11px] font-normal text-blue-600">
+                      {s.reason}
+                    </span>
                   </button>
                 </li>
               ))}
@@ -228,15 +227,15 @@ export function ReviewClient({ data }: { data: ReviewData }) {
           </div>
         )}
 
-        <div className="mb-3">
-          <label htmlFor="ugy_id" className="text-xs font-medium text-gray-600">
+        <div className="mb-4">
+          <label htmlFor="ugy_id" className="flabel">
             Ügy
           </label>
           <select
             id="ugy_id"
             value={ugyId}
             onChange={(e) => setUgyId(e.target.value)}
-            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+            className="control"
           >
             <option value="">Új ügy nyitása — új főszám</option>
             {data.ugyOptions.map((o) => (
@@ -245,7 +244,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
               </option>
             ))}
           </select>
-          <p className="mt-1 text-[11px] text-gray-500">
+          <p className="note mt-1">
             {ugyId
               ? "Az irat a választott ügy következő alszámát kapja."
               : "Az irat új főszámot kap, saját ügyet nyitva."}
@@ -413,7 +412,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
           </div>
 
           {amountMismatch && (
-            <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="alert alert-warn text-xs">
               A nettó + ÁFA nem egyezik a bruttóval. Fordított adózásnál vagy alanyi
               adómentességnél az ÁFA 0 — akkor ez rendben van.
             </p>
@@ -454,7 +453,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
           </div>
 
           {error && (
-            <p className="rounded-md bg-red-50 p-2 text-sm text-red-700" role="alert">
+            <p className="alert alert-error" role="alert">
               {error}
             </p>
           )}
@@ -463,7 +462,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
             type="button"
             onClick={submit}
             disabled={pending}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="btn btn-primary w-full py-2"
           >
             {pending ? "Iktatás…" : "Iktatás (Enter)"}
           </button>

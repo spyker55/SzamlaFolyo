@@ -15,6 +15,8 @@ import {
   visszavonOsszevonas,
   type PartnerFields,
 } from "@/lib/partner/actions";
+import { EmptyState } from "@/components/ui/page";
+import { IconArrowLeft } from "@/components/ui/icons";
 
 type Partner = {
   id: string;
@@ -142,28 +144,24 @@ export function PartnerDetail({
   }, [iratok]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <Link href="/partnerek" className="text-sm text-blue-700 hover:underline">
-          ← Partnerek
+        <Link href="/partnerek" className="link inline-flex items-center gap-1 text-sm">
+          <IconArrowLeft className="h-4 w-4" />
+          Partnerek
         </Link>
-        <div className="mt-1 flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold">{partner.name}</h1>
-          {partner.isSupplier && <Badge>Szállító</Badge>}
-          {partner.isCustomer && <Badge>Vevő</Badge>}
-          {partner.retired && (
-            <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-700">
-              Nem aktív
-            </span>
-          )}
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+            {partner.name}
+          </h1>
+          {partner.isSupplier && <span className="badge badge-blue">Szállító</span>}
+          {partner.isCustomer && <span className="badge badge-green">Vevő</span>}
+          {partner.retired && <span className="badge badge-slate">Nem aktív</span>}
         </div>
         {partner.mergedIntoId && (
-          <p className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+          <p className="alert alert-muted mt-3">
             Ez a partner össze lett vonva ide:{" "}
-            <Link
-              href={`/partnerek/${partner.mergedIntoId}`}
-              className="text-blue-700 hover:underline"
-            >
+            <Link href={`/partnerek/${partner.mergedIntoId}`} className="link">
               {partner.mergedIntoName ?? "másik partner"}
             </Link>
             . Az adatai addig nem szerkeszthetők, amíg az összevonást vissza nem vonod.
@@ -172,19 +170,19 @@ export function PartnerDetail({
       </div>
 
       {error && (
-        <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="alert alert-error" role="alert">
           {error}
         </p>
       )}
 
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
+      <section className="card card-pad">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-gray-700">Törzsadatok</h2>
+          <h2 className="card-title">Törzsadatok</h2>
           {!partner.mergedIntoId && (
             <button
               type="button"
               onClick={() => setEditing((v) => !v)}
-              className="text-sm text-blue-700 hover:underline"
+              className="btn btn-ghost btn-sm"
             >
               {editing ? "Mégse" : "Szerkesztés"}
             </button>
@@ -192,7 +190,7 @@ export function PartnerDetail({
         </div>
 
         {editing ? (
-          <div className="mt-3 space-y-3">
+          <div className="mt-4 space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Név">
                 <Input
@@ -257,21 +255,23 @@ export function PartnerDetail({
                 value={fields.note}
                 onChange={(e) => setFields({ ...fields, note: e.target.value })}
                 rows={2}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="control"
               />
             </Field>
             <div className="flex flex-wrap items-center gap-4 text-sm">
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-slate-700">
                 <input
                   type="checkbox"
+                  className="checkbox"
                   checked={fields.isSupplier}
                   onChange={(e) => setFields({ ...fields, isSupplier: e.target.checked })}
                 />
                 Szállító
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-slate-700">
                 <input
                   type="checkbox"
+                  className="checkbox"
                   checked={fields.isCustomer}
                   onChange={(e) => setFields({ ...fields, isCustomer: e.target.checked })}
                 />
@@ -283,14 +283,14 @@ export function PartnerDetail({
                 onClick={() =>
                   run(() => mentPartner(partner.id, fields), () => setEditing(false))
                 }
-                className="ml-auto rounded-md bg-blue-700 px-4 py-1 text-sm text-white disabled:opacity-50"
+                className="btn btn-primary ml-auto"
               >
                 Mentés
               </button>
             </div>
           </div>
         ) : (
-          <dl className="mt-3 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <dl className="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             <Row label="Adószám" value={formatTaxNumber(partner.taxNumber)} />
             <Row label="Közösségi adószám" value={partner.euTaxNumber} />
             <Row label="Bankszámlaszám" value={formatBankAccount(partner.bankAccount)} />
@@ -307,21 +307,21 @@ export function PartnerDetail({
       </section>
 
       {canMerge && !partner.mergedIntoId && !partner.retired && candidates.length > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-medium text-gray-700">Összevonás</h2>
-          <p className="mt-1 text-xs text-gray-500">
+        <section className="card card-pad">
+          <h2 className="card-title">Összevonás</h2>
+          <p className="note mt-1">
             A kiválasztott partner iratai és ügyei ide kerülnek át, a másik sor pedig
             nem aktív lesz. Az összevonás bármikor visszavonható, és pontosan azokat a
             sorokat viszi vissza, amelyeket elmozdított.
           </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <select
               value={loserId}
               onChange={(e) => {
                 setLoserId(e.target.value);
                 setConfirming(false);
               }}
-              className="w-96 rounded-md border border-gray-300 px-2 py-1 text-sm"
+              className="control w-96"
             >
               <option value="">Válaszd ki a beolvasztandó partnert…</option>
               {candidates.map((c) => (
@@ -335,22 +335,22 @@ export function PartnerDetail({
               <button
                 type="button"
                 onClick={() => setConfirming(true)}
-                className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+                className="btn btn-secondary"
               >
                 Összevonás…
               </button>
             )}
           </div>
 
-          {blocked && <p className="mt-3 text-sm text-red-600">{blocked}</p>}
+          {blocked && <p className="alert alert-error mt-3">{blocked}</p>}
 
           {loser && !blocked && confirming && (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-              <p className="text-amber-900">
+            <div className="alert alert-warn mt-3">
+              <p>
                 <strong>{loser.name}</strong> minden irata és ügye átkerül ide:{" "}
                 <strong>{partner.name}</strong>. A(z) {loser.name} sor nem aktív lesz.
               </p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-3 flex gap-2">
                 <button
                   type="button"
                   disabled={busy}
@@ -360,14 +360,14 @@ export function PartnerDetail({
                       setLoserId("");
                     })
                   }
-                  className="rounded-md bg-amber-700 px-3 py-1 text-sm text-white disabled:opacity-50"
+                  className="btn btn-warn"
                 >
                   Összevonás
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirming(false)}
-                  className="rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700"
+                  className="btn btn-secondary"
                 >
                   Mégse
                 </button>
@@ -378,32 +378,28 @@ export function PartnerDetail({
       )}
 
       {merges.length > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-medium text-gray-700">Összevonások</h2>
+        <section className="card card-pad">
+          <h2 className="card-title">Összevonások</h2>
           <ul className="mt-3 space-y-2 text-sm">
             {merges.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-2">
-                <span className="text-gray-500">{m.createdAt.slice(0, 10)}</span>
+                <span className="tabular-nums text-slate-500">
+                  {m.createdAt.slice(0, 10)}
+                </span>
                 <span>
-                  <Link
-                    href={`/partnerek/${m.loserId}`}
-                    className="text-blue-700 hover:underline"
-                  >
+                  <Link href={`/partnerek/${m.loserId}`} className="link">
                     {m.loserName}
                   </Link>
                   {" → "}
-                  <Link
-                    href={`/partnerek/${m.survivorId}`}
-                    className="text-blue-700 hover:underline"
-                  >
+                  <Link href={`/partnerek/${m.survivorId}`} className="link">
                     {m.survivorName}
                   </Link>
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="note">
                   {m.documentCount} irat, {m.ugyCount} ügy
                 </span>
                 {m.undoneAt ? (
-                  <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                  <span className="badge badge-slate">
                     visszavonva {m.undoneAt.slice(0, 10)}
                   </span>
                 ) : (
@@ -412,7 +408,7 @@ export function PartnerDetail({
                       type="button"
                       disabled={busy}
                       onClick={() => run(() => visszavonOsszevonas(m.id))}
-                      className="text-xs text-blue-700 hover:underline disabled:opacity-50"
+                      className="btn btn-ghost btn-sm"
                     >
                       Visszavonás
                     </button>
@@ -424,72 +420,68 @@ export function PartnerDetail({
         </section>
       )}
 
-      <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-2">
-          <h2 className="text-sm font-medium text-gray-700">Iratok ({iratok.length})</h2>
-          <div className="text-sm text-gray-600">
+      <section className="card">
+        <div className="card-head">
+          <h2 className="card-title">Iratok ({iratok.length})</h2>
+          <div className="text-sm tabular-nums text-slate-600">
             {totals.map(([currency, amount]) => (
-              <span key={currency} className="ml-3 tabular-nums">
+              <span key={currency} className="ml-3">
                 {formatAmountHu(amount)} {currency}
               </span>
             ))}
           </div>
         </div>
         {iratok.length === 0 ? (
-          <p className="p-6 text-center text-gray-400">Ehhez a partnerhez még nincs irat.</p>
+          <EmptyState>Ehhez a partnerhez még nincs irat.</EmptyState>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
+          <div className="table-scroll">
+            <table className="tbl">
+              <thead className="thead">
                 <tr>
-                  <th className="px-4 py-2">Iktatószám</th>
-                  <th className="px-4 py-2">Típus</th>
-                  <th className="px-4 py-2">Tárgy</th>
-                  <th className="px-4 py-2">Érkezett</th>
-                  <th className="px-4 py-2">Határidő</th>
-                  <th className="px-4 py-2 text-right">Bruttó</th>
-                  <th className="px-4 py-2">Állapot</th>
+                  <th className="th">Iktatószám</th>
+                  <th className="th">Típus</th>
+                  <th className="th">Tárgy</th>
+                  <th className="th">Érkezett</th>
+                  <th className="th">Határidő</th>
+                  <th className="th text-right">Bruttó</th>
+                  <th className="th">Állapot</th>
                 </tr>
               </thead>
               <tbody>
                 {iratok.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
-                  >
+                  <tr key={d.id} className="trow">
                     <td
-                      className={`px-4 py-2 tabular-nums ${
-                        d.status === "ervenytelenitve" ? "text-gray-400 line-through" : ""
+                      className={`td tabular-nums ${
+                        d.status === "ervenytelenitve" ? "text-slate-400 line-through" : ""
                       }`}
                     >
                       {d.ugyId ? (
-                        <Link
-                          href={`/ugyek/${d.ugyId}`}
-                          className="text-blue-700 hover:underline"
-                        >
+                        <Link href={`/ugyek/${d.ugyId}`} className="link">
                           {d.iktatoszam ?? "—"}
                         </Link>
                       ) : (
                         d.iktatoszam ?? "—"
                       )}
                     </td>
-                    <td className="px-4 py-2 text-gray-600">{docKindLabel(d.docKind)}</td>
-                    <td className="px-4 py-2">{d.targy ?? "—"}</td>
-                    <td className="px-4 py-2 text-gray-600">{d.erkezettAt ?? "—"}</td>
-                    <td className="px-4 py-2 text-gray-600">{d.dueDate ?? "—"}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
+                    <td className="td">{docKindLabel(d.docKind)}</td>
+                    <td className="td">{d.targy ?? "—"}</td>
+                    <td className="td tabular-nums">{d.erkezettAt ?? "—"}</td>
+                    <td className="td tabular-nums">{d.dueDate ?? "—"}</td>
+                    <td className="td text-right tabular-nums">
                       {d.grossAmount === null
                         ? "—"
                         : `${formatAmountHu(d.grossAmount)} ${d.currency ?? ""}`}
                     </td>
-                    <td className="px-4 py-2 text-xs text-gray-500">
-                      {d.status === "ervenytelenitve"
-                        ? "Érvénytelenítve"
-                        : d.fizetveAt
-                          ? `Fizetve ${d.fizetveAt}`
-                          : d.status === "iktatva"
-                            ? "Iktatva"
-                            : "Feldolgozás alatt"}
+                    <td className="td">
+                      {d.status === "ervenytelenitve" ? (
+                        <span className="badge badge-red">Érvénytelenítve</span>
+                      ) : d.fizetveAt ? (
+                        <span className="badge badge-green">Fizetve {d.fizetveAt}</span>
+                      ) : d.status === "iktatva" ? (
+                        <span className="badge badge-slate">Iktatva</span>
+                      ) : (
+                        <span className="badge badge-blue">Feldolgozás alatt</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -500,26 +492,24 @@ export function PartnerDetail({
       </section>
 
       {ugyek.length > 0 && (
-        <section className="rounded-lg border border-gray-200 bg-white">
-          <h2 className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
-            Ügyek ({ugyek.length})
-          </h2>
-          <ul className="divide-y divide-gray-100">
+        <section className="card">
+          <div className="card-head">
+            <h2 className="card-title">Ügyek ({ugyek.length})</h2>
+          </div>
+          <ul className="divide-y divide-slate-100">
             {ugyek.map((u) => (
-              <li key={u.id} className="flex flex-wrap items-center gap-3 px-4 py-2 text-sm">
-                <Link
-                  href={`/ugyek/${u.id}`}
-                  className="tabular-nums text-blue-700 hover:underline"
-                >
+              <li
+                key={u.id}
+                className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm sm:px-5"
+              >
+                <Link href={`/ugyek/${u.id}`} className="link tabular-nums">
                   {u.iktatoszam}
                 </Link>
-                <span className="flex-1">{u.targy || "—"}</span>
-                <span className="text-xs text-gray-500">
+                <span className="flex-1 text-slate-700">{u.targy || "—"}</span>
+                <span className="note">
                   {UGY_STATUS_LABEL[u.status as UgyStatus] ?? u.status}
                 </span>
-                <span className="w-24 text-right text-xs text-gray-500">
-                  {u.hatarido ?? ""}
-                </span>
+                <span className="note w-24 text-right tabular-nums">{u.hatarido ?? ""}</span>
               </li>
             ))}
           </ul>
@@ -529,17 +519,11 @@ export function PartnerDetail({
   );
 }
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">{children}</span>
-  );
-}
-
 function Row({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <dt className="text-xs uppercase text-gray-500">{label}</dt>
-      <dd className="text-gray-900">{value || "—"}</dd>
+      <dt className="flabel">{label}</dt>
+      <dd className="text-slate-900">{value || "—"}</dd>
     </div>
   );
 }
@@ -547,7 +531,7 @@ function Row({ label, value }: { label: string; value: string | null }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase text-gray-500">{label}</span>
+      <span className="flabel">{label}</span>
       {children}
     </label>
   );
@@ -567,7 +551,7 @@ function Input({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+      className="control"
     />
   );
 }

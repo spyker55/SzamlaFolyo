@@ -15,6 +15,8 @@ import {
   UGY_STATUS_LABEL,
   type UgyStatus,
 } from "@/lib/ugy/status";
+import { EmptyState } from "@/components/ui/page";
+import { IconArrowLeft } from "@/components/ui/icons";
 
 type Ugy = {
   id: string;
@@ -54,8 +56,15 @@ const DEADLINE_STYLE: Record<string, string> = {
   lejart: "text-red-600 font-medium",
   ma: "text-amber-700 font-medium",
   kozeli: "text-amber-700",
-  tavoli: "text-gray-500",
-  nincs: "text-gray-400",
+  tavoli: "text-slate-500",
+  nincs: "text-slate-400",
+};
+
+const STATUS_STYLE: Record<string, string> = {
+  folyamatban: "badge-blue",
+  felfuggesztve: "badge-amber",
+  lezart: "badge-slate",
+  irattarazott: "badge-slate",
 };
 
 export function UgyDetail({
@@ -125,64 +134,69 @@ export function UgyDetail({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <Link href="/ugyek" className="text-sm text-blue-700 hover:underline">
-          ← Ügyek
+      <div>
+        <Link href="/ugyek" className="link inline-flex items-center gap-1 text-sm">
+          <IconArrowLeft className="h-4 w-4" />
+          Ügyek
         </Link>
-        <h1 className="text-xl font-semibold">{ugy.iktatoszam}</h1>
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-          {UGY_STATUS_LABEL[ugy.status]}
-        </span>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight tabular-nums text-slate-900">
+            {ugy.iktatoszam}
+          </h1>
+          <span className={`badge ${STATUS_STYLE[ugy.status] ?? "badge-slate"}`}>
+            {UGY_STATUS_LABEL[ugy.status]}
+          </span>
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <div className="alert alert-error" role="alert">
           {error}
         </div>
       )}
 
       {!acceptsNewIrat(ugy.status) && (
-        <p className="rounded-md bg-gray-100 p-2 text-xs text-gray-600">
+        <p className="alert alert-muted text-xs">
           Ebbe az ügybe {ugy.status === "lezart" ? "lezárt" : "irattárazott"} állapotban nem
           lehet több iratot iktatni. A meglévő iratok és az iktatószámuk változatlanok.
         </p>
       )}
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+      <div className="card card-pad">
         {editing ? (
-          <div className="space-y-3">
-            <label className="block text-sm">
-              <span className="text-xs text-gray-500">Tárgy</span>
+          <div className="space-y-4">
+            <label className="block">
+              <span className="flabel">Tárgy</span>
               <input
                 value={targy}
                 onChange={(e) => setTargy(e.target.value)}
-                className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1"
+                className="control"
               />
             </label>
             <div className="flex flex-wrap gap-4">
-              <label className="text-sm">
-                <span className="block text-xs text-gray-500">Határidő</span>
+              <label>
+                <span className="flabel">Határidő</span>
                 <input
                   type="date"
                   value={hatarido}
                   onChange={(e) => setHatarido(e.target.value)}
-                  className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+                  className="control w-auto"
                 />
               </label>
-              <label className="text-sm">
-                <span className="block text-xs text-gray-500">Irattári jel</span>
+              <label>
+                <span className="flabel">Irattári jel</span>
                 <input
                   value={irattariJel}
                   onChange={(e) => setIrattariJel(e.target.value)}
-                  className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+                  className="control w-auto"
                 />
               </label>
-              <label className="text-sm">
-                <span className="block text-xs text-gray-500">Előadó</span>
+              <label>
+                <span className="flabel">Előadó</span>
                 <select
                   value={eloado}
                   onChange={(e) => setEloado(e.target.value)}
-                  className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+                  className="control w-auto"
                 >
                   <option value="">—</option>
                   {members.map((m) => (
@@ -198,7 +212,7 @@ export function UgyDetail({
                 type="button"
                 onClick={save}
                 disabled={busy}
-                className="rounded-md bg-blue-700 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+                className="btn btn-primary"
               >
                 Mentés
               </button>
@@ -211,7 +225,7 @@ export function UgyDetail({
                   setIrattariJel(ugy.irattariJel);
                   setEloado(ugy.eloadoUserId ?? "");
                 }}
-                className="rounded-md border border-gray-300 px-4 py-1.5 text-sm"
+                className="btn btn-secondary"
               >
                 Mégse
               </button>
@@ -221,12 +235,14 @@ export function UgyDetail({
           <>
             <div className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
-                <div className="text-base font-medium">{ugy.targy || "—"}</div>
-                <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+                <div className="text-base font-medium text-slate-900">{ugy.targy || "—"}</div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-4">
                   <Field label="Partner">
                     {ugy.partnerName ?? "—"}
                     {ugy.partnerTaxNumber && (
-                      <span className="block text-xs text-gray-400">{ugy.partnerTaxNumber}</span>
+                      <span className="block text-xs tabular-nums text-slate-400">
+                        {ugy.partnerTaxNumber}
+                      </span>
                     )}
                   </Field>
                   <Field label="Határidő">
@@ -249,7 +265,7 @@ export function UgyDetail({
                   <Field label="Iratok">
                     {iratok.length}
                     {totals.size > 0 && (
-                      <span className="block text-xs text-gray-500">
+                      <span className="block text-xs tabular-nums text-slate-500">
                         {[...totals].map(([c, a], i) => (
                           <span key={c}>
                             {i > 0 ? " · " : ""}
@@ -265,21 +281,21 @@ export function UgyDetail({
                 <button
                   type="button"
                   onClick={() => setEditing(true)}
-                  className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                  className="btn btn-secondary"
                 >
                   Szerkesztés
                 </button>
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
               {nextStatuses(ugy.status).map((to) => (
                 <button
                   key={to}
                   type="button"
                   onClick={() => move(to)}
                   disabled={busy}
-                  className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 disabled:opacity-50"
+                  className="btn btn-secondary"
                 >
                   {transitionLabel(ugy.status, to)}
                 </button>
@@ -289,59 +305,66 @@ export function UgyDetail({
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-        <table className="w-full text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
-            <tr>
-              <th className="px-4 py-2">Iktatószám</th>
-              <th className="px-4 py-2">Típus</th>
-              <th className="px-4 py-2">Bizonylatszám</th>
-              <th className="px-4 py-2">Beérkezés</th>
-              <th className="px-4 py-2">Határidő</th>
-              <th className="px-4 py-2 text-right">Összeg</th>
-              <th className="px-4 py-2">Állapot</th>
-            </tr>
-          </thead>
-          <tbody>
-            {iratok.length === 0 && (
+      <div className="card">
+        <div className="card-head">
+          <h2 className="card-title">Iratok ({iratok.length})</h2>
+        </div>
+        <div className="table-scroll">
+          <table className="tbl">
+            <thead className="thead">
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                  Ehhez az ügyhöz még nincs irat.
-                </td>
+                <th className="th">Iktatószám</th>
+                <th className="th">Típus</th>
+                <th className="th">Bizonylatszám</th>
+                <th className="th">Beérkezés</th>
+                <th className="th">Határidő</th>
+                <th className="th text-right">Összeg</th>
+                <th className="th">Állapot</th>
               </tr>
-            )}
-            {iratok.map((i) => (
-              <tr key={i.id} className="border-b border-gray-100 last:border-0">
-                <td className="whitespace-nowrap px-4 py-2 font-medium">
-                  {i.iktatoszam ?? "—"}
-                  {i.targy && (
-                    <span className="block max-w-xs truncate text-xs font-normal text-gray-500">
-                      {i.targy}
-                    </span>
-                  )}
-                </td>
-                <td className="whitespace-nowrap px-4 py-2">{docKindLabel(i.docKind)}</td>
-                <td className="whitespace-nowrap px-4 py-2">{i.iratSzama ?? "—"}</td>
-                <td className="whitespace-nowrap px-4 py-2">{i.erkezettAt ?? "—"}</td>
-                <td className="whitespace-nowrap px-4 py-2">{i.dueDate ?? "—"}</td>
-                <td className="whitespace-nowrap px-4 py-2 text-right">
-                  {i.grossAmount === null ? "—" : `${formatAmountHu(i.grossAmount)} ${i.currency ?? ""}`}
-                </td>
-                <td className="whitespace-nowrap px-4 py-2 text-xs">
-                  {i.status === "ervenytelenitve" ? (
-                    <span className="text-red-600" title={i.ervenytelenitesIndoka ?? ""}>
-                      Érvénytelenítve
-                    </span>
-                  ) : i.fizetveAt ? (
-                    <span className="text-green-700">Kifizetve {i.fizetveAt}</span>
-                  ) : (
-                    <span className="text-gray-500">Iktatva</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {iratok.length === 0 && (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState>Ehhez az ügyhöz még nincs irat.</EmptyState>
+                  </td>
+                </tr>
+              )}
+              {iratok.map((i) => (
+                <tr key={i.id} className="trow">
+                  <td className="td whitespace-nowrap font-medium tabular-nums text-slate-900">
+                    {i.iktatoszam ?? "—"}
+                    {i.targy && (
+                      <span className="block max-w-xs truncate text-xs font-normal text-slate-500">
+                        {i.targy}
+                      </span>
+                    )}
+                  </td>
+                  <td className="td whitespace-nowrap">{docKindLabel(i.docKind)}</td>
+                  <td className="td whitespace-nowrap tabular-nums">{i.iratSzama ?? "—"}</td>
+                  <td className="td whitespace-nowrap tabular-nums">{i.erkezettAt ?? "—"}</td>
+                  <td className="td whitespace-nowrap tabular-nums">{i.dueDate ?? "—"}</td>
+                  <td className="td whitespace-nowrap text-right tabular-nums">
+                    {i.grossAmount === null
+                      ? "—"
+                      : `${formatAmountHu(i.grossAmount)} ${i.currency ?? ""}`}
+                  </td>
+                  <td className="td whitespace-nowrap">
+                    {i.status === "ervenytelenitve" ? (
+                      <span className="badge badge-red" title={i.ervenytelenitesIndoka ?? ""}>
+                        Érvénytelenítve
+                      </span>
+                    ) : i.fizetveAt ? (
+                      <span className="badge badge-green">Kifizetve {i.fizetveAt}</span>
+                    ) : (
+                      <span className="badge badge-slate">Iktatva</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -350,8 +373,8 @@ export function UgyDetail({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="mt-0.5">{children}</dd>
+      <dt className="flabel">{label}</dt>
+      <dd className="text-slate-800">{children}</dd>
     </div>
   );
 }

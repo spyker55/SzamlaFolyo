@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { DOC_KIND_OPTIONS, docKindLabel } from "@/lib/domain/doc-kind";
 import { ervenytelenit } from "@/lib/iktatas/actions";
+import { EmptyState } from "@/components/ui/page";
+import { IconBook, IconSearch } from "@/components/ui/icons";
 
 export type IktatokonyvRow = {
   id: string;
@@ -90,18 +92,21 @@ export function Iktatokonyv({
   }, [rows, query, direction, docKind]);
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Keresés: iktatószám, beküldő, tárgy…"
-          className="w-72 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
-        />
+        <div className="relative w-72">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Keresés: iktatószám, beküldő, tárgy…"
+            className="control pl-9"
+          />
+        </div>
         <select
           value={direction}
           onChange={(e) => setDirection(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className="control w-auto"
         >
           <option value="">Minden irány</option>
           {Object.entries(DIRECTION_LABEL).map(([v, l]) => (
@@ -113,7 +118,7 @@ export function Iktatokonyv({
         <select
           value={docKind}
           onChange={(e) => setDocKind(e.target.value)}
-          className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+          className="control w-auto"
         >
           <option value="">Minden fajta</option>
           {DOC_KIND_OPTIONS.map((o) => (
@@ -122,65 +127,65 @@ export function Iktatokonyv({
             </option>
           ))}
         </select>
-        <span className="ml-auto self-center text-xs text-gray-400">
-          {filtered.length} tétel
-        </span>
+        <span className="note ml-auto self-center">{filtered.length} tétel</span>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-        <table className="w-full whitespace-nowrap text-sm">
-          <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
+      <div className="card table-scroll">
+        <table className="tbl whitespace-nowrap">
+          <thead className="thead">
             <tr>
-              <th className="px-3 py-2">Sorszám</th>
-              <th className="px-3 py-2">Előadó</th>
-              <th className="px-3 py-2">Irattári jel</th>
-              <th className="px-3 py-2">Érkezett</th>
-              <th className="px-3 py-2">Beküldő neve</th>
-              <th className="px-3 py-2">Típus</th>
-              <th className="px-3 py-2">Irat száma</th>
-              <th className="px-3 py-2">Mell. db</th>
-              <th className="px-3 py-2">Tárgy</th>
-              <th className="px-3 py-2">Kezelési feljegyzések</th>
-              <th className="px-3 py-2">Határidő</th>
-              <th className="px-3 py-2">Irattárba helyezés</th>
-              <th className="px-3 py-2" />
+              <th className="th px-3">Sorszám</th>
+              <th className="th px-3">Előadó</th>
+              <th className="th px-3">Irattári jel</th>
+              <th className="th px-3">Érkezett</th>
+              <th className="th px-3">Beküldő neve</th>
+              <th className="th px-3">Típus</th>
+              <th className="th px-3">Irat száma</th>
+              <th className="th px-3">Mell. db</th>
+              <th className="th px-3">Tárgy</th>
+              <th className="th px-3">Kezelési feljegyzések</th>
+              <th className="th px-3">Határidő</th>
+              <th className="th px-3">Irattárba helyezés</th>
+              <th className="th px-3" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={13} className="px-3 py-8 text-center text-gray-400">
-                  Nincs iktatott irat.
+                <td colSpan={13}>
+                  <EmptyState icon={<IconBook className="h-8 w-8" />}>
+                    Nincs iktatott irat.
+                  </EmptyState>
                 </td>
               </tr>
             )}
             {filtered.map((r) => (
               <tr
                 key={r.id}
-                className={`border-b border-gray-100 last:border-0 ${
-                  r.ervenytelen ? "text-gray-400 line-through" : ""
-                }`}
+                className={`trow ${r.ervenytelen ? "text-slate-400 line-through" : ""}`}
               >
-                <td className="px-3 py-2 font-medium">{r.iktatoszam}</td>
-                <td className="px-3 py-2">{r.eloado}</td>
-                <td className="px-3 py-2">{r.irattariJel}</td>
-                <td className="px-3 py-2">{r.erkezett}</td>
-                <td className="px-3 py-2">{r.bekuldo}</td>
-                <td className="px-3 py-2">{docKindLabel(r.docKind)}</td>
-                <td className="px-3 py-2">{r.iratSzama}</td>
-                <td className="px-3 py-2 text-center">{r.mellekletDb}</td>
-                <td className="max-w-xs truncate px-3 py-2" title={r.targy}>
+                <td className="td px-3 font-medium tabular-nums text-slate-900">
+                  {r.iktatoszam}
+                </td>
+                <td className="td px-3">{r.eloado}</td>
+                <td className="td px-3">{r.irattariJel}</td>
+                <td className="td px-3 tabular-nums">{r.erkezett}</td>
+                <td className="td px-3">{r.bekuldo}</td>
+                <td className="td px-3">{docKindLabel(r.docKind)}</td>
+                <td className="td px-3 tabular-nums">{r.iratSzama}</td>
+                <td className="td px-3 text-center tabular-nums">{r.mellekletDb}</td>
+                <td className="td max-w-xs truncate px-3" title={r.targy}>
                   {r.targy}
                 </td>
-                <td className="max-w-xs truncate px-3 py-2" title={r.kezelesiFeljegyzes}>
+                <td className="td max-w-xs truncate px-3" title={r.kezelesiFeljegyzes}>
                   {r.kezelesiFeljegyzes}
                 </td>
-                <td className="px-3 py-2">{r.hatarido}</td>
-                <td className="px-3 py-2">{r.irattarbaHelyezve}</td>
-                <td className="px-3 py-2 text-right">
+                <td className="td px-3 tabular-nums">{r.hatarido}</td>
+                <td className="td px-3 tabular-nums">{r.irattarbaHelyezve}</td>
+                <td className="td px-3 text-right">
                   {r.ervenytelen ? (
                     <span
-                      className="text-xs text-red-400"
+                      className="badge badge-red"
                       title={
                         r.ervenytelenitesIndoka
                           ? `Érvénytelenítve${r.ervenytelenitveAt ? ` (${r.ervenytelenitveAt})` : ""}: ${r.ervenytelenitesIndoka}`
@@ -194,7 +199,7 @@ export function Iktatokonyv({
                       <button
                         type="button"
                         onClick={() => setTarget(r)}
-                        className="text-xs text-gray-400 hover:text-red-600"
+                        className="btn btn-ghost btn-sm hover:text-red-600"
                         title="Érvénytelenítés — az iktatószám megmarad, a művelet nem vonható vissza"
                       >
                         Érvénytelenít
@@ -218,20 +223,20 @@ export function Iktatokonyv({
             if (e.key === "Escape") closeDialog();
           }}
         >
-          <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-lg">
-            <h2 id="ervenytelenites-cim" className="text-base font-semibold">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-pop">
+            <h2 id="ervenytelenites-cim" className="text-base font-semibold text-slate-900">
               Irat érvénytelenítése
             </h2>
-            <p className="mt-1 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-slate-600">
               <span className="font-medium">{target.iktatoszam}</span>
               {target.targy ? ` — ${target.targy}` : ""}
             </p>
-            <p className="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+            <p className="alert alert-warn mt-3 text-xs">
               Az iktatószám megmarad és nem osztható ki újra, az irat pedig áthúzva marad az
               iktatókönyvben. Az érvénytelenítés <strong>nem vonható vissza</strong>.
             </p>
 
-            <label htmlFor="ervenytelenites-indok" className="mt-3 block text-xs font-medium text-gray-600">
+            <label htmlFor="ervenytelenites-indok" className="flabel mt-4">
               Az érvénytelenítés indoka
             </label>
             <textarea
@@ -241,21 +246,21 @@ export function Iktatokonyv({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Pl. Téves iktatás, az irat a másik céghez tartozik."
-              className="mt-1 w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+              className="control"
             />
 
             {dialogError && (
-              <p className="mt-2 rounded-md bg-red-50 p-2 text-sm text-red-700" role="alert">
+              <p className="alert alert-error mt-2" role="alert">
                 {dialogError}
               </p>
             )}
 
-            <div className="mt-3 flex justify-end gap-2">
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={closeDialog}
                 disabled={pending}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50"
+                className="btn btn-secondary"
               >
                 Mégse
               </button>
@@ -263,7 +268,7 @@ export function Iktatokonyv({
                 type="button"
                 onClick={submitErvenytelenites}
                 disabled={pending || reason.trim().length < 5}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                className="btn btn-danger"
               >
                 {pending ? "Érvénytelenítés…" : "Érvénytelenítés"}
               </button>

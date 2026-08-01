@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { UgyekClient, type UgyRow } from "@/components/ugy/UgyekClient";
 import { compareUgyForList } from "@/lib/ugy/order";
 import { isUgyStatus, type UgyStatus } from "@/lib/ugy/status";
+import { PageHeader } from "@/components/ui/page";
 
 type Row = {
   id: string;
@@ -103,7 +104,10 @@ export default async function UgyekPage({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Ügyek</h1>
+      <PageHeader
+        title="Ügyek"
+        description="Egy ügy egy főszám: az összetartozó iratok alszámot kapnak alatta. A lista a legközelebbi határidővel kezdődik."
+      />
       <UgyekClient ugyek={ugyek} status={status} today={todayInBudapest()} />
     </div>
   );

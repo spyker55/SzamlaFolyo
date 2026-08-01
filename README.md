@@ -56,6 +56,21 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   deflate csak CPU-t égetne, így pedig nincs új függőség.
 - `src/lib/iktatas/ugy-suggest.ts` — determinisztikus ügy-javaslat (nem modellhívás): azonos partner **és** azonos összeg, és a javaslat mindig megmondja, miért ajánlja. Semmi nincs előre kiválasztva.
 - `app.resolve_partner()` — partner-feloldás adószám, majd normalizált név alapján. A normalizálás kisbetűsít, ékezetet és írásjelet távolít el, de a **cégformát nem** vágja le: a `Kft.` és a `Bt.` két külön jogi személy. Adószám nélküli élő partnereknél részleges unique index garantálja, hogy egy névhez egy sor tartozzon.
+- `src/app/globals.css` — a dizájnrendszer. A `@theme` blokkban a vászonszín,
+  a betűcsalád és a kártyaárnyékok; a `@layer components` blokkban az összes
+  ismétlődő elem egyetlen definíciója: `card`, `btn`, `control`, `badge`,
+  `chip`, `tbl`/`th`/`td`/`trow`, `alert`, `empty`, `nav-item`. Azért
+  komponensrétegben vannak, mert így az elemre írt utility **felülírja** őket —
+  a `.control` teljes szélességű, de egy `w-72` mellette továbbra is szűkít.
+  Új képernyő ne írjon saját `rounded-lg border border-… bg-white` kombinációt:
+  kilenc fájlban kilenc kicsit másmilyen kártya volt, ezt szünteti meg.
+- `src/components/app/` — a keret: `Nav.tsx` (oldalsáv ikonokkal, szekciókkal
+  és a Beérkezőn a **rád váró** iratok számával — a feldolgozás alatt álló irat
+  még nem feladat), `AuthShell.tsx` (bejelentkezés, regisztráció, cégnyitás
+  közös kártyája).
+- `src/components/ui/` — `page.tsx` a `PageHeader` és az `EmptyState`,
+  `icons.tsx` a néhány vonalas ikon. Az ikonok itt vannak megrajzolva, nem
+  csomagból: tizenegy path miatt nem kell külön függőség és bundle.
 
 ## Fejlesztés
 

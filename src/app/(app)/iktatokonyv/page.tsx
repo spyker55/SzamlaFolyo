@@ -2,6 +2,7 @@ import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Iktatokonyv } from "@/components/iktatokonyv/IktatokonyvTable";
 import { compareIktatoszamDesc } from "@/lib/iktatas/order";
+import { PageHeader } from "@/components/ui/page";
 
 type Row = {
   id: string;
@@ -79,7 +80,10 @@ export default async function IktatokonyvPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Iktatókönyv</h1>
+      <PageHeader
+        title="Iktatókönyv"
+        description="Minden iktatott irat, a hagyományos iktatókönyv oszlopaival. Az érvénytelenített iratok áthúzva maradnak — a sor és az iktatószám sosem tűnik el."
+      />
       {/* Only owner and admin may withdraw an irat; the RPC checks this too. */}
       <Iktatokonyv rows={rows} canErvenytelenit={role === "owner" || role === "admin"} />
     </div>

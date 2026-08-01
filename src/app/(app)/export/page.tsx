@@ -12,6 +12,7 @@ import {
   type DateBasis,
 } from "@/lib/export/period";
 import { docKindLabel } from "@/lib/domain/doc-kind";
+import { PageHeader } from "@/components/ui/page";
 
 export default async function ExportPage({
   searchParams,
@@ -59,7 +60,10 @@ export default async function ExportPage({
 
   return (
     <div>
-      <h1 className="text-xl font-semibold">Könyvelői export</h1>
+      <PageHeader
+        title="Könyvelői export"
+        description="Egy hónap iratai táblázatban, vagy táblázat és a fájlok egy ZIP-ben — abban a formában, ahogy a könyvelő kéri."
+      />
       <ExportClient
         month={month}
         months={months}

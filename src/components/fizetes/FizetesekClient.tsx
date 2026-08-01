@@ -11,14 +11,19 @@ import {
   type Schedule,
   type ScheduleEntry,
 } from "@/lib/fizetes/schedule";
+import { EmptyState } from "@/components/ui/page";
+import { IconWallet } from "@/components/ui/icons";
 
-const BUCKET_STYLE: Record<string, string> = {
-  lejart: "border-red-300 bg-red-50",
-  ma: "border-amber-300 bg-amber-50",
-  het: "border-amber-200 bg-white",
-  honap: "border-gray-200 bg-white",
-  kesobb: "border-gray-200 bg-white",
-  nincs_hatarido: "border-gray-200 bg-white",
+// The urgency is carried by a dot and the heading, not by tinting the whole
+// card: five stacked coloured panels read as an alarm, and most of them are
+// simply "this is due next month".
+const BUCKET_STYLE: Record<string, { dot: string; head: string }> = {
+  lejart: { dot: "bg-red-500", head: "text-red-700" },
+  ma: { dot: "bg-amber-500", head: "text-amber-700" },
+  het: { dot: "bg-amber-400", head: "text-slate-900" },
+  honap: { dot: "bg-blue-400", head: "text-slate-900" },
+  kesobb: { dot: "bg-slate-300", head: "text-slate-900" },
+  nincs_hatarido: { dot: "bg-slate-300", head: "text-slate-900" },
 };
 
 function Totals({ totals, className = "" }: { totals: CurrencyTotal[]; className?: string }) {
@@ -72,100 +77,118 @@ export function FizetesekClient({
   };
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="flex flex-wrap items-baseline gap-3 rounded-lg border border-gray-200 bg-white p-4">
-        <span className="text-sm text-gray-500">Nyitott tartozás összesen</span>
-        <Totals totals={schedule.totals} className="text-lg font-semibold" />
-        {schedule.count === 0 && <span className="text-lg font-semibold">—</span>}
-        <span className="text-xs text-gray-400">
-          {schedule.count} tétel
-        </span>
+    <div className="space-y-4">
+      <div className="card card-pad flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="flabel">Nyitott tartozás összesen</div>
+          {schedule.count === 0 ? (
+            <div className="text-2xl font-semibold text-slate-400">—</div>
+          ) : (
+            <Totals
+              totals={schedule.totals}
+              className="text-2xl font-semibold tabular-nums text-slate-900"
+            />
+          )}
+        </div>
+        <span className="note">{schedule.count} tétel</span>
       </div>
 
       {ellenorzesreVar > 0 && (
-        <p className="rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+        <p className="alert alert-warn text-xs">
           {ellenorzesreVar} irat még ellenőrzésre vár, ezek nincsenek benne az összesítésben.
           Az itt látható összeg csak az iktatott iratokat tartalmazza.
         </p>
       )}
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <div className="alert alert-error" role="alert">
           {error}
         </div>
       )}
 
       {schedule.groups.length === 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-400">
-          Nincs nyitott fizetnivaló.
+        <div className="card">
+          <EmptyState icon={<IconWallet className="h-8 w-8" />}>
+            Nincs nyitott fizetnivaló.
+          </EmptyState>
         </div>
       )}
 
-      {schedule.groups.map((group) => (
-        <div
-          key={group.bucket}
-          className={`overflow-hidden rounded-lg border ${BUCKET_STYLE[group.bucket] ?? "border-gray-200 bg-white"}`}
-        >
-          <div className="flex flex-wrap items-baseline gap-3 border-b border-gray-200 px-4 py-2">
-            <h2 className="text-sm font-semibold">{BUCKET_LABEL[group.bucket]}</h2>
-            <span className="text-xs text-gray-500">{group.entries.length} tétel</span>
-            <Totals totals={group.totals} className="ml-auto text-sm font-medium" />
-          </div>
+      {schedule.groups.map((group) => {
+        const style = BUCKET_STYLE[group.bucket] ?? {
+          dot: "bg-slate-300",
+          head: "text-slate-900",
+        };
+        return (
+          <div key={group.bucket} className="card overflow-hidden">
+            <div className="card-head">
+              <div className="flex flex-wrap items-baseline gap-3">
+                <h2 className={`flex items-center gap-2 text-sm font-semibold ${style.head}`}>
+                  <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+                  {BUCKET_LABEL[group.bucket]}
+                </h2>
+                <span className="note">{group.entries.length} tétel</span>
+              </div>
+              <Totals totals={group.totals} className="text-sm font-medium tabular-nums" />
+            </div>
 
-          <div className="overflow-x-auto bg-white">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
-                <tr>
-                  <th className="px-4 py-2">Iktatószám</th>
-                  <th className="px-4 py-2">Partner</th>
-                  <th className="px-4 py-2">Típus</th>
-                  <th className="px-4 py-2">Tárgy</th>
-                  <th className="px-4 py-2">Határidő</th>
-                  <th className="px-4 py-2 text-right">Összeg</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {group.entries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-gray-100 last:border-0">
-                    <td className="whitespace-nowrap px-4 py-2 font-medium">
-                      {entry.iktatoszam ?? "—"}
-                    </td>
-                    <td className="px-4 py-2">{entry.partnerName ?? "—"}</td>
-                    <td className="whitespace-nowrap px-4 py-2 text-gray-600">
-                      {docKindLabel(entry.docKind)}
-                    </td>
-                    <td className="max-w-xs truncate px-4 py-2" title={entry.targy ?? ""}>
-                      {entry.targy ?? "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2">
-                      <div>{entry.dueDate ?? "—"}</div>
-                      <div
-                        className={`text-xs ${entry.daysLeft !== null && entry.daysLeft < 0 ? "text-red-600" : "text-gray-400"}`}
-                      >
-                        {deadlineText(entry)}
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-right font-medium">
-                      {formatAmountHu(entry.grossAmount)} {entry.currency}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => markPaid(entry)}
-                        disabled={busyId === entry.id}
-                        className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        Kifizetve
-                      </button>
-                    </td>
+            <div className="table-scroll">
+              <table className="tbl">
+                <thead className="thead">
+                  <tr>
+                    <th className="th">Iktatószám</th>
+                    <th className="th">Partner</th>
+                    <th className="th">Típus</th>
+                    <th className="th">Tárgy</th>
+                    <th className="th">Határidő</th>
+                    <th className="th text-right">Összeg</th>
+                    <th className="th" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {group.entries.map((entry) => (
+                    <tr key={entry.id} className="trow">
+                      <td className="td whitespace-nowrap font-medium tabular-nums text-slate-900">
+                        {entry.iktatoszam ?? "—"}
+                      </td>
+                      <td className="td">{entry.partnerName ?? "—"}</td>
+                      <td className="td whitespace-nowrap">{docKindLabel(entry.docKind)}</td>
+                      <td className="td max-w-xs truncate" title={entry.targy ?? ""}>
+                        {entry.targy ?? "—"}
+                      </td>
+                      <td className="td whitespace-nowrap">
+                        <div className="tabular-nums">{entry.dueDate ?? "—"}</div>
+                        <div
+                          className={`text-xs ${
+                            entry.daysLeft !== null && entry.daysLeft < 0
+                              ? "font-medium text-red-600"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {deadlineText(entry)}
+                        </div>
+                      </td>
+                      <td className="td whitespace-nowrap text-right font-medium tabular-nums text-slate-900">
+                        {formatAmountHu(entry.grossAmount)} {entry.currency}
+                      </td>
+                      <td className="td whitespace-nowrap text-right">
+                        <button
+                          type="button"
+                          onClick={() => markPaid(entry)}
+                          disabled={busyId === entry.id}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          Kifizetve
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

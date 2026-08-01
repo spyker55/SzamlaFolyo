@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { formatAmountHu } from "@/lib/format/amount";
 import { DATE_BASIS_LABEL, type DateBasis } from "@/lib/export/period";
 import type { CurrencyTotal } from "@/lib/export/csv";
+import { IconDownload } from "@/components/ui/icons";
 
 type Props = {
   month: string;
@@ -79,15 +80,15 @@ export function ExportClient(props: Props) {
   const empty = props.count === 0;
 
   return (
-    <div className="mt-4 max-w-3xl space-y-4">
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="max-w-3xl space-y-4">
+      <div className="card card-pad">
         <div className="flex flex-wrap gap-4">
-          <label className="text-sm">
-            <span className="block text-xs text-gray-500">Időszak</span>
+          <label>
+            <span className="flabel">Időszak</span>
             <select
               value={props.month}
               onChange={(e) => setParam("honap", e.target.value)}
-              className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+              className="control w-auto"
             >
               {props.months.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -97,24 +98,24 @@ export function ExportClient(props: Props) {
             </select>
           </label>
 
-          <label className="text-sm">
-            <span className="block text-xs text-gray-500">Mi alapján</span>
+          <label>
+            <span className="flabel">Mi alapján</span>
             <select
               value={props.basis}
               onChange={(e) => setParam("alap", e.target.value)}
-              className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+              className="control w-auto"
             >
               <option value="erkezett">{DATE_BASIS_LABEL.erkezett}</option>
               <option value="kelt">{DATE_BASIS_LABEL.kelt}</option>
             </select>
           </label>
 
-          <label className="text-sm">
-            <span className="block text-xs text-gray-500">Irány</span>
+          <label>
+            <span className="flabel">Irány</span>
             <select
               value={props.direction ?? ""}
               onChange={(e) => setParam("irany", e.target.value)}
-              className="mt-1 rounded-md border border-gray-300 px-2 py-1"
+              className="control w-auto"
             >
               <option value="">Mind</option>
               <option value="bejovo">Bejövő</option>
@@ -123,50 +124,49 @@ export function ExportClient(props: Props) {
           </label>
         </div>
 
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="note mt-4">
           {props.basis === "erkezett"
             ? "Az iratok beérkezési dátuma szerint — ez az, amit az iktatókönyv is mutat."
             : "Az iratok saját kelte szerint. Amelyik iratról a kelt nem derült ki, az ebből a listából kimarad."}
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex flex-wrap items-baseline gap-3">
-          <span className="text-sm text-gray-500">
+      <div className="card card-pad">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+          <span className="note tabular-nums">
             {props.from} – {props.to}
           </span>
-          <span className="text-lg font-semibold">{props.count} irat</span>
+          <span className="text-xl font-semibold text-slate-900">{props.count} irat</span>
           {props.totals.length === 0 && props.count > 0 && (
-            <span className="text-sm text-gray-500">nincs könyvelendő összeg</span>
+            <span className="note">nincs könyvelendő összeg</span>
           )}
           {props.totals.map((t) => (
-            <span key={t.currency} className="text-sm">
+            <span key={t.currency} className="text-sm tabular-nums text-slate-600">
               nettó {formatAmountHu(t.net)} · ÁFA {formatAmountHu(t.vat)} ·{" "}
-              <strong>bruttó {formatAmountHu(t.gross)} {t.currency}</strong>
+              <strong className="text-slate-900">
+                bruttó {formatAmountHu(t.gross)} {t.currency}
+              </strong>
             </span>
           ))}
         </div>
 
         {props.kinds.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             {props.kinds.map((k) => (
-              <span
-                key={k.label}
-                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
-              >
+              <span key={k.label} className="badge badge-slate">
                 {k.label} · {k.count}
               </span>
             ))}
           </div>
         )}
 
-        <p className="mt-3 text-xs text-gray-500">
+        <p className="note mt-4">
           Az összeg csak a számviteli bizonylatokat tartalmazza: számla, előlegszámla,
           helyesbítő, sztornó és nyugta. A díjbekérő nem az — a rá kiállított számla ugyanazt
           az összeget hozza, tehát kétszer szerepelne a könyvelésben.
         </p>
 
-        <ul className="mt-3 space-y-1 text-xs text-gray-500">
+        <ul className="note mt-3 space-y-1">
           {props.nemKonyvelendo > 0 && (
             <li>
               {props.nemKonyvelendo} irat nem számviteli bizonylat (díjbekérő, szállítólevél,
@@ -192,7 +192,7 @@ export function ExportClient(props: Props) {
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+        <div className="alert alert-error" role="alert">
           {error}
         </div>
       )}
@@ -202,21 +202,23 @@ export function ExportClient(props: Props) {
           type="button"
           onClick={() => download("csv")}
           disabled={empty || busy !== null || pending}
-          className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+          className="btn btn-primary px-4 py-2"
         >
+          <IconDownload className="h-4 w-4" />
           {busy === "csv" ? "Készül…" : "Táblázat letöltése (CSV)"}
         </button>
         <button
           type="button"
           onClick={() => download("zip")}
           disabled={empty || busy !== null || pending}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="btn btn-secondary px-4 py-2"
         >
+          <IconDownload className="h-4 w-4" />
           {busy === "zip" ? "Készül…" : "Iratok + táblázat (ZIP)"}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="note">
         A CSV pontosvesszővel tagolt, magyar tizedesvesszővel — a magyar Excel közvetlenül
         megnyitja. A ZIP az iratok eredeti fájljait tartalmazza, iktatószámmal kezdődő néven,
         és benne van ugyanez a táblázat is.

@@ -8,6 +8,8 @@ import { formatBankAccount } from "@/lib/partner/bank-account";
 import { formatTaxNumber } from "@/lib/partner/identity";
 import { STRENGTH_LABEL, type DuplicateStrength } from "@/lib/partner/duplicates";
 import { letrehozPartner, type PartnerFields } from "@/lib/partner/actions";
+import { EmptyState } from "@/components/ui/page";
+import { IconPlus, IconSearch, IconUsers } from "@/components/ui/icons";
 
 export type PartnerRow = {
   id: string;
@@ -38,9 +40,9 @@ const ROLE_FILTERS = [
 ] as const;
 
 const STRENGTH_STYLE: Record<DuplicateStrength, string> = {
-  biztos: "bg-red-100 text-red-800",
-  valoszinu: "bg-amber-100 text-amber-800",
-  lehetseges: "bg-gray-100 text-gray-600",
+  biztos: "badge-red",
+  valoszinu: "badge-amber",
+  lehetseges: "badge-slate",
 };
 
 const EMPTY: PartnerFields = {
@@ -102,32 +104,30 @@ export function PartnerekClient({
   };
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="space-y-4">
       {duplicates.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <div className="text-sm font-medium text-amber-900">
+        <div className="alert alert-warn">
+          <div className="text-sm font-semibold">
             Lehetséges duplikátumok ({duplicates.length})
           </div>
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="mt-1 text-xs">
             Az összevonás a partner adatlapján indítható, és bármikor visszavonható.
             Eltérő törzsszámú cégek soha nem kerülnek ide.
           </p>
           <ul className="mt-3 space-y-2">
             {duplicates.map((d) => (
               <li key={`${d.aId}-${d.bId}`} className="flex flex-wrap items-center gap-2 text-sm">
-                <span
-                  className={`rounded px-2 py-0.5 text-xs ${STRENGTH_STYLE[d.strength]}`}
-                >
+                <span className={`badge ${STRENGTH_STYLE[d.strength]}`}>
                   {STRENGTH_LABEL[d.strength]}
                 </span>
-                <Link href={`/partnerek/${d.aId}`} className="text-blue-700 hover:underline">
+                <Link href={`/partnerek/${d.aId}`} className="link">
                   {d.aName}
                 </Link>
-                <span className="text-gray-400">↔</span>
-                <Link href={`/partnerek/${d.bId}`} className="text-blue-700 hover:underline">
+                <span className="text-slate-400">↔</span>
+                <Link href={`/partnerek/${d.bId}`} className="link">
                   {d.bName}
                 </Link>
-                <span className="text-xs text-gray-500">{d.reason}</span>
+                <span className="note">{d.reason}</span>
               </li>
             ))}
           </ul>
@@ -135,46 +135,52 @@ export function PartnerekClient({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           {ROLE_FILTERS.map((f) => (
             <button
               key={f.value}
               type="button"
               onClick={() => setRole(f.value)}
-              className={`rounded-md px-3 py-1 text-sm ${
-                role === f.value
-                  ? "bg-blue-700 text-white"
-                  : "border border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`chip ${role === f.value ? "chip-on" : ""}`}
             >
               {f.label}
             </button>
           ))}
         </div>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Keresés névre, adószámra, bankszámlára"
-          className="w-72 rounded-md border border-gray-300 px-3 py-1 text-sm"
-        />
+        <div className="relative w-72">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Keresés névre, adószámra, bankszámlára"
+            className="control pl-9"
+          />
+        </div>
         <button
           type="button"
           onClick={() => setCreating((v) => !v)}
-          className="ml-auto rounded-md border border-gray-300 px-3 py-1 text-sm text-gray-700 hover:bg-gray-50"
+          className={`ml-auto btn ${creating ? "btn-secondary" : "btn-primary"}`}
         >
-          {creating ? "Mégse" : "Új partner"}
+          {creating ? (
+            "Mégse"
+          ) : (
+            <>
+              <IconPlus className="h-4 w-4" />
+              Új partner
+            </>
+          )}
         </button>
       </div>
 
       {creating && (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className="card card-pad">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Field label="Név">
               <input
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="control"
               />
             </Field>
             <Field label="Adószám">
@@ -182,29 +188,31 @@ export function PartnerekClient({
                 value={draft.taxNumber}
                 onChange={(e) => setDraft({ ...draft, taxNumber: e.target.value })}
                 placeholder="12345678-1-23"
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="control"
               />
             </Field>
             <Field label="Bankszámlaszám">
               <input
                 value={draft.bankAccount}
                 onChange={(e) => setDraft({ ...draft, bankAccount: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="control"
               />
             </Field>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-            <label className="flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
+            <label className="flex items-center gap-2 text-slate-700">
               <input
                 type="checkbox"
+                className="checkbox"
                 checked={draft.isSupplier}
                 onChange={(e) => setDraft({ ...draft, isSupplier: e.target.checked })}
               />
               Szállító
             </label>
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-slate-700">
               <input
                 type="checkbox"
+                className="checkbox"
                 checked={draft.isCustomer}
                 onChange={(e) => setDraft({ ...draft, isCustomer: e.target.checked })}
               />
@@ -214,63 +222,64 @@ export function PartnerekClient({
               type="button"
               onClick={create}
               disabled={pending}
-              className="ml-auto rounded-md bg-blue-700 px-4 py-1 text-sm text-white disabled:opacity-50"
+              className="btn btn-primary ml-auto"
             >
               Létrehozás
             </button>
           </div>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="alert alert-error mt-3" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       )}
 
       {shown.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-400">
-          {partners.length === 0 ? "Még nincs partner." : "Nincs találat."}
+        <div className="card">
+          <EmptyState icon={<IconUsers className="h-8 w-8" />}>
+            {partners.length === 0 ? "Még nincs partner." : "Nincs találat."}
+          </EmptyState>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs uppercase text-gray-500">
+        <div className="card table-scroll">
+          <table className="tbl">
+            <thead className="thead">
               <tr>
-                <th className="px-4 py-2">Név</th>
-                <th className="px-4 py-2">Adószám</th>
-                <th className="px-4 py-2">Bankszámla</th>
-                <th className="px-4 py-2">Szerep</th>
-                <th className="px-4 py-2 text-right">Iratok</th>
-                <th className="px-4 py-2">Utolsó irat</th>
-                <th className="px-4 py-2 text-right">Nyitott</th>
+                <th className="th">Név</th>
+                <th className="th">Adószám</th>
+                <th className="th">Bankszámla</th>
+                <th className="th">Szerep</th>
+                <th className="th text-right">Iratok</th>
+                <th className="th">Utolsó irat</th>
+                <th className="th text-right">Nyitott</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((p) => (
-                <tr key={p.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-2">
-                    <Link
-                      href={`/partnerek/${p.id}`}
-                      className="font-medium text-blue-700 hover:underline"
-                    >
+                <tr key={p.id} className="trow">
+                  <td className="td">
+                    <Link href={`/partnerek/${p.id}`} className="link font-medium">
                       {p.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2 tabular-nums text-gray-600">
-                    {formatTaxNumber(p.taxNumber) || "—"}
+                  <td className="td tabular-nums">{formatTaxNumber(p.taxNumber) || "—"}</td>
+                  <td className="td tabular-nums">{formatBankAccount(p.bankAccount) || "—"}</td>
+                  <td className="td">
+                    <span className="flex flex-wrap gap-1">
+                      {p.isSupplier && <span className="badge badge-blue">Szállító</span>}
+                      {p.isCustomer && <span className="badge badge-green">Vevő</span>}
+                      {!p.isSupplier && !p.isCustomer && "—"}
+                    </span>
                   </td>
-                  <td className="px-4 py-2 tabular-nums text-gray-600">
-                    {formatBankAccount(p.bankAccount) || "—"}
-                  </td>
-                  <td className="px-4 py-2 text-gray-600">
-                    {[p.isSupplier ? "Szállító" : null, p.isCustomer ? "Vevő" : null]
-                      .filter(Boolean)
-                      .join(", ") || "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums">{p.iratCount}</td>
-                  <td className="px-4 py-2 text-gray-600">{p.lastIratAt ?? "—"}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">
+                  <td className="td text-right tabular-nums">{p.iratCount}</td>
+                  <td className="td tabular-nums">{p.lastIratAt ?? "—"}</td>
+                  <td className="td text-right tabular-nums">
                     {p.open.length === 0 ? (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-slate-300">—</span>
                     ) : (
                       p.open.map((t) => (
-                        <div key={t.currency} className="whitespace-nowrap">
+                        <div key={t.currency} className="whitespace-nowrap font-medium">
                           {formatAmountHu(t.amount)} {t.currency}
                         </div>
                       ))
@@ -289,7 +298,7 @@ export function PartnerekClient({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs uppercase text-gray-500">{label}</span>
+      <span className="flabel">{label}</span>
       {children}
     </label>
   );
