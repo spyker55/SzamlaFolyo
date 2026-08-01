@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hunSupabaseError } from "@/lib/errors";
 import { requireMembership } from "@/lib/tenant";
 import { checkBankAccount, normalizeBankAccount } from "@/lib/partner/bank-account";
 import { checkTaxNumber } from "@/lib/partner/identity";
@@ -191,5 +192,5 @@ function hunPartnerError(message: string): string {
   if (message.includes("partner_company_name_norm_key")) {
     return "Ezzel a névvel már van adószám nélküli partner. Vond össze a kettőt.";
   }
-  return "A mentés nem sikerült: " + message;
+  return hunSupabaseError(message, "A mentés nem sikerült.");
 }

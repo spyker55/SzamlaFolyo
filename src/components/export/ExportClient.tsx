@@ -6,6 +6,7 @@ import { formatAmountHu } from "@/lib/format/amount";
 import { DATE_BASIS_LABEL, type DateBasis } from "@/lib/export/period";
 import type { CurrencyTotal } from "@/lib/export/csv";
 import { IconDownload } from "@/components/ui/icons";
+import { hunFetchError } from "@/lib/errors";
 
 type Props = {
   month: string;
@@ -71,7 +72,9 @@ export function ExportClient(props: Props) {
       a.remove();
       URL.revokeObjectURL(url);
     } catch {
-      setError("A letöltés nem sikerült.");
+      setError(
+        hunFetchError("A letöltés nem sikerült — a szerver nem válaszolt. Próbáld meg újra.")
+      );
     } finally {
       setBusy(null);
     }
@@ -190,6 +193,18 @@ export function ExportClient(props: Props) {
           )}
         </ul>
       </div>
+
+      {/* The buttons below go grey when there is nothing to export, and a
+          disabled button with no reason next to it is a dead end. */}
+      {empty && (
+        <p className="alert alert-muted">
+          Ebben az időszakban nincs iktatott irat, így nincs mit letölteni. Válassz másik
+          hónapot
+          {props.basis === "kelt"
+            ? ", vagy váltsd a „Mi alapján” mezőt beérkezésre — a kelt csak azokat az iratokat hozza, amelyeken szerepel."
+            : ", vagy nézd meg, hogy a Beérkezőben nem vár-e még iktatásra irat."}
+        </p>
+      )}
 
       {error && (
         <div className="alert alert-error" role="alert">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hunSupabaseError } from "@/lib/errors";
 
 export type FizetesResult = { ok: true } | { ok: false; error: string };
 
@@ -29,7 +30,7 @@ export async function jeloldKifizetve(
     .maybeSingle();
 
   if (error) {
-    return { ok: false, error: "A mentés nem sikerült: " + error.message };
+    return { ok: false, error: hunSupabaseError(error.message, "A mentés nem sikerült.") };
   }
   if (!data) {
     return { ok: false, error: "Ez az irat nem található, vagy még nincs iktatva." };

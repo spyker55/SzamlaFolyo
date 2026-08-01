@@ -63,57 +63,59 @@ export default async function PartnerPage({
   const { partnerId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
-    .from("partner")
-    .select(
-      `id, name, tax_number, eu_tax_number, bank_account, address, email, country,
-       is_supplier, is_customer, default_payment_term_days, note, deleted_at,
-       merged_into_partner_id`
-    )
-    .eq("id", partnerId)
-    .maybeSingle();
+  // Five queries that were running one after another, and every one of them is
+  // keyed by the partnerId from the URL — none needed the previous answer. On
+  // this screen that was five sequential round trips before anything rendered.
+  const [{ data }, { data: docData }, { data: ugyData }, { data: mergeData }, { data: otherData }] =
+    await Promise.all([
+      supabase
+        .from("partner")
+        .select(
+          `id, name, tax_number, eu_tax_number, bank_account, address, email, country,
+           is_supplier, is_customer, default_payment_term_days, note, deleted_at,
+           merged_into_partner_id`
+        )
+        .eq("id", partnerId)
+        .maybeSingle(),
+      supabase
+        .from("document")
+        .select(
+          `id, ugy_id, iktatoszam, doc_kind, direction, targy, erkezett_at, due_date,
+           gross_amount, currency, processing_status, fizetve_at`
+        )
+        .eq("partner_id", partnerId)
+        .is("deleted_at", null)
+        .order("erkezett_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("ugy")
+        .select("id, foszam, ev, targy, status, hatarido")
+        .eq("partner_id", partnerId)
+        .order("ev", { ascending: false })
+        .order("foszam", { ascending: false })
+        .limit(200),
+      // Everything this partner was ever part of, on either side.
+      supabase
+        .from("partner_merge")
+        .select("id, survivor_id, loser_id, document_ids, ugy_ids, created_at, undone_at")
+        .or(`survivor_id.eq.${partnerId},loser_id.eq.${partnerId}`)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      // Every partner named anywhere in the merge history, plus the live rows
+      // the merge picker can choose from.
+      supabase
+        .from("partner")
+        .select("id, name, tax_number, deleted_at")
+        .order("name")
+        .limit(1000),
+    ]);
 
   // RLS makes another company's partner invisible, so "not found" and "not
   // yours" are the same answer, which is the answer to give.
   const partner = data as unknown as PartnerRow | null;
   if (!partner) notFound();
 
-  const { data: docData } = await supabase
-    .from("document")
-    .select(
-      `id, ugy_id, iktatoszam, doc_kind, direction, targy, erkezett_at, due_date,
-       gross_amount, currency, processing_status, fizetve_at`
-    )
-    .eq("partner_id", partnerId)
-    .is("deleted_at", null)
-    .order("erkezett_at", { ascending: false })
-    .limit(500);
-
-  const { data: ugyData } = await supabase
-    .from("ugy")
-    .select("id, foszam, ev, targy, status, hatarido")
-    .eq("partner_id", partnerId)
-    .order("ev", { ascending: false })
-    .order("foszam", { ascending: false })
-    .limit(200);
-
-  // Everything this partner was ever part of, on either side.
-  const { data: mergeData } = await supabase
-    .from("partner_merge")
-    .select("id, survivor_id, loser_id, document_ids, ugy_ids, created_at, undone_at")
-    .or(`survivor_id.eq.${partnerId},loser_id.eq.${partnerId}`)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
   const merges = (mergeData ?? []) as unknown as MergeRow[];
-
-  // Every partner named anywhere in the merge history, plus the live rows the
-  // merge picker can choose from.
-  const { data: otherData } = await supabase
-    .from("partner")
-    .select("id, name, tax_number, deleted_at")
-    .order("name")
-    .limit(1000);
 
   const allPartners = (otherData ?? []) as unknown as {
     id: string;

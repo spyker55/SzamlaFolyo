@@ -7,8 +7,9 @@ import { DOC_KINDS, docKindLabel } from "@/lib/domain/doc-kind";
 import { elvet, visszaallit } from "@/lib/inbox/actions";
 import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
 import { EmptyState } from "@/components/ui/page";
-import { IconInbox, IconMail, IconUpload } from "@/components/ui/icons";
+import { IconInbox, IconMail, IconSearch, IconUpload } from "@/components/ui/icons";
 import { onUploadRequest } from "@/lib/ui/upload-intent";
+import { hunFetchError, hunSupabaseError } from "@/lib/errors";
 
 type InboxDocument = {
   id: string;
@@ -80,15 +81,16 @@ export function InboxClient() {
 
     if (error) {
       // A query failure must never masquerade as an empty inbox.
-      setLoadError("A lista betöltése nem sikerült: " + error.message);
+      setLoadError(hunSupabaseError(error.message, "A lista betöltése nem sikerült."));
       return;
     }
     setLoadError(null);
 
     const docs = (data ?? []) as unknown as InboxDocument[];
 
-    // Resolve the original iktatoszam for duplicates in a second query
-    // (PostgREST self-join embeds proved fragile).
+    // Three lookups that fill in the columns, and none of them needs the
+    // others. They used to run one after another, so every four-second poll
+    // cost four sequential round trips.
     const originalIds = [
       ...new Set(
         docs
@@ -96,12 +98,42 @@ export function InboxClient() {
           .map((d) => d.duplicate_of_document_id as string)
       ),
     ];
-    if (originalIds.length > 0) {
-      const { data: originals } = await supabaseRef.current
-        .from("document")
-        .select("id, iktatoszam")
-        .in("id", originalIds);
-      const byId = new Map((originals ?? []).map((o) => [o.id as string, o.iktatoszam as string | null]));
+    const emailIds = [
+      ...new Set(docs.filter((d) => d.inbound_email_id).map((d) => d.inbound_email_id as string)),
+    ];
+
+    const [originals, emails, extractions] = await Promise.all([
+      // Resolved with a plain second query rather than a self-join embed —
+      // PostgREST embeds proved fragile here.
+      originalIds.length > 0
+        ? supabaseRef.current.from("document").select("id, iktatoszam").in("id", originalIds)
+        : null,
+      emailIds.length > 0
+        ? supabaseRef.current
+            .from("inbound_email")
+            .select("id, mail_from, sender_known")
+            .in("id", emailIds)
+        : null,
+      // How sure the model was about the type. Same rule as the review screen:
+      // only finished, successful extractions count, and the newest one wins.
+      docs.length > 0
+        ? supabaseRef.current
+            .from("extraction")
+            .select("document_id, field_confidence")
+            .in(
+              "document_id",
+              docs.map((d) => d.id)
+            )
+            .is("error", null)
+            .not("parsed_fields", "is", null)
+            .order("finished_at", { ascending: true })
+        : null,
+    ]);
+
+    if (originals?.data) {
+      const byId = new Map(
+        originals.data.map((o) => [o.id as string, o.iktatoszam as string | null])
+      );
       for (const d of docs) {
         if (d.duplicate_of_document_id) {
           d.duplicateOfIktatoszam = byId.get(d.duplicate_of_document_id) ?? null;
@@ -109,18 +141,9 @@ export function InboxClient() {
       }
     }
 
-    // Same shape as above: resolve the sending address with a plain second
-    // query rather than an embed.
-    const emailIds = [
-      ...new Set(docs.filter((d) => d.inbound_email_id).map((d) => d.inbound_email_id as string)),
-    ];
-    if (emailIds.length > 0) {
-      const { data: emails } = await supabaseRef.current
-        .from("inbound_email")
-        .select("id, mail_from, sender_known")
-        .in("id", emailIds);
+    if (emails?.data) {
       const byId = new Map(
-        (emails ?? []).map((e) => [
+        emails.data.map((e) => [
           e.id as string,
           { from: e.mail_from as string | null, known: Boolean(e.sender_known) },
         ])
@@ -132,22 +155,9 @@ export function InboxClient() {
       }
     }
 
-    // How sure the model was about the type. Same rule as the review screen:
-    // only finished, successful extractions count, and the newest one wins.
-    if (docs.length > 0) {
-      const { data: extractions } = await supabaseRef.current
-        .from("extraction")
-        .select("document_id, field_confidence")
-        .in(
-          "document_id",
-          docs.map((d) => d.id)
-        )
-        .is("error", null)
-        .not("parsed_fields", "is", null)
-        .order("finished_at", { ascending: true });
-
+    if (extractions?.data) {
       const confidenceByDoc = new Map<string, number | undefined>();
-      for (const e of extractions ?? []) {
+      for (const e of extractions.data) {
         const combined = (e.field_confidence as { combined?: Record<string, number> } | null)
           ?.combined;
         // Ascending order means a later row overwrites an earlier one.
@@ -192,9 +202,31 @@ export function InboxClient() {
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 4000);
-    return () => clearInterval(interval);
   }, [load]);
+
+  // Something is still moving on its own only while the model is reading. Once
+  // every document is waiting for a human, four-second polling is asking the
+  // same question of the database fifteen times a minute for an answer that
+  // changes when the user clicks something — but not never: an e-mailed irat
+  // can arrive at any moment, so it slows down rather than stopping.
+  const working = documents.some(
+    (d) => d.processing_status === "received" || d.processing_status === "extracting"
+  );
+  const delay = working ? 4000 : 30000;
+
+  useEffect(() => {
+    // A background tab polling every four seconds is pure waste — nobody is
+    // looking at it. Coming back refreshes at once, so it is never stale.
+    const tick = () => {
+      if (!document.hidden) load();
+    };
+    const interval = setInterval(tick, delay);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [load, delay]);
 
   // "Irat feltöltése" in the sidebar. The discarded view has no dropzone, so
   // step back to the inbox first — otherwise the file dialog would open over a
@@ -236,7 +268,11 @@ export function InboxClient() {
           setMessages(msgs);
         }
       } catch {
-        setMessages(["A feltöltés nem sikerült — hálózati hiba."]);
+        setMessages([
+          hunFetchError(
+            "A feltöltés nem sikerült — a szerver nem válaszolt. Próbáld meg újra."
+          ),
+        ]);
       } finally {
         setUploading(false);
         load();
@@ -396,13 +432,31 @@ export function InboxClient() {
             {visible.length === 0 && (
               <tr>
                 <td colSpan={6}>
-                  <EmptyState icon={<IconInbox className="h-8 w-8" />}>
-                    {kindFilter
-                      ? "Nincs ilyen fajtájú irat."
-                      : showDiscarded
-                        ? "Nincs elvetett irat."
-                        : "Nincs feldolgozás alatt álló irat."}
-                  </EmptyState>
+                  {kindFilter ? (
+                    <EmptyState icon={<IconSearch className="h-8 w-8" />}>
+                      Nincs ilyen fajtájú irat.
+                      <button
+                        type="button"
+                        onClick={() => setKindFilter("")}
+                        className="link ml-2"
+                      >
+                        Szűrő törlése
+                      </button>
+                    </EmptyState>
+                  ) : showDiscarded ? (
+                    <EmptyState icon={<IconInbox className="h-8 w-8" />}>
+                      Nincs elvetett irat.
+                    </EmptyState>
+                  ) : (
+                    /* An empty inbox is good news, not an absence — say so,
+                       and say where the finished iratok went. */
+                    <EmptyState
+                      icon={<IconInbox className="h-8 w-8" />}
+                      hint="Húzd ide a következő iratot, vagy küldd e-mailben. Amit már iktattál, az Iktatókönyvben van."
+                    >
+                      Minden irat feldolgozva.
+                    </EmptyState>
+                  )}
                 </td>
               </tr>
             )}

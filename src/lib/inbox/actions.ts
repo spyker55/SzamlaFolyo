@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hunSupabaseError } from "@/lib/errors";
 
 export type InboxActionResult = { ok: true } | { ok: false; error: string };
 
@@ -29,7 +30,7 @@ export async function elvet(documentId: string): Promise<InboxActionResult> {
     .maybeSingle();
 
   if (error) {
-    return { ok: false, error: "Az elvetés nem sikerült: " + error.message };
+    return { ok: false, error: hunSupabaseError(error.message, "Az elvetés nem sikerült.") };
   }
   if (!data) {
     return {
@@ -89,7 +90,7 @@ export async function visszaallit(documentId: string): Promise<InboxActionResult
     .maybeSingle();
 
   if (error) {
-    return { ok: false, error: "A visszaállítás nem sikerült: " + error.message };
+    return { ok: false, error: hunSupabaseError(error.message, "A visszaállítás nem sikerült.") };
   }
   if (!data) {
     return { ok: false, error: "Ez az irat nem állítható vissza." };

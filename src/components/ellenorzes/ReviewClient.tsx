@@ -161,9 +161,12 @@ export function ReviewClient({ data }: { data: ReviewData }) {
   );
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-[34rem] flex-col gap-4 lg:flex-row">
+    // Side by side only where there is room for it. On a phone the two panes
+    // stack and the page scrolls: forcing both into one viewport height gave
+    // the form a few hundred pixels with its own scrollbar inside the page's.
+    <div className="flex flex-col gap-4 lg:h-[calc(100vh-7rem)] lg:min-h-[34rem] lg:flex-row">
       {/* Left: the original document */}
-      <div className="card min-h-64 flex-1 overflow-hidden bg-slate-100">
+      <div className="card h-[55vh] overflow-hidden bg-slate-100 lg:h-auto lg:flex-1">
         {data.fileUrl ? (
           data.fileMimeType === "application/pdf" ? (
             <iframe src={data.fileUrl} title={data.fileName ?? "Irat"} className="h-full w-full" />
@@ -185,7 +188,7 @@ export function ReviewClient({ data }: { data: ReviewData }) {
       {/* Right: extracted fields */}
       <div
         ref={formRef}
-        className="card card-pad w-full shrink-0 overflow-y-auto lg:w-[30rem]"
+        className="card card-pad w-full lg:w-[30rem] lg:shrink-0 lg:overflow-y-auto"
       >
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-900">Ellenőrzés</h1>

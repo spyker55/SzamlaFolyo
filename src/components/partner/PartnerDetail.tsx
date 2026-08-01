@@ -321,7 +321,7 @@ export function PartnerDetail({
                 setLoserId(e.target.value);
                 setConfirming(false);
               }}
-              className="control w-96"
+              className="control w-full sm:w-96"
             >
               <option value="">Válaszd ki a beolvasztandó partnert…</option>
               {candidates.map((c) => (

@@ -46,6 +46,7 @@ const DEADLINE_STYLE: Record<string, string> = {
   kozeli: "text-amber-700",
   tavoli: "text-slate-400",
   nincs: "text-slate-400",
+  lezarult: "text-slate-400",
 };
 
 export function UgyekClient({
@@ -92,7 +93,7 @@ export function UgyekClient({
             </button>
           ))}
         </div>
-        <div className="relative ml-auto w-72">
+        <div className="relative w-full sm:ml-auto sm:w-72">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -106,9 +107,41 @@ export function UgyekClient({
 
       {shown.length === 0 ? (
         <div className="card">
-          <EmptyState icon={<IconFolder className="h-8 w-8" />}>
-            {ugyek.length === 0 ? "Ebben az állapotban nincs ügy." : "Nincs találat."}
-          </EmptyState>
+          {ugyek.length === 0 ? (
+            <EmptyState
+              icon={<IconFolder className="h-8 w-8" />}
+              hint={
+                status === "aktiv"
+                  ? "Ügy akkor keletkezik, amikor egy iratot új főszámra iktatsz."
+                  : undefined
+              }
+            >
+              {status === "aktiv" ? (
+                <>
+                  Nincs nyitott ügyed.
+                  <button
+                    type="button"
+                    onClick={() => setStatus("mind")}
+                    className="link ml-2"
+                  >
+                    Lezártak megjelenítése
+                  </button>
+                </>
+              ) : (
+                "Ebben az állapotban nincs ügy."
+              )}
+            </EmptyState>
+          ) : (
+            <EmptyState
+              icon={<IconSearch className="h-8 w-8" />}
+              hint={`A(z) ${ugyek.length} listázott ügyből egy sem felel meg a keresésnek.`}
+            >
+              Nincs találat.
+              <button type="button" onClick={() => setSearch("")} className="link ml-2">
+                Keresés törlése
+              </button>
+            </EmptyState>
+          )}
         </div>
       ) : (
         <div className="card table-scroll">
@@ -148,10 +181,24 @@ export function UgyekClient({
                     </span>
                   </td>
                   <td className="td whitespace-nowrap">
-                    <div className="tabular-nums">{u.hatarido ?? "—"}</div>
-                    <div className={`text-xs ${DEADLINE_STYLE[deadlineState(u.hatarido, today)]}`}>
-                      {deadlineText(u.hatarido, today)}
+                    <div
+                      className={`tabular-nums ${
+                        deadlineState(u.hatarido, today, u.status) === "lezarult"
+                          ? "text-slate-400"
+                          : ""
+                      }`}
+                    >
+                      {u.hatarido ?? "—"}
                     </div>
+                    {deadlineText(u.hatarido, today, u.status) && (
+                      <div
+                        className={`text-xs ${
+                          DEADLINE_STYLE[deadlineState(u.hatarido, today, u.status)]
+                        }`}
+                      >
+                        {deadlineText(u.hatarido, today, u.status)}
+                      </div>
+                    )}
                   </td>
                   <td className="td whitespace-nowrap text-right tabular-nums">{u.iratCount}</td>
                   <td className="td whitespace-nowrap text-right tabular-nums">

@@ -38,29 +38,30 @@ export default async function PartnerekPage() {
   await requireMembership();
   const supabase = await createSupabaseServerClient();
 
-  const { data: partnerData } = await supabase
-    .from("partner")
-    .select(
-      "id, name, tax_number, bank_account, is_supplier, is_customer, default_payment_term_days"
-    )
-    // Retired partners are reached from the row they were merged into, not
-    // from the list: showing them here would put the duplicate back on screen.
-    .is("deleted_at", null)
-    .order("name")
-    .limit(1000);
+  // Neither query needs the other's answer, so they go out together.
+  const [{ data: partnerData }, { data: docData }] = await Promise.all([
+    supabase
+      .from("partner")
+      .select(
+        "id, name, tax_number, bank_account, is_supplier, is_customer, default_payment_term_days"
+      )
+      // Retired partners are reached from the row they were merged into, not
+      // from the list: showing them here would put the duplicate back on screen.
+      .is("deleted_at", null)
+      .order("name")
+      .limit(1000),
+    supabase
+      .from("document")
+      .select(
+        `id, partner_id, ugy_id, doc_kind, direction, processing_status,
+         erkezett_at, due_date, gross_amount, currency, fizetve_at`
+      )
+      .not("partner_id", "is", null)
+      .is("deleted_at", null)
+      .limit(3000),
+  ]);
 
   const partners = (partnerData ?? []) as unknown as Row[];
-
-  const { data: docData } = await supabase
-    .from("document")
-    .select(
-      `id, partner_id, ugy_id, doc_kind, direction, processing_status,
-       erkezett_at, due_date, gross_amount, currency, fizetve_at`
-    )
-    .not("partner_id", "is", null)
-    .is("deleted_at", null)
-    .limit(3000);
-
   const docs = (docData ?? []) as unknown as DocRow[];
 
   // Suppression is ügy-scoped, so it has to run over the whole register

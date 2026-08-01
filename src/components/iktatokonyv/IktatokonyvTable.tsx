@@ -78,6 +78,14 @@ export function Iktatokonyv({
     });
   };
 
+  const filtering = query.trim() !== "" || direction !== "" || docKind !== "";
+
+  const clearFilters = () => {
+    setQuery("");
+    setDirection("");
+    setDocKind("");
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
@@ -94,7 +102,7 @@ export function Iktatokonyv({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <div className="relative w-72">
+        <div className="relative w-full sm:w-72">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={query}
@@ -127,7 +135,14 @@ export function Iktatokonyv({
             </option>
           ))}
         </select>
-        <span className="note ml-auto self-center">{filtered.length} tétel</span>
+        {filtering && (
+          <button type="button" onClick={clearFilters} className="btn btn-ghost btn-sm">
+            Szűrők törlése
+          </button>
+        )}
+        <span className="note ml-auto self-center">
+          {filtering ? `${filtered.length} / ${rows.length} tétel` : `${rows.length} tétel`}
+        </span>
       </div>
 
       <div className="card table-scroll">
@@ -153,9 +168,27 @@ export function Iktatokonyv({
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={13}>
-                  <EmptyState icon={<IconBook className="h-8 w-8" />}>
-                    Nincs iktatott irat.
-                  </EmptyState>
+                  {/* It used to say "Nincs iktatott irat." whatever the reason,
+                      so a search that matched nothing looked like an empty
+                      register. */}
+                  {rows.length === 0 ? (
+                    <EmptyState
+                      icon={<IconBook className="h-8 w-8" />}
+                      hint="Ide az kerül, amit a Beérkezőben ellenőriztél és iktattál."
+                    >
+                      Még nincs iktatott irat.
+                    </EmptyState>
+                  ) : (
+                    <EmptyState
+                      icon={<IconSearch className="h-8 w-8" />}
+                      hint={`A ${rows.length} iktatott iratból egy sem felel meg a szűrésnek.`}
+                    >
+                      Nincs találat.
+                      <button type="button" onClick={clearFilters} className="link ml-2">
+                        Szűrők törlése
+                      </button>
+                    </EmptyState>
+                  )}
                 </td>
               </tr>
             )}

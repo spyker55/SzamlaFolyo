@@ -45,37 +45,39 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
   const { ugyId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
-    .from("ugy")
-    .select(
-      `id, foszam, ev, targy, status, hatarido, irattari_jel, eloado_user_id,
-       opened_at, closed_at, irattarba_helyezve_at,
-       partner:partner_id (name, tax_number)`
-    )
-    .eq("id", ugyId)
-    .maybeSingle();
+  // All three are keyed by the id in the URL or by the signed-in company, so
+  // none of them needs an earlier answer.
+  const [{ data }, { data: docData }, { data: memberData }] = await Promise.all([
+    supabase
+      .from("ugy")
+      .select(
+        `id, foszam, ev, targy, status, hatarido, irattari_jel, eloado_user_id,
+         opened_at, closed_at, irattarba_helyezve_at,
+         partner:partner_id (name, tax_number)`
+      )
+      .eq("id", ugyId)
+      .maybeSingle(),
+    supabase
+      .from("document")
+      .select(
+        `id, alszam, iktatoszam, doc_kind, direction, targy, irat_szama, erkezett_at,
+         due_date, gross_amount, currency, processing_status, fizetve_at,
+         ervenytelenites_indoka`
+      )
+      .eq("ugy_id", ugyId)
+      .is("deleted_at", null)
+      .order("alszam", { ascending: true })
+      .limit(500),
+    supabase
+      .from("company_member")
+      .select("user_id, app_user:user_id (full_name, email)")
+      .limit(100),
+  ]);
 
   // RLS makes another company's ugy invisible, so "not found" and "not yours"
   // are the same answer here, which is the answer we want to give.
   const ugy = data as unknown as UgyRow | null;
   if (!ugy || !isUgyStatus(ugy.status)) notFound();
-
-  const { data: docData } = await supabase
-    .from("document")
-    .select(
-      `id, alszam, iktatoszam, doc_kind, direction, targy, irat_szama, erkezett_at,
-       due_date, gross_amount, currency, processing_status, fizetve_at,
-       ervenytelenites_indoka`
-    )
-    .eq("ugy_id", ugyId)
-    .is("deleted_at", null)
-    .order("alszam", { ascending: true })
-    .limit(500);
-
-  const { data: memberData } = await supabase
-    .from("company_member")
-    .select("user_id, app_user:user_id (full_name, email)")
-    .limit(100);
 
   const members = ((memberData ?? []) as unknown as {
     user_id: string;

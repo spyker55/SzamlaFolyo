@@ -28,16 +28,22 @@ function initials(name: string): string {
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const membership = await requireMembership();
   const supabase = await createSupabaseServerClient();
 
-  // What is actually waiting for a human — not everything in the Beérkező.
-  // A document still being read by the model is not a task yet.
-  const { count } = await supabase
-    .from("document")
-    .select("id", { count: "exact", head: true })
-    .in("processing_status", ["needs_review", "extraction_failed"])
-    .is("deleted_at", null);
+  // The badge is on every page, so it must not add a round trip to every page.
+  // The count does not need the membership row — RLS already scopes it to the
+  // signed-in user's company — so the two go together.
+  //
+  // What is actually waiting for a human, not everything in the Beérkező: a
+  // document the model is still reading is not a task yet.
+  const [membership, { count }] = await Promise.all([
+    requireMembership(),
+    supabase
+      .from("document")
+      .select("id", { count: "exact", head: true })
+      .in("processing_status", ["needs_review", "extraction_failed"])
+      .is("deleted_at", null),
+  ]);
 
   const inboxCount = count ?? 0;
 

@@ -30,6 +30,20 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   `folyamatban` soha nem ugorhat egyenesen az irattárba — előbb lezárás jön,
   ez a tényleges ügyviteli sorrend. Az irattárazott ügy metaadata be van
   fagyasztva, amíg ki nem veszik onnan.
+- `src/lib/ugy/order.ts` — **a határidő csak addig határidő, amíg az ügy fut.**
+  Egy májusban irattárazott ügy hónapokig azt írta ki, hogy „84 napja lejárt",
+  és mivel az övé volt a legrégebbi dátum, a lista tetejére került — a valóban
+  nyitott munka fölé. A lezárt és irattárazott ügy ezért minden futó alá süllyed,
+  a dátuma megmarad, de nem visszaszámlálás és nem piros. Ami viszont **nem**
+  szűnik meg egy ügy lezárásával, az a kifizetetlen számla: az ügy adatlapja
+  ezt külön kiírja, és a fizetési naptár változatlanul hozza.
+- `src/lib/errors.ts` — a hibaüzenetek közös rétege. Amit egy funkció előre lát
+  („eltérő törzsszám", „az ügy irattárazott"), azt ott fordítjuk le, ahol
+  keletkezik; ez azokat kezeli, amiket egyik funkció sem lát előre — és amik a
+  leggyakrabban megtörténnek: a kérés meg sem érkezik. A megszakadt kapcsolat
+  eddig `TypeError: fetch failed` néven jelent meg a mondat közepén. Most azt
+  mondja meg, ami a felhasználót érdekli: **megtörtént-e az írás**. Hálózati
+  hibánál nem — a kérés el sem indult.
 - `src/lib/partner/` — a partnertörzs. Az `identity.ts` két dolgot tükröz az
   adatbázisból: a névnormalizálást (`app.normalize_company_name()`) és a
   **törzsszám**-összehasonlítást (`app.tax_number_core()`). Az adószám ÁFA-kódja

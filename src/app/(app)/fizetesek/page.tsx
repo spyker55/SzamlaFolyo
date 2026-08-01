@@ -28,20 +28,30 @@ export default async function FizetesekPage() {
   await requireMembership();
   const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
-    .from("document")
-    .select(
-      `id, iktatoszam, ugy_id, doc_kind, targy, due_date, gross_amount, currency,
-       fizetve_at, partner:partner_id (name)`
-    )
-    // 'iktatva' excludes érvénytelenített iratok: a withdrawn invoice is not
-    // owed. Only incoming documents are debts — outgoing ones are receivables,
-    // which is a different question.
-    .eq("processing_status", "iktatva")
-    .eq("direction", "bejovo")
-    .in("doc_kind", [...PAYABLE_KINDS])
-    .is("deleted_at", null)
-    .limit(1000);
+  // A total the user might act on must say what it does not include, so the
+  // count of documents still awaiting review is fetched alongside the debts
+  // themselves rather than after them.
+  const [{ data }, { count: ellenorzesreVar }] = await Promise.all([
+    supabase
+      .from("document")
+      .select(
+        `id, iktatoszam, ugy_id, doc_kind, targy, due_date, gross_amount, currency,
+         fizetve_at, partner:partner_id (name)`
+      )
+      // 'iktatva' excludes érvénytelenített iratok: a withdrawn invoice is not
+      // owed. Only incoming documents are debts — outgoing ones are receivables,
+      // which is a different question.
+      .eq("processing_status", "iktatva")
+      .eq("direction", "bejovo")
+      .in("doc_kind", [...PAYABLE_KINDS])
+      .is("deleted_at", null)
+      .limit(1000),
+    supabase
+      .from("document")
+      .select("id", { count: "exact", head: true })
+      .in("processing_status", ["needs_review", "extraction_failed"])
+      .is("deleted_at", null),
+  ]);
 
   const documents: PayableDocument[] = ((data ?? []) as unknown as Row[]).map((d) => ({
     id: d.id,
@@ -59,13 +69,6 @@ export default async function FizetesekPage() {
 
   const today = todayInBudapest();
   const schedule = buildSchedule(documents, today);
-
-  // A total the user might act on must say what it does not include.
-  const { count: ellenorzesreVar } = await supabase
-    .from("document")
-    .select("id", { count: "exact", head: true })
-    .in("processing_status", ["needs_review", "extraction_failed"])
-    .is("deleted_at", null);
 
   return (
     <div>

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,73 +17,80 @@ export default async function EllenorzesPage({
   const { documentId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const { data: doc } = await supabase
-    .from("document")
-    .select(
-      "id, processing_status, direction, doc_kind, targy, irat_szama, erkezett_at, issue_date, due_date, melleklet_db, kezelesi_feljegyzes, currency, net_amount, vat_amount, gross_amount, partner_id"
-    )
-    .eq("id", documentId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // This is the screen the user waits on most, so nothing here queues behind
+  // an answer it does not need. These four are all keyed by the id in the URL
+  // or by the company, and used to run one after another.
+  const [{ data: doc }, { data: extraction }, { data: file }, candidates] = await Promise.all([
+    supabase
+      .from("document")
+      .select(
+        "id, processing_status, direction, doc_kind, targy, irat_szama, erkezett_at, issue_date, due_date, melleklet_db, kezelesi_feljegyzes, currency, net_amount, vat_amount, gross_amount, partner_id"
+      )
+      .eq("id", documentId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("extraction")
+      .select("parsed_fields, field_confidence")
+      .eq("document_id", documentId)
+      .is("error", null)
+      .not("parsed_fields", "is", null)
+      .order("finished_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("document_file")
+      .select("storage_path, mime_type, original_filename")
+      .eq("document_id", documentId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+    // Which open ügy might this irat belong to? Deterministic — same partner,
+    // same amount — so the suggestion can state its own reason.
+    loadOpenUgyCandidates(supabase, companyId),
+  ]);
 
   if (!doc) notFound();
 
   if (doc.processing_status !== "needs_review" && doc.processing_status !== "extraction_failed") {
     return (
       <div className="card">
-        <EmptyState hint="Ha tévedésből nyitottad meg, a Beérkezőben megtalálod a többi iratot.">
-          Ez az irat már nem vár ellenőrzésre (állapot: {doc.processing_status}).
+        <EmptyState
+          hint={
+            <>
+              Valószínűleg közben valaki más iktatta.{" "}
+              <Link href="/inbox" className="link">
+                Vissza a Beérkezőhöz
+              </Link>
+            </>
+          }
+        >
+          Ez az irat már nem vár ellenőrzésre.
         </EmptyState>
       </div>
     );
   }
 
-  const { data: extraction } = await supabase
-    .from("extraction")
-    .select("parsed_fields, field_confidence")
-    .eq("document_id", documentId)
-    .is("error", null)
-    .not("parsed_fields", "is", null)
-    .order("finished_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // These two do need answers from above — the storage path and the partner
+  // id — but not from each other.
+  const [signedUrl, partner] = await Promise.all([
+    file
+      ? supabase.storage.from("iratok").createSignedUrl(file.storage_path, 600)
+      : null,
+    doc.partner_id
+      ? supabase.from("partner").select("name, tax_number").eq("id", doc.partner_id).maybeSingle()
+      : null,
+  ]);
 
-  const { data: file } = await supabase
-    .from("document_file")
-    .select("storage_path, mime_type, original_filename")
-    .eq("document_id", documentId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  let fileUrl: string | null = null;
-  if (file) {
-    const { data: signed } = await supabase.storage
-      .from("iratok")
-      .createSignedUrl(file.storage_path, 600);
-    fileUrl = signed?.signedUrl ?? null;
-  }
+  const fileUrl = signedUrl?.data?.signedUrl ?? null;
+  const partnerName = partner?.data?.name ?? null;
+  const partnerTax = partner?.data?.tax_number ?? null;
 
   const parsed = (extraction?.parsed_fields ?? {}) as Record<string, unknown>;
   const confidence =
     ((extraction?.field_confidence as { combined?: Record<string, number> } | null)?.combined) ??
     {};
 
-  let partnerName: string | null = null;
-  let partnerTax: string | null = null;
-  if (doc.partner_id) {
-    const { data: partner } = await supabase
-      .from("partner")
-      .select("name, tax_number")
-      .eq("id", doc.partner_id)
-      .maybeSingle();
-    partnerName = partner?.name ?? null;
-    partnerTax = partner?.tax_number ?? null;
-  }
-
-  // Which open ügy might this irat belong to? Deterministic — same partner,
-  // same amount — so the suggestion can state its own reason.
-  const candidates = await loadOpenUgyCandidates(supabase, companyId);
   const ugySuggestions = suggestUgy(
     {
       partnerName: partnerName ?? str(parsed.partner_name),

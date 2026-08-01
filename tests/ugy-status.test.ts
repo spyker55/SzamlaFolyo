@@ -94,7 +94,12 @@ describe("ugy status machine", () => {
 });
 
 describe("ugy list order", () => {
-  const u = (hatarido: string | null, foszam: number, ev = 2026) => ({ hatarido, foszam, ev });
+  const u = (hatarido: string | null, foszam: number, ev = 2026, status = "folyamatban") => ({
+    hatarido,
+    foszam,
+    ev,
+    status,
+  });
 
   it("puts the nearest deadline first", () => {
     const rows = [u("2026-08-11", 2), u(null, 9), u("2026-05-09", 6), u("2026-07-17", 1)];
@@ -111,18 +116,56 @@ describe("ugy list order", () => {
     expect(rows.sort(compareUgyForList).map((r) => r.ev)).toEqual([2026, 2025]);
   });
 
+  it("sinks a finished ugy below every running one, however old its deadline", () => {
+    // The real case: IKT/6/2026 was archived in May with a deadline months
+    // past, and being the oldest date put it at the very top of the list —
+    // above the work that is actually open.
+    const rows = [
+      u("2026-05-09", 6, 2026, "irattarazott"),
+      u("2026-07-25", 4, 2026, "lezart"),
+      u("2026-08-11", 2, 2026, "folyamatban"),
+      u(null, 3, 2026, "felfuggesztve"),
+    ];
+    expect(rows.sort(compareUgyForList).map((r) => r.foszam)).toEqual([2, 3, 6, 4]);
+  });
+
+  it("still orders the finished ones among themselves by deadline", () => {
+    const rows = [
+      u("2026-07-25", 4, 2026, "lezart"),
+      u("2026-05-09", 6, 2026, "irattarazott"),
+    ];
+    expect(rows.sort(compareUgyForList).map((r) => r.foszam)).toEqual([6, 4]);
+  });
+
   it("reads a deadline the same way the fizetesi naptar does", () => {
-    expect(deadlineState("2026-07-30", "2026-07-31")).toBe("lejart");
-    expect(deadlineState("2026-07-31", "2026-07-31")).toBe("ma");
-    expect(deadlineState("2026-08-07", "2026-07-31")).toBe("kozeli");
-    expect(deadlineState("2026-08-08", "2026-07-31")).toBe("tavoli");
-    expect(deadlineState(null, "2026-07-31")).toBe("nincs");
+    expect(deadlineState("2026-07-30", "2026-07-31", "folyamatban")).toBe("lejart");
+    expect(deadlineState("2026-07-31", "2026-07-31", "folyamatban")).toBe("ma");
+    expect(deadlineState("2026-08-07", "2026-07-31", "folyamatban")).toBe("kozeli");
+    expect(deadlineState("2026-08-08", "2026-07-31", "folyamatban")).toBe("tavoli");
+    expect(deadlineState(null, "2026-07-31", "folyamatban")).toBe("nincs");
+    // A suspended ugy is still running: the case is on hold, the clock is not.
+    expect(deadlineState("2026-07-30", "2026-07-31", "felfuggesztve")).toBe("lejart");
+  });
+
+  it("stops counting once the ugy is finished", () => {
+    for (const status of ["lezart", "irattarazott"]) {
+      expect(deadlineState("2026-05-09", "2026-08-01", status)).toBe("lezarult");
+      expect(deadlineText("2026-05-09", "2026-08-01", status)).toBe("");
+    }
+    // While it is still open, it very much does count.
+    expect(deadlineText("2026-05-09", "2026-08-01", "folyamatban")).toBe("84 napja lejárt");
+  });
+
+  it("says nothing under a date that is not there", () => {
+    // The cell above already renders "—"; repeating it made every deadline-less
+    // ugy read "— / —".
+    expect(deadlineText(null, "2026-08-01", "folyamatban")).toBe("");
   });
 
   it("counts days across a DST change without drifting", () => {
     // Hungary moves the clock on 2026-10-25; an ugy due the day after must
     // not read as two days out.
-    expect(deadlineText("2026-10-26", "2026-10-25")).toBe("1 nap múlva");
+    expect(deadlineText("2026-10-26", "2026-10-25", "folyamatban")).toBe("1 nap múlva");
   });
 });
 

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hunSupabaseError } from "@/lib/errors";
 
 export type IktatValues = Record<string, string | number | null>;
 
@@ -88,7 +89,7 @@ function hunErvenytelenitError(message: string): string {
   if (message.includes("document not found")) {
     return "Az irat nem található.";
   }
-  return "Az érvénytelenítés nem sikerült: " + message;
+  return hunSupabaseError(message, "Az érvénytelenítés nem sikerült.");
 }
 
 function hunError(message: string): string {
@@ -109,5 +110,5 @@ function hunError(message: string): string {
   if (message.includes("closed")) {
     return "Az iktatókönyv le van zárva erre az évre.";
   }
-  return "Az iktatás nem sikerült: " + message;
+  return hunSupabaseError(message, "Az iktatás nem sikerült.");
 }

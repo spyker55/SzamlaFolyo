@@ -54,17 +54,20 @@ export default async function UgyekPage({
   if (status === "aktiv") query = query.in("status", ["folyamatban", "felfuggesztve"]);
   else if (status !== "mind") query = query.eq("status", status);
 
-  const { data } = await query;
-  const rows = (data ?? []) as unknown as Row[];
-
   // A second plain query rather than an embed: the counts are per ugy and
   // PostgREST aggregates on embedded rows have bitten this project before.
-  const { data: docData } = await supabase
-    .from("document")
-    .select("ugy_id, gross_amount, currency, processing_status")
-    .not("ugy_id", "is", null)
-    .is("deleted_at", null)
-    .limit(2000);
+  // It does not depend on the first, so both go out at once.
+  const [{ data }, { data: docData }] = await Promise.all([
+    query,
+    supabase
+      .from("document")
+      .select("ugy_id, gross_amount, currency, processing_status")
+      .not("ugy_id", "is", null)
+      .is("deleted_at", null)
+      .limit(2000),
+  ]);
+
+  const rows = (data ?? []) as unknown as Row[];
 
   const stats = new Map<string, { count: number; totals: Map<string, number> }>();
   for (const d of (docData ?? []) as unknown as DocRow[]) {

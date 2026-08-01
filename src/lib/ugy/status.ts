@@ -78,3 +78,17 @@ export function acceptsNewIrat(status: UgyStatus): boolean {
 export function isEditable(status: UgyStatus): boolean {
   return status !== "irattarazott";
 }
+
+// Whether the ugy is still being worked on.
+//
+// It happens to be the same two statuses that accept a new irat, but it is a
+// different question and is written separately on purpose: this one decides
+// whether a deadline still means anything. IKT/6/2026 went into the archive in
+// May, and the list went on shouting "84 napja lejárt" at it every day since,
+// sorted above the work that was actually open. A finished ugy's deadline is a
+// historical fact, not a task.
+//
+// Takes a plain string because the lists carry whatever the database returned.
+export function isRunning(status: string): boolean {
+  return status === "folyamatban" || status === "felfuggesztve";
+}

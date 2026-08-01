@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hunSupabaseError } from "@/lib/errors";
 import { canTransition, isUgyStatus } from "@/lib/ugy/status";
 
 export type UgyResult = { ok: true } | { ok: false; error: string };
@@ -94,5 +95,5 @@ function hunUgyError(message: string): string {
   if (message.includes("status cannot go")) {
     return "Ebből az állapotból ez a lépés nem lehetséges.";
   }
-  return "A mentés nem sikerült: " + message;
+  return hunSupabaseError(message, "A mentés nem sikerült.");
 }

@@ -10,11 +10,13 @@ import { deadlineState, deadlineText } from "@/lib/ugy/order";
 import {
   acceptsNewIrat,
   isEditable,
+  isRunning,
   nextStatuses,
   transitionLabel,
   UGY_STATUS_LABEL,
   type UgyStatus,
 } from "@/lib/ugy/status";
+import { PAYABLE_KINDS } from "@/lib/fizetes/schedule";
 import { EmptyState } from "@/components/ui/page";
 import { IconArrowLeft } from "@/components/ui/icons";
 
@@ -58,6 +60,7 @@ const DEADLINE_STYLE: Record<string, string> = {
   kozeli: "text-amber-700",
   tavoli: "text-slate-500",
   nincs: "text-slate-400",
+  lezarult: "text-slate-400",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -132,6 +135,16 @@ export function UgyDetail({
     totals.set(c, (totals.get(c) ?? 0) + i.grossAmount);
   }
 
+  // The same test the fizetési naptár applies, so the two screens cannot
+  // disagree about what is still owed: an incoming, filed, unsettled bill.
+  const unpaid = iratok.filter(
+    (i) =>
+      i.status === "iktatva" &&
+      i.direction === "bejovo" &&
+      !i.fizetveAt &&
+      PAYABLE_KINDS.includes(i.docKind ?? "")
+  );
+
   return (
     <div className="space-y-4">
       <div>
@@ -159,6 +172,21 @@ export function UgyDetail({
         <p className="alert alert-muted text-xs">
           Ebbe az ügybe {ugy.status === "lezart" ? "lezárt" : "irattárazott"} állapotban nem
           lehet több iratot iktatni. A meglévő iratok és az iktatószámuk változatlanok.
+        </p>
+      )}
+
+      {/* A closed ügy's deadline stops mattering, but an unpaid invoice does
+          not: the money is owed whether or not the case is filed away. Saying
+          so here is also the answer to "why is this still in the fizetési
+          naptár?" — which is exactly where it belongs. */}
+      {!isRunning(ugy.status) && unpaid.length > 0 && (
+        <p className="alert alert-warn text-sm">
+          Az ügy {UGY_STATUS_LABEL[ugy.status].toLowerCase()}, de {unpaid.length} tétele még
+          nincs kifizetve. A{" "}
+          <Link href="/fizetesek" className="link">
+            fizetési naptárban
+          </Link>{" "}
+          továbbra is szerepel.
         </p>
       )}
 
@@ -247,11 +275,15 @@ export function UgyDetail({
                   </Field>
                   <Field label="Határidő">
                     {ugy.hatarido ?? "—"}
-                    <span
-                      className={`block text-xs ${DEADLINE_STYLE[deadlineState(ugy.hatarido, today)]}`}
-                    >
-                      {deadlineText(ugy.hatarido, today)}
-                    </span>
+                    {deadlineText(ugy.hatarido, today, ugy.status) && (
+                      <span
+                        className={`block text-xs ${
+                          DEADLINE_STYLE[deadlineState(ugy.hatarido, today, ugy.status)]
+                        }`}
+                      >
+                        {deadlineText(ugy.hatarido, today, ugy.status)}
+                      </span>
+                    )}
                   </Field>
                   <Field label="Előadó">
                     {members.find((m) => m.id === ugy.eloadoUserId)?.name ?? "—"}
