@@ -8,6 +8,7 @@ import { elvet, visszaallit } from "@/lib/inbox/actions";
 import { REVIEW_THRESHOLD } from "@/lib/extraction/confidence";
 import { EmptyState } from "@/components/ui/page";
 import { IconInbox, IconMail, IconUpload } from "@/components/ui/icons";
+import { onUploadRequest } from "@/lib/ui/upload-intent";
 
 type InboxDocument = {
   id: string;
@@ -195,6 +196,18 @@ export function InboxClient() {
     return () => clearInterval(interval);
   }, [load]);
 
+  // "Irat feltöltése" in the sidebar. The discarded view has no dropzone, so
+  // step back to the inbox first — otherwise the file dialog would open over a
+  // list the uploaded irat will not appear in.
+  useEffect(
+    () =>
+      onUploadRequest(() => {
+        setShowDiscarded(false);
+        fileInputRef.current?.click();
+      }),
+    []
+  );
+
   const upload = useCallback(
     async (files: FileList | File[]) => {
       setUploading(true);
@@ -265,6 +278,21 @@ export function InboxClient() {
 
   return (
     <div className="mt-4 space-y-4">
+      {/* Outside the dropzone below, which the discarded view hides: the
+          sidebar's "Irat feltöltése" has to find this input whichever view is
+          on screen. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) upload(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
       {/* Nothing to drop into the discarded list. */}
       {!showDiscarded && (
       <div
@@ -295,17 +323,6 @@ export function InboxClient() {
           {uploading ? "Feltöltés…" : "Húzd ide az iratokat, vagy kattints a tallózáshoz"}
         </p>
         <p className="note">PDF, JPEG, PNG vagy WebP, max. 20 MB</p>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="application/pdf,image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) upload(e.target.files);
-            e.target.value = "";
-          }}
-        />
       </div>
       )}
 

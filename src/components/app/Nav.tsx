@@ -11,6 +11,7 @@ import {
   IconUsers,
   IconWallet,
 } from "@/components/ui/icons";
+import { requestUpload } from "@/lib/ui/upload-intent";
 
 type Item = {
   href: string;
@@ -70,10 +71,13 @@ export function Sidebar({ inboxCount }: { inboxCount: number }) {
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-1 border-r border-slate-200 bg-white px-3 py-4 lg:flex">
       <Logo />
 
-      {/* The one thing every session starts with. It is a link, not a button,
-          because the Beérkező is where uploading happens. */}
+      {/* The one thing every session starts with. It goes to the Beérkező —
+          that is where uploading happens — and asks it to open the file
+          dialog, so the button does something even when you are already
+          there. */}
       <Link
         href="/inbox"
+        onClick={() => requestUpload()}
         className="btn btn-secondary mx-3 mt-4 justify-start rounded-full py-2"
       >
         <IconUpload className="h-4 w-4 text-blue-600" />
