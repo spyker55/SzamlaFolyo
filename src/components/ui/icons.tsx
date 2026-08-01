@@ -129,6 +129,17 @@ export function IconMail(props: IconProps) {
   );
 }
 
+// A clock with a turned-back hand: the log is the register's own history.
+export function IconHistory(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3.5 9.5A9 9 0 1 1 3 12" />
+      <path d="M3 4.5V9.5H8" />
+      <path d="M12 7.5V12l3 1.8" />
+    </Svg>
+  );
+}
+
 export function IconArrowLeft(props: IconProps) {
   return (
     <Svg {...props}>

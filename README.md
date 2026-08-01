@@ -44,6 +44,12 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   eddig `TypeError: fetch failed` néven jelent meg a mondat közepén. Most azt
   mondja meg, ami a felhasználót érdekli: **megtörtént-e az írás**. Hálózati
   hibánál nem — a kérés el sem indult.
+- `src/lib/audit/` — az **audit napló** olvasó- és megjelenítő rétege. A
+  `labels.ts` fordítja magyarra, amit a triggerek nyersen rögzítenek (esemény,
+  oszlopnév, érték), a `query.ts` pedig az egyetlen hely, ahonnan a naplót
+  lekérdezzük — így a Napló képernyő és az ügy „Előzmények" doboza nem
+  gondolhat mást a rendezésről. Egy uuid-mezőből sosem uuid lesz a képernyőn,
+  hanem az, ami vele történt („hozzárendelve", „eltávolítva").
 - `src/lib/partner/` — a partnertörzs. Az `identity.ts` két dolgot tükröz az
   adatbázisból: a névnormalizálást (`app.normalize_company_name()`) és a
   **törzsszám**-összehasonlítást (`app.tax_number_core()`). Az adószám ÁFA-kódja
@@ -82,6 +88,9 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   és a Beérkezőn a **rád váró** iratok számával — a feldolgozás alatt álló irat
   még nem feladat), `AuthShell.tsx` (bejelentkezés, regisztráció, cégnyitás
   közös kártyája).
+- `src/components/audit/` — a naplóbejegyzés egyetlen alakja. Az `AuditList`
+  a Napló képernyőn és az ügy/partner adatlap „Előzmények" dobozában is
+  ugyanaz, mert egy esemény kétféle megjelenítése előbb-utóbb kétféle igazság.
 - `src/components/ui/` — `page.tsx` a `PageHeader` és az `EmptyState`,
   `icons.tsx` a néhány vonalas ikon. Az ikonok itt vannak megrajzolva, nem
   csomagból: tizenegy path miatt nem kell külön függőség és bundle.
@@ -125,6 +134,12 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   számjegye három valódi, a registerben iktatott számla adószámán; az IBAN
   négy publikált mintán, plusz egy elrontott ellenőrző számon; és hogy eltérő
   törzsszámú cégeket a duplikátumkereső **soha** nem ajánl összevonásra.
+- `tests/audit-labels.test.ts` — a napló szótára és a migráció nem csúszhat
+  szét: a teszt **a migrációs fájlból olvassa ki** az összes eseménynevet, amit
+  a triggerek írnak, és megköveteli, hogy mindegyiknek legyen magyar
+  megfelelője — különben a képernyőn nyers `document.valami` kulcs jelenne meg.
+  Fedi az uuid-mezők leírását, a hosszú szöveg levágását, és hogy az időszak-szűrő
+  **budapesti** napkezdettel dolgozik, nyári és téli időszámításban is.
 - `tests/export-csv.test.ts` — hónaphatárok (szökőév is), a magyar
   számformátum, a formula-injekció elleni védelem, és hogy a díjbekérő nem
   duplázza meg a könyvelendő összeget.
@@ -135,7 +150,7 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   hiányzó fejléc), címzett-feloldás és payload-olvasás. A payload-teszt egy
   **valódi Resend-kézbesítés** szó szerinti másolatán fut, nem kitalált alakon.
 
-A másik két teszt a Supabase projekt **publikus API-ján** fut (anon kulcs +
+A többi teszt a Supabase projekt **publikus API-ján** fut (anon kulcs +
 jelszavas bejelentkezés), tehát pontosan azt az utat gyakorolja, amit az
 alkalmazás:
 
@@ -158,6 +173,11 @@ alkalmazás:
   `unmerge_partner()` pontosan azokat a sorokat viszi vissza, amelyeket
   elmozdított; eltérő adószámú cégeket az adatbázis elutasít; összevont
   partner nem szerkeszthető, és partner nem költöztethető másik céghez.
+- `tests/audit-trail.test.ts` — az iktatás bejegyzést ír, a bejegyzésben ott a
+  személy és az iktatószám; az ügy megnyitása **megelőzi** az iratét ugyanabban
+  a tranzakcióban; egy tag a saját cége bejegyzését sem módosítani, sem törölni,
+  sem hamisítani nem tudja; másik cég naplója láthatatlan; és az érvénytelenítés
+  indoka bekerül a naplóba.
 - `tests/rls-isolation.test.ts` — másik cég usere semmilyen úton nem látja, nem
   módosítja és nem iktatja az első cég iratait; a `p_ugy_id`-vel sem tudja a saját
   iratát idegen ügy alá fűzni; anon semmit nem lát; fizikai törlés senkinek.
@@ -166,7 +186,7 @@ A két teszt-user (`teszt.a@szamlafolyo-test.hu`, `teszt.b@szamlafolyo-test.hu`)
 a projektben seedelve van megerősített e-maillel. A jelszavuk **nincs a
 repóban** — állítsd be a `TEST_USER_PASSWORD`-öt a `.env.test`-ben.
 
-Ha nincs `.env.test`, ez a két suite **kihagyódik** (a vitest kiírja, hány
+Ha nincs `.env.test`, ezek a suite-ok **kihagyódnak** (a vitest kiírja, hány
 tesztet hagyott ki — nem hamis zöld), az offline tesztek viszont futnak.
 Ez szándékos: a concurrency-suite futásonként 50 valódi iratot iktat abba a
 projektbe, amire mutat, ezért nem szabad minden pusholásnál a produkciós
@@ -194,6 +214,22 @@ tesztek és build minden pusholásnál és pull requestnél.
   Ezt az `app.protect_iktatott_document()` trigger tartja be, nem a jó szándék:
   a `document_update` policy minden mezőt engedne, ezért a szabály a triggerben él,
   ahol a service role és a `SECURITY DEFINER` függvények sem kerülhetik meg.
+- **Audit napló** (`/naplo`): ki, mit, mikor. A bejegyzéseket **triggerek**
+  írják, nem az alkalmazás — a szerver-action, a kinyerő worker, az e-mailes
+  beérkeztetés és egy kézi `psql` is ugyanazokat a táblákat írja, és az a
+  napló, ami csak a beépített útvonalakat fedi, pont arról hallgat, amire
+  kíváncsiak lennénk. A tábla **append-only**: a klienseknek nincs INSERT
+  joguk (hamisítani nem lehet), egy `BEFORE UPDATE OR DELETE` trigger pedig
+  minden szerepkörnek nemet mond, a service role-nak is. A cég minden tagja
+  olvashatja — minden bejegyzés olyan sorról szól, amit amúgy is megnyithat,
+  szűkíteni egy policy átírása. Az idő `clock_timestamp()`, nem `now()`:
+  egy tranzakción belül (iktatás = ügy + iktatószám + irat) különben minden
+  bejegyzés azonos másodpercet kapna, és a napló nem tudná megmondani, mi
+  történt előbb. A napló a bekapcsolás napjától rögzít; visszamenőleg nincs
+  benne semmi, és nem is találunk ki bele.
+- A napló egyetlen eseménye, amit nem trigger lát: a **könyvelői export
+  letöltése** (`log_export` RPC). Az adatbázisban semmi nem változik, amikor egy
+  hónapnyi irat elhagyja a rendszert — épp ezért érdemes rögzíteni.
 - A könyvelői export (`/export`) csak **iktatott** iratot ad ki; az
   érvénytelenítettek is benne vannak, jelölve, de az összegen nem mozdítanak.
   A ZIP-be az eredeti fájlok kerülnek, iktatószámmal kezdődő néven, és benne

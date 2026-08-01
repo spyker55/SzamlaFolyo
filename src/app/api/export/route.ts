@@ -58,6 +58,26 @@ export async function GET(request: Request) {
 
   const base = exportBaseName(companyName, from, to);
 
+  // The one event no trigger can see: nothing in the database changes when a
+  // month of iratok leaves it. Logged before the bytes are built, so a
+  // download that dies halfway through building a large ZIP still leaves the
+  // record that it was asked for.
+  //
+  // Not awaited into the response's success: the export is the user's, and a
+  // log write that fails must not turn a working download into an error.
+  await supabase
+    .rpc("log_export", {
+      p_format: format,
+      p_from: from,
+      p_to: to,
+      p_basis: basisParam,
+      p_direction: direction,
+      p_count: items.length,
+    })
+    .then(({ error }) => {
+      if (error) console.error("log_export failed", error.message);
+    });
+
   if (format === "csv") {
     const csv = toCsv(items);
     return new NextResponse(csv, {

@@ -6,6 +6,7 @@ import {
   IconBook,
   IconDownload,
   IconFolder,
+  IconHistory,
   IconInbox,
   IconUpload,
   IconUsers,
@@ -43,6 +44,10 @@ const SECTIONS: { title: string; items: Item[] }[] = [
       { href: "/fizetesek", label: "Fizetések", Icon: IconWallet },
       { href: "/export", label: "Könyvelői export", Icon: IconDownload },
     ],
+  },
+  {
+    title: "Rendszer",
+    items: [{ href: "/naplo", label: "Napló", Icon: IconHistory }],
   },
 ];
 

@@ -3,6 +3,8 @@ import { requireMembership } from "@/lib/tenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { UgyDetail } from "@/components/ugy/UgyDetail";
 import { isUgyStatus } from "@/lib/ugy/status";
+import { AuditCard } from "@/components/audit/AuditList";
+import { fetchAuditEvents } from "@/lib/audit/query";
 
 type UgyRow = {
   id: string;
@@ -104,27 +106,41 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
     ervenytelenitesIndoka: d.ervenytelenites_indoka,
   }));
 
+  // Only now, because the irat ids are what makes this the ügy's history and
+  // not just its own row's: "mikor iktattuk az IKT/7-2-t" is the question
+  // somebody standing on this screen is asking.
+  const events = await fetchAuditEvents(supabase, {
+    entityIds: [ugy.id, ...iratok.map((i) => i.id)],
+    limit: 100,
+  });
+
   return (
-    <UgyDetail
-      ugy={{
-        id: ugy.id,
-        iktatoszam: `IKT/${ugy.foszam}/${ugy.ev}`,
-        foszam: ugy.foszam,
-        ev: ugy.ev,
-        targy: ugy.targy ?? "",
-        status: ugy.status,
-        hatarido: ugy.hatarido,
-        irattariJel: ugy.irattari_jel ?? "",
-        eloadoUserId: ugy.eloado_user_id,
-        openedAt: ugy.opened_at,
-        closedAt: ugy.closed_at,
-        irattarbaHelyezveAt: ugy.irattarba_helyezve_at,
-        partnerName: ugy.partner?.name ?? null,
-        partnerTaxNumber: ugy.partner?.tax_number ?? null,
-      }}
-      iratok={iratok}
-      members={members}
-      today={todayInBudapest()}
-    />
+    <div className="space-y-4">
+      <UgyDetail
+        ugy={{
+          id: ugy.id,
+          iktatoszam: `IKT/${ugy.foszam}/${ugy.ev}`,
+          foszam: ugy.foszam,
+          ev: ugy.ev,
+          targy: ugy.targy ?? "",
+          status: ugy.status,
+          hatarido: ugy.hatarido,
+          irattariJel: ugy.irattari_jel ?? "",
+          eloadoUserId: ugy.eloado_user_id,
+          openedAt: ugy.opened_at,
+          closedAt: ugy.closed_at,
+          irattarbaHelyezveAt: ugy.irattarba_helyezve_at,
+          partnerName: ugy.partner?.name ?? null,
+          partnerTaxNumber: ugy.partner?.tax_number ?? null,
+        }}
+        iratok={iratok}
+        members={members}
+        today={todayInBudapest()}
+      />
+      <AuditCard
+        events={events}
+        empty="Ehhez az ügyhöz még nincs naplóbejegyzés — a napló később indult, mint maga az ügy."
+      />
+    </div>
   );
 }
