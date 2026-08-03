@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -13,12 +13,24 @@ import {
 } from "@/lib/audit/labels";
 import { AUDIT_PERIODS, budapestDayStart, periodSince } from "@/lib/audit/query";
 
-const MIGRATION = join(
-  process.cwd(),
-  "supabase",
-  "migrations",
-  "20260801000020_audit_log.sql"
-);
+const MIGRATIONS_DIR = join(process.cwd(), "supabase", "migrations");
+
+// Every migration that writes audit entries, not just the one that introduced
+// the table: the irattári terv added five actions of its own in a later file,
+// and a test pinned to a single filename would have missed all five.
+function auditActionsFromMigrations(): Set<string> {
+  const actions = new Set<string>();
+  for (const file of readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"))) {
+    const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
+    if (!sql.includes("app.audit_write(")) continue;
+    for (const m of sql.matchAll(
+      /'((?:document|ugy|partner|tag|ceg|export|irattar)\.[a-z_]+)'/g
+    )) {
+      actions.add(m[1]);
+    }
+  }
+  return actions;
+}
 
 function event(partial: Partial<AuditEvent>): AuditEvent {
   return {
@@ -41,13 +53,10 @@ describe("the action vocabulary", () => {
   // migration ever writes an action with no Hungarian label, the napló would
   // quietly render a raw key like 'document.valami' at the user — so the
   // authority is read back out of the SQL rather than trusted to stay in sync.
-  it("has a Hungarian label for every action the migration writes", () => {
-    const sql = readFileSync(MIGRATION, "utf8");
-    const actions = new Set(
-      [...sql.matchAll(/'((?:document|ugy|partner|tag|ceg|export)\.[a-z_]+)'/g)].map((m) => m[1])
-    );
+  it("has a Hungarian label for every action the migrations write", () => {
+    const actions = auditActionsFromMigrations();
 
-    expect(actions.size).toBeGreaterThan(15);
+    expect(actions.size).toBeGreaterThan(20);
     for (const action of actions) {
       expect(AUDIT_ACTION_LABEL[action], `no Hungarian label for ${action}`).toBeTruthy();
     }
@@ -82,6 +91,13 @@ describe("formatting a value", () => {
     const shown = formatAuditValue("note", long);
     expect(shown.length).toBeLessThan(200);
     expect(shown.endsWith("…")).toBe(true);
+  });
+
+  // Az üres őrzési idő nem hiányzó adat, hanem a legerősebb érték. "—"-ként
+  // kiírva a "nem selejtezhető" ellenkezőjét mondaná.
+  it("calls an empty őrzési idő what it is", () => {
+    expect(formatAuditValue("orzesi_ido_ev", null)).toBe("nem selejtezhető");
+    expect(formatAuditValue("orzesi_ido_ev", 8)).toBe("8");
   });
 
   it("keeps an unknown enum value visible", () => {
@@ -124,6 +140,24 @@ describe("the change lines", () => {
       })
     );
     expect(moved.note).toBe("megváltozott");
+  });
+
+  // "Irattári tétel inaktiválva" fejlécű bejegyzés alatt az "Elvetve" sor a
+  // saját címét cáfolná.
+  it("names deleted_at after the thing it happened to", () => {
+    const [line] = auditChangeLines(
+      event({
+        entityType: "irattari_tetel",
+        action: "irattar.tetel_inaktivalva",
+        changes: { deleted_at: { from: null, to: "2026-08-01T10:00:00" } },
+      })
+    );
+    expect(line.label).toBe("Inaktiválva");
+
+    const [partnerLine] = auditChangeLines(
+      event({ entityType: "partner", changes: { deleted_at: { from: null, to: "2026-08-01" } } })
+    );
+    expect(partnerLine.label).toBe("Törölve");
   });
 
   it("skips the bookkeeping columns", () => {

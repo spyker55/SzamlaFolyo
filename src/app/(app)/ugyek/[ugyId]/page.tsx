@@ -14,6 +14,7 @@ type UgyRow = {
   status: string;
   hatarido: string | null;
   irattari_jel: string | null;
+  irattari_tetel_id: string | null;
   eloado_user_id: string | null;
   opened_at: string;
   closed_at: string | null;
@@ -49,32 +50,42 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
 
   // All three are keyed by the id in the URL or by the signed-in company, so
   // none of them needs an earlier answer.
-  const [{ data }, { data: docData }, { data: memberData }] = await Promise.all([
-    supabase
-      .from("ugy")
-      .select(
-        `id, foszam, ev, targy, status, hatarido, irattari_jel, eloado_user_id,
-         opened_at, closed_at, irattarba_helyezve_at,
-         partner:partner_id (name, tax_number)`
-      )
-      .eq("id", ugyId)
-      .maybeSingle(),
-    supabase
-      .from("document")
-      .select(
-        `id, alszam, iktatoszam, doc_kind, direction, targy, irat_szama, erkezett_at,
-         due_date, gross_amount, currency, processing_status, fizetve_at,
-         ervenytelenites_indoka`
-      )
-      .eq("ugy_id", ugyId)
-      .is("deleted_at", null)
-      .order("alszam", { ascending: true })
-      .limit(500),
-    supabase
-      .from("company_member")
-      .select("user_id, app_user:user_id (full_name, email)")
-      .limit(100),
-  ]);
+  const [{ data }, { data: docData }, { data: memberData }, { data: tetelData }] =
+    await Promise.all([
+      supabase
+        .from("ugy")
+        .select(
+          `id, foszam, ev, targy, status, hatarido, irattari_jel, irattari_tetel_id,
+           eloado_user_id, opened_at, closed_at, irattarba_helyezve_at,
+           partner:partner_id (name, tax_number)`
+        )
+        .eq("id", ugyId)
+        .maybeSingle(),
+      supabase
+        .from("document")
+        .select(
+          `id, alszam, iktatoszam, doc_kind, direction, targy, irat_szama, erkezett_at,
+           due_date, gross_amount, currency, processing_status, fizetve_at,
+           ervenytelenites_indoka`
+        )
+        .eq("ugy_id", ugyId)
+        .is("deleted_at", null)
+        .order("alszam", { ascending: true })
+        .limit(500),
+      supabase
+        .from("company_member")
+        .select("user_id, app_user:user_id (full_name, email)")
+        .limit(100),
+      // Only the live tételek: a retired one is not something to file a new ügy
+      // under, and the ügy already carries the jel it was filed with.
+      supabase
+        .from("irattari_tetel")
+        .select("id, tetelszam, nev, orzesi_ido_ev, jogszabaly, megjegyzes, sorrend")
+        .is("deleted_at", null)
+        .order("sorrend")
+        .order("tetelszam")
+        .limit(500),
+    ]);
 
   // RLS makes another company's ugy invisible, so "not found" and "not yours"
   // are the same answer here, which is the answer we want to give.
@@ -87,6 +98,25 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
   }[]).map((m) => ({
     id: m.user_id,
     name: m.app_user?.full_name ?? m.app_user?.email ?? m.user_id,
+  }));
+
+  const tetelek = ((tetelData ?? []) as unknown as {
+    id: string;
+    tetelszam: string;
+    nev: string;
+    orzesi_ido_ev: number | null;
+    jogszabaly: string | null;
+    megjegyzes: string | null;
+    sorrend: number;
+  }[]).map((t) => ({
+    id: t.id,
+    tetelszam: t.tetelszam,
+    nev: t.nev,
+    orzesiIdoEv: t.orzesi_ido_ev,
+    jogszabaly: t.jogszabaly,
+    megjegyzes: t.megjegyzes,
+    sorrend: t.sorrend,
+    aktiv: true,
   }));
 
   const iratok = ((docData ?? []) as unknown as DocRow[]).map((d) => ({
@@ -126,6 +156,7 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
           status: ugy.status,
           hatarido: ugy.hatarido,
           irattariJel: ugy.irattari_jel ?? "",
+          irattariTetelId: ugy.irattari_tetel_id,
           eloadoUserId: ugy.eloado_user_id,
           openedAt: ugy.opened_at,
           closedAt: ugy.closed_at,
@@ -135,7 +166,9 @@ export default async function UgyPage({ params }: { params: Promise<{ ugyId: str
         }}
         iratok={iratok}
         members={members}
+        tetelek={tetelek}
         today={todayInBudapest()}
+        mostEv={Number(todayInBudapest().slice(0, 4))}
       />
       <AuditCard
         events={events}

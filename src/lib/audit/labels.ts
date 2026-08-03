@@ -56,6 +56,11 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "tag.hozzaadva": "Felhasználó hozzáadva",
   "tag.szerepkor": "Szerepkör módosítva",
   "tag.modositva": "Tagság módosítva",
+  "irattar.tetel_letrehozva": "Irattári tétel felvéve",
+  "irattar.tetel_modositva": "Irattári tétel módosítva",
+  "irattar.orzesi_ido": "Őrzési idő módosítva",
+  "irattar.tetel_inaktivalva": "Irattári tétel inaktiválva",
+  "irattar.tetel_visszaallitva": "Irattári tétel visszaállítva",
   "ceg.letrehozva": "Cég létrehozva",
   "ceg.modositva": "Cégadatok módosítva",
   "export.letoltve": "Könyvelői export letöltve",
@@ -81,6 +86,9 @@ export function auditActionTone(action: string): string {
     return "badge-red";
   }
   if (action === "export.letoltve") return "badge-violet";
+  // Not decoration: an őrzési idő is the date after which records may be
+  // destroyed, so a change to one is worth finding in a scrolled feed.
+  if (action === "irattar.orzesi_ido") return "badge-orange";
   if (action === "document.fizetve") return "badge-green";
   if (action.endsWith(".elvetve") || action.endsWith(".torolve")) return "badge-amber";
   return "badge-slate";
@@ -92,6 +100,7 @@ export const AUDIT_ENTITY_LABEL: Record<string, string> = {
   partner: "Partner",
   company_member: "Felhasználó",
   company: "Cég",
+  irattari_tetel: "Irattári tétel",
 };
 
 export function auditEntityLabel(entityType: string): string {
@@ -104,6 +113,7 @@ export const AUDIT_FILTERS: { value: string; label: string; prefix: string }[] =
   { value: "irat", label: "Iratok", prefix: "document." },
   { value: "ugy", label: "Ügyek", prefix: "ugy." },
   { value: "partner", label: "Partnerek", prefix: "partner." },
+  { value: "irattar", label: "Irattári terv", prefix: "irattar." },
   { value: "hozzaferes", label: "Hozzáférés", prefix: "tag." },
   { value: "export", label: "Export", prefix: "export." },
 ];
@@ -147,6 +157,12 @@ const FIELD_LABEL: Record<string, string> = {
   status: "Állapot",
   hatarido: "Határidő",
   irattari_jel: "Irattári jel",
+  irattari_tetel_id: "Irattári tétel",
+  tetelszam: "Tételszám",
+  orzesi_ido_ev: "Őrzési idő (év)",
+  jogszabaly: "Jogszabály",
+  megjegyzes: "Megjegyzés",
+  sorrend: "Sorrend",
   eloado_user_id: "Előadó",
   parent_ugy_id: "Fölérendelt ügy",
   closed_at: "Lezárva",
@@ -168,8 +184,19 @@ const FIELD_LABEL: Record<string, string> = {
   default_currency: "Alapértelmezett pénznem",
 };
 
-export function auditFieldLabel(field: string): string {
-  return FIELD_LABEL[field] ?? field;
+// The same column does not always mean the same thing. `deleted_at` is the
+// one that bites: on an irat it is "elvetve", on a partner "törölve", on an
+// irattári tétel "inaktiválva" — and an entry headed "Irattári tétel
+// inaktiválva" whose only line reads "Elvetve" contradicts its own title.
+const FIELD_LABEL_BY_ENTITY: Record<string, Record<string, string>> = {
+  irattari_tetel: { deleted_at: "Inaktiválva" },
+  partner: { deleted_at: "Törölve" },
+};
+
+export function auditFieldLabel(field: string, entityType?: string): string {
+  return (
+    FIELD_LABEL_BY_ENTITY[entityType ?? ""]?.[field] ?? FIELD_LABEL[field] ?? field
+  );
 }
 
 // Foreign keys. Printing a uuid at somebody is not information, so these
@@ -181,6 +208,7 @@ const OPAQUE_FIELDS = new Set([
   "parent_ugy_id",
   "duplicate_of_document_id",
   "merged_into_partner_id",
+  "irattari_tetel_id",
   "ervenytelenitette",
   "created_by",
   "user_id",
@@ -235,6 +263,12 @@ const SOURCE_LABEL: Record<string, string> = {
 const MAX_VALUE_LENGTH = 180;
 
 export function formatAuditValue(field: string, value: unknown): string {
+  // The one column where empty is a decision and not a gap. Rendering it as
+  // "—" would turn "nem selejtezhető" into "nincs megadva", which is the
+  // opposite instruction.
+  if (field === "orzesi_ido_ev" && (value === null || value === undefined)) {
+    return "nem selejtezhető";
+  }
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Igen" : "Nem";
 
@@ -272,7 +306,7 @@ export function auditChangeLines(event: AuditEvent): AuditChangeLine[] {
   for (const [field, change] of Object.entries(event.changes ?? {})) {
     if (HIDDEN_FIELDS.has(field)) continue;
 
-    const label = auditFieldLabel(field);
+    const label = auditFieldLabel(field, event.entityType);
 
     if (OPAQUE_FIELDS.has(field)) {
       const had = change.from !== null && change.from !== undefined;
@@ -338,6 +372,14 @@ export function auditContextNote(event: AuditEvent): string | null {
     return event.action === "partner.osszevonva"
       ? `Megmaradt partner: ${survivor}`
       : `Korábban ide volt összevonva: ${survivor}`;
+  }
+
+  if (event.action === "irattar.tetel_letrehozva") {
+    return `Őrzési idő: ${
+      c.orzesi_ido_ev === null || c.orzesi_ido_ev === undefined
+        ? "nem selejtezhető"
+        : `${c.orzesi_ido_ev} év`
+    }`;
   }
 
   if (event.action === "tag.hozzaadva" && typeof c.role === "string") {

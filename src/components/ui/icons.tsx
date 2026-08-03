@@ -129,6 +129,17 @@ export function IconMail(props: IconProps) {
   );
 }
 
+// A box with a lid and a label line: the archive, not a folder.
+export function IconArchive(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 5.5A1.5 1.5 0 0 1 4.5 4h15A1.5 1.5 0 0 1 21 5.5V8H3Z" />
+      <path d="M4.5 8h15v10a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18Z" />
+      <path d="M10 12h4" />
+    </Svg>
+  );
+}
+
 // A clock with a turned-back hand: the log is the register's own history.
 export function IconHistory(props: IconProps) {
   return (

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  IconArchive,
   IconBook,
   IconDownload,
   IconFolder,
@@ -36,7 +37,10 @@ const SECTIONS: { title: string; items: Item[] }[] = [
   },
   {
     title: "Törzsadatok",
-    items: [{ href: "/partnerek", label: "Partnerek", Icon: IconUsers }],
+    items: [
+      { href: "/partnerek", label: "Partnerek", Icon: IconUsers },
+      { href: "/irattari-terv", label: "Irattári terv", Icon: IconArchive },
+    ],
   },
   {
     title: "Pénzügy",

@@ -44,6 +44,12 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   eddig `TypeError: fetch failed` néven jelent meg a mondat közepén. Most azt
   mondja meg, ami a felhasználót érdekli: **megtörtént-e az írás**. Hálózati
   hibánál nem — a kérés el sem indult.
+- `src/lib/irattar/terv.ts` — **meddig kell megőrizni.** A megőrzési idő az ügy
+  *lezárásának* évétől számít: a Számviteli törvény a bizonylat üzleti évétől
+  számol, egy éven belül nyitott és lezárt ügynél ez ugyanaz, ahol pedig
+  eltérnek, ott a lezárás a későbbi — így a számolás soha nem selejtez korán.
+  A modul legfontosabb sora, hogy a **null őrzési idő nem hiányzó adat, hanem
+  a „nem selejtezhető"**: a legerősebb érték, amit a mező felvehet.
 - `src/lib/audit/` — az **audit napló** olvasó- és megjelenítő rétege. A
   `labels.ts` fordítja magyarra, amit a triggerek nyersen rögzítenek (esemény,
   oszlopnév, érték), a `query.ts` pedig az egyetlen hely, ahonnan a naplót
@@ -88,6 +94,9 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   és a Beérkezőn a **rád váró** iratok számával — a feldolgozás alatt álló irat
   még nem feladat), `AuthShell.tsx` (bejelentkezés, regisztráció, cégnyitás
   közös kártyája).
+- `src/components/irattar/` — az irattári terv szerkesztője. A „nem
+  selejtezhető" külön jelölőnégyzet, nem az üresen hagyott évszám-mező: döntés,
+  nem a döntés hiánya.
 - `src/components/audit/` — a naplóbejegyzés egyetlen alakja. Az `AuditList`
   a Napló képernyőn és az ügy/partner adatlap „Előzmények" dobozában is
   ugyanaz, mert egy esemény kétféle megjelenítése előbb-utóbb kétféle igazság.
@@ -134,6 +143,13 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   számjegye három valódi, a registerben iktatott számla adószámán; az IBAN
   négy publikált mintán, plusz egy elrontott ellenőrző számon; és hogy eltérő
   törzsszámú cégeket a duplikátumkereső **soha** nem ajánl összevonásra.
+- `tests/irattari-terv.test.ts` — a megőrzési idő számolása (a 2026-ban lezárt,
+  8 éves tétel 2034. december 31-ig őrzendő, és 2035-től selejtezhető), a
+  szilveszter éjjeli lezárás **budapesti** éve, és hogy a null őrzési idő nem
+  selejtezhetőt jelent, nem azonnal selejtezhetőt. Az alapértelmezett tervet
+  **a migrációból olvassa vissza**: a számviteli bizonylatok 8 éve és a
+  munkaügyi iratok „nem selejtezhető" jelölése nem csúszhat el csendben, és
+  minden tételnek meg kell mondania, mire alapozza a határidőt.
 - `tests/audit-labels.test.ts` — a napló szótára és a migráció nem csúszhat
   szét: a teszt **a migrációs fájlból olvassa ki** az összes eseménynevet, amit
   a triggerek írnak, és megköveteli, hogy mindegyiknek legyen magyar
@@ -214,6 +230,23 @@ tesztek és build minden pusholásnál és pull requestnél.
   Ezt az `app.protect_iktatott_document()` trigger tartja be, nem a jó szándék:
   a `document_update` policy minden mezőt engedne, ezért a szabály a triggerben él,
   ahol a service role és a `SECURITY DEFINER` függvények sem kerülhetik meg.
+- **Irattári terv** (`/irattari-terv`): melyik ügytípust meddig kell megőrizni.
+  A tétel az **ügyhöz** tartozik, nem az irathoz — az ügy megy az irattárba, és
+  a benne iktatott iratok osztoznak a sorsán; egy díjbekérőnek és a rá kiállított
+  számlának nem lehet külön megőrzési ideje. A rendszer minden cégnek beveti
+  ugyanazt a kiindulási tervet a hivatkozott jogszabállyal együtt, de ez
+  **kiindulás, nem tanács**: minden sor szerkeszthető, és a megadott idők
+  törvényi minimumok. A tervet csak `owner` vagy `admin` írhatja — a megőrzési
+  idő rövidítése végső soron döntés arról, hogy iratokat meg lehet semmisíteni.
+  A tételszám nem módosítható: az kerül rá az ügyre irattári jelként, és ha
+  elmozdulhatna, egy régi ügy jele már nem arra a tételre mutatna, ami alatt
+  iktatták.
+- **Selejtezés: a rendszer soha nem töröl.** A `/irattari-terv` kilistázza,
+  melyik ügy megőrzési ideje járt le, és ott megáll. A döntést és a
+  megsemmisítést emberre hagyja, az iktatott irat fizikai törlése pedig az
+  adatbázisban is tiltott marad. Ez nem óvatosság: egy magától selejtező
+  ütemterv volna az egyetlen funkció, ami képes elveszíteni azt, amit ez az
+  egész kódbázis őrizni hivatott.
 - **Audit napló** (`/naplo`): ki, mit, mikor. A bejegyzéseket **triggerek**
   írják, nem az alkalmazás — a szerver-action, a kinyerő worker, az e-mailes
   beérkeztetés és egy kézi `psql` is ugyanazokat a táblákat írja, és az a

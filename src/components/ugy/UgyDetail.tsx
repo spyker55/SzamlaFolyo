@@ -17,6 +17,15 @@ import {
   type UgyStatus,
 } from "@/lib/ugy/status";
 import { PAYABLE_KINDS } from "@/lib/fizetes/schedule";
+import {
+  budapestEv,
+  irattariJel as irattariJelOf,
+  megorzes,
+  megorzesSzoveg,
+  MEGORZES_LABEL,
+  megorzesStilus,
+  type IrattariTetel,
+} from "@/lib/irattar/terv";
 import { EmptyState } from "@/components/ui/page";
 import { IconArrowLeft } from "@/components/ui/icons";
 
@@ -29,6 +38,7 @@ type Ugy = {
   status: UgyStatus;
   hatarido: string | null;
   irattariJel: string;
+  irattariTetelId: string | null;
   eloadoUserId: string | null;
   openedAt: string;
   closedAt: string | null;
@@ -74,12 +84,18 @@ export function UgyDetail({
   ugy,
   iratok,
   members,
+  tetelek,
   today,
+  mostEv,
 }: {
   ugy: Ugy;
   iratok: Irat[];
   members: { id: string; name: string }[];
+  tetelek: IrattariTetel[];
   today: string;
+  // The current year in Budapest, computed on the server: the retention line
+  // must not read differently because a browser's clock is in another zone.
+  mostEv: number;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -89,7 +105,7 @@ export function UgyDetail({
 
   const [targy, setTargy] = useState(ugy.targy);
   const [hatarido, setHatarido] = useState(ugy.hatarido ?? "");
-  const [irattariJel, setIrattariJel] = useState(ugy.irattariJel);
+  const [irattariTetelId, setIrattariTetelId] = useState(ugy.irattariTetelId ?? "");
   const [eloado, setEloado] = useState(ugy.eloadoUserId ?? "");
 
   const editable = isEditable(ugy.status);
@@ -115,7 +131,7 @@ export function UgyDetail({
       const result = await mentMetaadat(ugy.id, {
         targy,
         hatarido: hatarido === "" ? null : hatarido,
-        irattariJel,
+        irattariTetelId: irattariTetelId === "" ? null : irattariTetelId,
         eloadoUserId: eloado === "" ? null : eloado,
       });
       setBusy(false);
@@ -143,6 +159,15 @@ export function UgyDetail({
       i.direction === "bejovo" &&
       !i.fizetveAt &&
       PAYABLE_KINDS.includes(i.docKind ?? "")
+  );
+
+  const tetel = tetelek.find((t) => t.id === ugy.irattariTetelId) ?? null;
+  // Retention is counted from the closing, and only a closed ügy has one.
+  const megorzesAllapot = megorzes(
+    budapestEv(ugy.closedAt),
+    tetel?.orzesiIdoEv ?? null,
+    mostEv,
+    tetel !== null
   );
 
   return (
@@ -212,12 +237,19 @@ export function UgyDetail({
                 />
               </label>
               <label>
-                <span className="flabel">Irattári jel</span>
-                <input
-                  value={irattariJel}
-                  onChange={(e) => setIrattariJel(e.target.value)}
+                <span className="flabel">Irattári tétel</span>
+                <select
+                  value={irattariTetelId}
+                  onChange={(e) => setIrattariTetelId(e.target.value)}
                   className="control w-auto"
-                />
+                >
+                  <option value="">— nincs besorolva —</option>
+                  {tetelek.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {irattariJelOf(t.tetelszam, t.orzesiIdoEv)} · {t.nev}
+                    </option>
+                  ))}
+                </select>
               </label>
               <label>
                 <span className="flabel">Előadó</span>
@@ -250,7 +282,7 @@ export function UgyDetail({
                   setEditing(false);
                   setTargy(ugy.targy);
                   setHatarido(ugy.hatarido ?? "");
-                  setIrattariJel(ugy.irattariJel);
+                  setIrattariTetelId(ugy.irattariTetelId ?? "");
                   setEloado(ugy.eloadoUserId ?? "");
                 }}
                 className="btn btn-secondary"
@@ -288,7 +320,12 @@ export function UgyDetail({
                   <Field label="Előadó">
                     {members.find((m) => m.id === ugy.eloadoUserId)?.name ?? "—"}
                   </Field>
-                  <Field label="Irattári jel">{ugy.irattariJel || "—"}</Field>
+                  <Field label="Irattári jel">
+                    {ugy.irattariJel || "—"}
+                    {tetel && (
+                      <span className="block max-w-xs text-xs text-slate-400">{tetel.nev}</span>
+                    )}
+                  </Field>
                   <Field label="Megnyitva">{ugy.openedAt.slice(0, 10)}</Field>
                   {ugy.closedAt && <Field label="Lezárva">{ugy.closedAt.slice(0, 10)}</Field>}
                   {ugy.irattarbaHelyezveAt && (
@@ -308,6 +345,19 @@ export function UgyDetail({
                     )}
                   </Field>
                 </dl>
+
+                {/* The retention line is prose and not a grid cell: "2034.
+                    december 31-ig őrzendő" is the answer to a question, and a
+                    cell would truncate it into a fragment. */}
+                <p className="mt-4 flex flex-wrap items-baseline gap-2 text-xs">
+                  <span className={`badge ${megorzesStilus(megorzesAllapot.allapot)}`}>
+                    {MEGORZES_LABEL[megorzesAllapot.allapot]}
+                  </span>
+                  <span className="text-slate-500">{megorzesSzoveg(megorzesAllapot)}</span>
+                  {tetel?.jogszabaly && (
+                    <span className="text-slate-400">{tetel.jogszabaly}</span>
+                  )}
+                </p>
               </div>
               {editable && (
                 <button
