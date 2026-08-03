@@ -151,6 +151,17 @@ export function IconHistory(props: IconProps) {
   );
 }
 
+// A public building with columns: the tax authority.
+export function IconLandmark(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 9.5 12 4l9 5.5" />
+      <path d="M6 10v7M10 10v7M14 10v7M18 10v7" />
+      <path d="M3.5 20h17" />
+    </Svg>
+  );
+}
+
 export function IconArrowLeft(props: IconProps) {
   return (
     <Svg {...props}>

@@ -50,6 +50,20 @@ A termékdefiníció a `docs/` mappában, az 1. mérföldkő terve: `docs/milest
   eltérnek, ott a lezárás a későbbi — így a számolás soha nem selejtez korán.
   A modul legfontosabb sora, hogy a **null őrzési idő nem hiányzó adat, hanem
   a „nem selejtezhető"**: a legerősebb érték, amit a mező felvehet.
+- `src/lib/nav/` — a **NAV Online Számla** kapcsolat. Az egész réteg csak
+  **lekérdez**: nincs benne `manageInvoice`, és teszt őrzi, hogy ne is kerüljön
+  bele. Az adatszolgáltatás azé a programé, amelyik a számlát kiállította; egy
+  második bejelentés ugyanarról a számláról a cég adószámán valótlan
+  adatszolgáltatás. A `signature.ts` az egyetlen hely, ahol a hitelesítés
+  szabályai le vannak írva — a 3.0 **SHA3-512**-vel írja alá a kérést (a 2.0
+  még SHA-512-vel), és ez a tévesztés ugyanúgy `INVALID_SECURITY_USER`-ként
+  jelenik meg, mint a rossz jelszó, ezért teszt köti le a vektort. Az `xml.ts`
+  szándékosan szűk értelmező: **elutasít mindent, amit nem ért**, mert egy
+  csendben eldobott `<invoiceDigest>` pontosan úgy néz ki, mint egy hiányzó
+  számla. A `secret.ts` AES-256-GCM-mel titkosít, a `company_id`-t hitelesített
+  adatként a rejtjelbe kötve: másik cég sorába átmásolva nem fejthető vissza.
+  A `reconcile.ts` a lényeg, és tiszta függvény — hálózat és óra nélkül
+  eldönthető, mit állít.
 - `src/lib/audit/` — az **audit napló** olvasó- és megjelenítő rétege. A
   `labels.ts` fordítja magyarra, amit a triggerek nyersen rögzítenek (esemény,
   oszlopnév, érték), a `query.ts` pedig az egyetlen hely, ahonnan a naplót
@@ -150,6 +164,21 @@ Hálózat és adatbázis nélkül fut, tehát CI-ban minden pusholásnál:
   **a migrációból olvassa vissza**: a számviteli bizonylatok 8 éve és a
   munkaügyi iratok „nem selejtezhető" jelölése nem csúszhat el csendben, és
   minden tételnek meg kell mondania, mire alapozza a határidőt.
+- `tests/nav-protocol.test.ts` — a NAV-hitelesítés rögzített vektorokon: a
+  jelszó SHA-512, a kérés aláírása **SHA3-512** (és a teszt külön kimondja,
+  hogy nem SHA-512), a fejléc és az aláírás ugyanarra a másodpercre mutat, a
+  kérés elemei az XSD sorrendjében mennek, és a jelszó nyersen soha nem kerül
+  a kérésbe. Egy **valódi alakú** `queryInvoiceDigest` válaszon fut az olvasás
+  (`ns2:` előtaggal, entitásokkal); az értelmező hibára fut DOCTYPE-on,
+  ismeretlen entitáson és nem illeszkedő záró elemen. A 35 napos ablakokra
+  bontás hézag- és átfedésmentes. És egy teszt végigolvassa az egész
+  `src/lib/nav/` mappát, hogy **ne hivatkozzon beküldő műveletre**.
+- `tests/nav-reconcile.test.ts` — az egyeztetés: mit hiányol és mit nem. A
+  díjbekérőt, a nyugtát, a külföldi szállítót és az érvénytelenített iratot
+  nevesítve hagyja ki; a tegnap kelt számlát nem hiányolja a NAV-nál; az
+  áfacsoport tagjának adószámán is párosít; két szállító azonos számlaszáma
+  nem keveredik össze; ugyanannak a számlának két bejelentése egy tétel; és
+  ugyanarra a két listára mindig ugyanazt a párosítást adja.
 - `tests/audit-labels.test.ts` — a napló szótára és a migráció nem csúszhat
   szét: a teszt **a migrációs fájlból olvassa ki** az összes eseménynevet, amit
   a triggerek írnak, és megköveteli, hogy mindegyiknek legyen magyar
@@ -247,6 +276,32 @@ tesztek és build minden pusholásnál és pull requestnél.
   adatbázisban is tiltott marad. Ez nem óvatosság: egy magától selejtező
   ütemterv volna az egyetlen funkció, ami képes elveszíteni azt, amit ez az
   egész kódbázis őrizni hivatott.
+- **NAV Online Számla** (`/nav`): az egyetlen lista, ami nem tőlünk függ.
+  Minden más ellenőrzés a registert önmagával veti össze — egy meg nem érkezett
+  irat viszont belülről pontosan úgy néz ki, mint egy soha el nem küldött. A
+  NAV-nál viszont ott van, mert a szállító oda bejelentette. Az app **csak
+  lekérdez**: adatszolgáltatást nem küld be, mert az annak a programnak a
+  kötelezettsége, amelyik a számlát kiállította, és egy második bejelentés
+  ugyanarról a számláról valótlan adatszolgáltatás a cég adószámán. Kapcsolóval
+  sem lehet bekapcsolni; nincs is ilyen kód.
+- A technikai felhasználóhoz elég a **„Számlák lekérdezése"** jogosultság, és
+  csak a bejelentkezési név, a jelszó és az **aláíró kulcs** kell — a
+  cserekulcs kizárólag a beküldéshez tartozik, ezért nem is kérjük be. A
+  jelszó és az aláíró kulcs `NAV_SECRET_KEY`-jel titkosítva kerül a
+  `nav_credential` sorba, a `company_id`-t hitelesített adatként a rejtjelbe
+  kötve: egy adatbázis-dump önmagában nem tartalmazza a jelszót, és egy másik
+  cég sorába átmásolt titok nem fejthető vissza. A képernyő soha nem írja
+  vissza őket; üresen hagyva a korábbi érték marad.
+- A NAV-tól kapott sorok (`nav_invoice`) **nem törölhetők és nem írhatók át**:
+  nincs DELETE policy, a guard trigger pedig a számlaszámot is befagyasztja.
+  Egy eltérés, amit el lehet tüntetni, nem kontroll. Az újraszinkron frissíti,
+  amit a NAV mond, de egy bejelentett számlából nem csinál másikat.
+- Amit az egyeztetés **nem** hiányol, azt nevesítve hagyja ki: a díjbekérő és a
+  nyugta nem számla, a külföldi szállító számláját senki nem jelenti be a
+  NAV-nak, az érvénytelenített irat pedig nem kérdés. A tegnap kelt számla sem
+  hiányzik: a kiállítónak a következő munkanap végéig van ideje. Egy hamis
+  riasztás megtanítja az embert átlapozni a listát, és onnantól a valódi is
+  elvész benne.
 - **Audit napló** (`/naplo`): ki, mit, mikor. A bejegyzéseket **triggerek**
   írják, nem az alkalmazás — a szerver-action, a kinyerő worker, az e-mailes
   beérkeztetés és egy kézi `psql` is ugyanazokat a táblákat írja, és az a

@@ -9,6 +9,7 @@ import {
   IconFolder,
   IconHistory,
   IconInbox,
+  IconLandmark,
   IconUpload,
   IconUsers,
   IconWallet,
@@ -47,6 +48,7 @@ const SECTIONS: { title: string; items: Item[] }[] = [
     items: [
       { href: "/fizetesek", label: "Fizetések", Icon: IconWallet },
       { href: "/export", label: "Könyvelői export", Icon: IconDownload },
+      { href: "/nav", label: "NAV egyeztetés", Icon: IconLandmark },
     ],
   },
   {

@@ -24,7 +24,7 @@ function auditActionsFromMigrations(): Set<string> {
     const sql = readFileSync(join(MIGRATIONS_DIR, file), "utf8");
     if (!sql.includes("app.audit_write(")) continue;
     for (const m of sql.matchAll(
-      /'((?:document|ugy|partner|tag|ceg|export|irattar)\.[a-z_]+)'/g
+      /'((?:document|ugy|partner|tag|ceg|export|irattar|nav)\.[a-z_]+)'/g
     )) {
       actions.add(m[1]);
     }

@@ -61,6 +61,11 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   "irattar.orzesi_ido": "Őrzési idő módosítva",
   "irattar.tetel_inaktivalva": "Irattári tétel inaktiválva",
   "irattar.tetel_visszaallitva": "Irattári tétel visszaállítva",
+  "nav.kapcsolat_beallitva": "NAV-kapcsolat beállítva",
+  "nav.kapcsolat_modositva": "NAV-kapcsolat módosítva",
+  "nav.kapcsolat_torolve": "NAV-kapcsolat törölve",
+  "nav.lekerdezes": "NAV lekérdezés",
+  "nav.lekerdezes_hiba": "NAV lekérdezés sikertelen",
   "ceg.letrehozva": "Cég létrehozva",
   "ceg.modositva": "Cégadatok módosítva",
   "export.letoltve": "Könyvelői export letöltve",
@@ -81,7 +86,8 @@ export function auditActionTone(action: string): string {
   if (
     action === "document.ervenytelenitve" ||
     action === "partner.osszevonva" ||
-    action === "document.feldolgozas_sikertelen"
+    action === "document.feldolgozas_sikertelen" ||
+    action === "nav.lekerdezes_hiba"
   ) {
     return "badge-red";
   }
@@ -101,6 +107,8 @@ export const AUDIT_ENTITY_LABEL: Record<string, string> = {
   company_member: "Felhasználó",
   company: "Cég",
   irattari_tetel: "Irattári tétel",
+  nav_credential: "NAV-kapcsolat",
+  nav_sync: "NAV lekérdezés",
 };
 
 export function auditEntityLabel(entityType: string): string {
@@ -116,6 +124,7 @@ export const AUDIT_FILTERS: { value: string; label: string; prefix: string }[] =
   { value: "irattar", label: "Irattári terv", prefix: "irattar." },
   { value: "hozzaferes", label: "Hozzáférés", prefix: "tag." },
   { value: "export", label: "Export", prefix: "export." },
+  { value: "nav", label: "NAV", prefix: "nav." },
 ];
 
 export function auditFilterPrefix(value: string): string | null {
@@ -167,6 +176,12 @@ const FIELD_LABEL: Record<string, string> = {
   parent_ugy_id: "Fölérendelt ügy",
   closed_at: "Lezárva",
   irattarba_helyezve_at: "Irattárba helyezve",
+  login: "Technikai felhasználó",
+  environment: "Környezet",
+  // The values themselves never reach the log — the trigger records that they
+  // were replaced, not what they were replaced with.
+  password_enc: "Jelszó",
+  sign_key_enc: "Aláíró kulcs",
   name: "Név",
   tax_number: "Adószám",
   eu_tax_number: "EU adószám",
@@ -286,6 +301,7 @@ export function formatAuditValue(field: string, value: unknown): string {
   if (field === "status") return UGY_STATUS_LABEL[text as UgyStatus] ?? text;
   if (field === "role") return ROLE_LABEL[text] ?? text;
   if (field === "source") return SOURCE_LABEL[text] ?? text;
+  if (field === "environment") return text === "test" ? "Teszt" : "Éles";
 
   return text.length > MAX_VALUE_LENGTH ? `${text.slice(0, MAX_VALUE_LENGTH)}…` : text;
 }
@@ -380,6 +396,21 @@ export function auditContextNote(event: AuditEvent): string | null {
         ? "nem selejtezhető"
         : `${c.orzesi_ido_ev} év`
     }`;
+  }
+
+  if (event.action === "nav.lekerdezes" || event.action === "nav.lekerdezes_hiba") {
+    const direction =
+      typeof c.direction === "string" ? (DIRECTION_LABEL[c.direction] ?? c.direction) : null;
+    const period = c.from && c.to ? `${c.from} – ${c.to}` : null;
+    const count = typeof c.count === "number" ? `${c.count} számla` : null;
+    const fresh = typeof c.new_count === "number" && c.new_count > 0 ? `${c.new_count} új` : null;
+    const error = typeof c.error === "string" && c.error ? c.error : null;
+    return [direction, period, count, fresh, error].filter(Boolean).join(" · ") || null;
+  }
+
+  if (event.action === "nav.kapcsolat_beallitva") {
+    const env = c.environment === "test" ? "Teszt" : "Éles";
+    return typeof c.login === "string" ? `${env} · ${c.login}` : env;
   }
 
   if (event.action === "tag.hozzaadva" && typeof c.role === "string") {
