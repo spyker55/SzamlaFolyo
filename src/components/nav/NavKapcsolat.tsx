@@ -216,7 +216,9 @@ export function NavKapcsolat({
             A jelszó és az aláíró kulcs titkosítva tárolódik, és soha nem jelenik meg újra a
             képernyőn — módosításnál üresen hagyva a korábbi érték marad. A technikai
             felhasználónak elég a <strong>Számlák lekérdezése</strong> jogosultság: ez az
-            alkalmazás csak olvas a NAV-tól, adatot nem küld be.
+            alkalmazás csak olvas a NAV-tól, adatot nem küld be. A{" "}
+            <em>Saját számlák lekérdezése</em> viszont kevés — az csak a technikai felhasználó
+            saját beküldéseit adja vissza, a bejövő számlákat nem.
           </p>
         </form>
       )}

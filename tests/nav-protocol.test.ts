@@ -15,6 +15,7 @@ import {
   digestRequestBody,
   invoiceNumberKey,
   readDigestPage,
+  shiftDate,
   splitDateRange,
 } from "@/lib/nav/query";
 import { navSoftware } from "@/lib/nav/config";
@@ -188,6 +189,13 @@ describe("az integráció iránya", () => {
       expect(code, `${file} beküldő műveletre hivatkozik`).not.toMatch(
         /manageInvoice|manageAnnulment|tokenExchange/
       );
+      // queryTaxpayer is a read operation, so the rule above would let it
+      // through — but NAV only allows it with the "Számlák kezelése" jog,
+      // the submission permission we tell nobody to grant. Using it anywhere
+      // would make a correctly set up technical user look broken.
+      expect(code, `${file} olyan műveletet hív, amihez beküldő jog kell`).not.toMatch(
+        /[Qq]ueryTaxpayer/
+      );
     }
   });
 });
@@ -303,12 +311,18 @@ describe("az időszak felosztása", () => {
   it("a fordított időszakot nem kérdezi le", () => {
     expect(splitDateRange("2026-07-10", "2026-07-01")).toEqual([]);
   });
+
+  it("a naptári eltolás átlépi a hónap- és évhatárt", () => {
+    expect(shiftDate("2026-03-05", -7)).toBe("2026-02-26");
+    expect(shiftDate("2026-01-03", -7)).toBe("2025-12-27");
+    expect(shiftDate("2026-07-01", 0)).toBe("2026-07-01");
+  });
 });
 
 describe("a NAV hibái", () => {
   it("a hibaválaszt hibaként adja tovább, a kódjával együtt", async () => {
     const err = await navRequest({
-      operation: "QueryTaxpayer",
+      operation: "QueryInvoiceDigest",
       credentials: CREDENTIALS,
       software: SOFTWARE,
       body: "",
@@ -326,9 +340,19 @@ describe("a NAV hibái", () => {
     expect(navErrorMessage(new NavError("x", "NETWORK"))).toContain("nem futott le");
   });
 
+  // FORBIDDEN means the credentials were accepted, so sending the user back to
+  // re-check the password would be a wild goose chase. It has to name the two
+  // permissions and say which one is not enough.
+  it("a jogosultsági hibát nem keveri össze a rossz jelszóval", () => {
+    const message = navErrorMessage(new NavError("Jogosultság szükséges!", "FORBIDDEN"));
+    expect(message).toContain("Számlák lekérdezése");
+    expect(message).toContain("Saját számlák lekérdezése");
+    expect(message).not.toContain("jelszót");
+  });
+
   it("a hálózati hiba nem tesz úgy, mintha lefutott volna", async () => {
     const err = await navRequest({
-      operation: "QueryTaxpayer",
+      operation: "QueryInvoiceDigest",
       credentials: CREDENTIALS,
       software: SOFTWARE,
       body: "",
@@ -341,7 +365,7 @@ describe("a NAV hibái", () => {
 
   it("az értelmezhetetlen választ nem nézi sikernek", async () => {
     const err = await navRequest({
-      operation: "QueryTaxpayer",
+      operation: "QueryInvoiceDigest",
       credentials: CREDENTIALS,
       software: SOFTWARE,
       body: "",

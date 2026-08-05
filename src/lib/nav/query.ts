@@ -159,6 +159,11 @@ export function splitDateRange(
   return out;
 }
 
+/** Calendar-day arithmetic on the same YYYY-MM-DD strings NAV speaks. */
+export function shiftDate(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
 export function digestRequestBody(args: {
   page: number;
   direction: NavDirection;
@@ -173,6 +178,31 @@ export function digestRequestBody(args: {
     tag("dateTo", args.to) +
     "</invoiceIssueDate></mandatoryQueryParams></invoiceQueryParams>"
   );
+}
+
+/** One request, one page. The paging walk and the connection test share it. */
+export async function queryDigestPage(args: {
+  credentials: NavCredentials;
+  software: NavSoftware;
+  direction: NavDirection;
+  from: string;
+  to: string;
+  page: number;
+  transport?: NavTransport;
+}): Promise<DigestPage> {
+  const root = await navRequest({
+    operation: "QueryInvoiceDigest",
+    credentials: args.credentials,
+    software: args.software,
+    body: digestRequestBody({
+      page: args.page,
+      direction: args.direction,
+      from: args.from,
+      to: args.to,
+    }),
+    transport: args.transport,
+  });
+  return readDigestPage(root, args.direction);
 }
 
 export type DigestQueryResult = {
@@ -209,15 +239,14 @@ export async function queryInvoiceDigests(args: {
         );
       }
 
-      const root = await navRequest({
-        operation: "QueryInvoiceDigest",
+      const parsed = await queryDigestPage({
         credentials: args.credentials,
         software: args.software,
-        body: digestRequestBody({ page, direction: args.direction, ...window }),
+        direction: args.direction,
+        page,
+        ...window,
         transport: args.transport,
       });
-
-      const parsed = readDigestPage(root, args.direction);
       pageCount += 1;
       available = parsed.availablePage;
 

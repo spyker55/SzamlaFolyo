@@ -292,6 +292,14 @@ tesztek és build minden pusholásnál és pull requestnél.
   kötve: egy adatbázis-dump önmagában nem tartalmazza a jelszót, és egy másik
   cég sorába átmásolt titok nem fejthető vissza. A képernyő soha nem írja
   vissza őket; üresen hagyva a korábbi érték marad.
+- A **„Kapcsolat tesztelése”** egy lap bejövő digestet kér az elmúlt hétre —
+  ugyanazt a műveletet, amit az egyeztetés is használ. A kézenfekvőbb
+  `queryTaxpayer` (ami a cég saját nevét adná vissza) szándékosan nincs sehol:
+  a NAV a **„Számlák kezelése”** joghoz köti, tehát egy helyesen beállított,
+  csak lekérdező technikai felhasználó `FORBIDDEN`-t kapna tőle, ami rossz
+  jelszónak látszik. A `nav-protocol` teszt őrzi, hogy ne kerüljön vissza.
+  A „Saját számlák lekérdezése” jog is kevés: az csak a technikai felhasználó
+  saját beküldéseit adja vissza, a bejövő oldalt nem.
 - A NAV-tól kapott sorok (`nav_invoice`) **nem törölhetők és nem írhatók át**:
   nincs DELETE policy, a guard trigger pedig a számlaszámot is befagyasztja.
   Egy eltérés, amit el lehet tüntetni, nem kontroll. Az újraszinkron frissíti,

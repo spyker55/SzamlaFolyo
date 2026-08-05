@@ -93,31 +93,30 @@ export async function torolNavKapcsolat(): Promise<NavResult> {
   return { ok: true };
 }
 
-// The cheapest call that proves all four values at once, and it comes back
-// with the taxpayer's own name from NAV's registry — a confirmation somebody
-// can actually check, unlike "OK".
+// Proves the four secrets, the software identification and the technical
+// user's permission in one go, by asking for a single page of the same digest
+// query the egyeztetés runs. A wrong tax number cannot slip through it either:
+// NAV rejects a login that does not belong to the taxpayer in the request.
 export async function probaNavKapcsolat(): Promise<NavResult> {
   const supabase = await createSupabaseServerClient();
   const existing = await loadCredentialRow(supabase);
   if (!existing) return { ok: false, error: "Előbb mentsd el a kapcsolat adatait." };
 
   try {
-    const check = await testCredentials(existing);
+    const probe = await testCredentials(existing);
     await supabase
       .from("nav_credential")
       .update({ last_ok_at: new Date().toISOString(), last_error: null })
       .eq("id", existing.id);
     revalidatePath("/nav");
 
-    if (!check.valid) {
-      return {
-        ok: true,
-        message:
-          "A kapcsolat működik, de a NAV szerint ez az adószám nem érvényes adóalany. " +
-          "Ellenőrizd az adószámot.",
-      };
-    }
-    return { ok: true, message: `A kapcsolat működik. A NAV szerint: ${check.name ?? "—"}` };
+    return {
+      ok: true,
+      message:
+        probe.count === 0
+          ? "A kapcsolat működik. Az elmúlt hétben a NAV egyetlen bejövő számláról sem tud."
+          : `A kapcsolat működik. Az elmúlt hétben a NAV ${probe.count} bejövő számláról tud.`,
+    };
   } catch (err) {
     const message = navErrorMessage(err);
     await supabase

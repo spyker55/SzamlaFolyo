@@ -7,8 +7,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decryptSecret } from "@/lib/nav/secret";
 import { navSoftware, type NavEnvironment } from "@/lib/nav/config";
-import { queryTaxpayer, type NavCredentials, type TaxpayerCheck } from "@/lib/nav/client";
-import { invoiceNumberKey, queryInvoiceDigests, type NavDirection } from "@/lib/nav/query";
+import type { NavCredentials } from "@/lib/nav/client";
+import {
+  invoiceNumberKey,
+  queryDigestPage,
+  queryInvoiceDigests,
+  shiftDate,
+  type NavDirection,
+} from "@/lib/nav/query";
+import { budapestToday } from "@/lib/nav/reconcile";
 import type { NavSide, RegisterSide } from "@/lib/nav/reconcile";
 import { taxNumberCore } from "@/lib/partner/identity";
 
@@ -48,10 +55,28 @@ export function credentialsOf(row: CredentialRow): NavCredentials {
   };
 }
 
-export async function testCredentials(row: CredentialRow): Promise<TaxpayerCheck> {
+export type NavProbe = { from: string; to: string; count: number };
+
+// The connection test asks the smallest version of the real question: one page
+// of incoming digests for the last week. INBOUND on purpose — it is the
+// direction that needs the wider "Számlák lekérdezése" permission, so a pass
+// here means the whole feature can run, not just half of it.
+export async function testCredentials(row: CredentialRow): Promise<NavProbe> {
   const software = navSoftware();
   if (!software.ok) throw new Error(software.error);
-  return queryTaxpayer(credentialsOf(row), software.software, row.tax_number);
+
+  const to = budapestToday();
+  const from = shiftDate(to, -7);
+  const page = await queryDigestPage({
+    credentials: credentialsOf(row),
+    software: software.software,
+    direction: "bejovo",
+    from,
+    to,
+    page: 1,
+  });
+
+  return { from, to, count: page.digests.length };
 }
 
 export type SyncOutcome = {

@@ -187,42 +187,13 @@ export async function navRequest(args: {
   return root;
 }
 
-// The lightest call that proves all four credentials are right, and it returns
-// something a human can check: the taxpayer's own name as NAV holds it. "OK"
-// on its own would not tell anyone whether they typed the right tax number.
-export type TaxpayerCheck = {
-  valid: boolean;
-  name: string | null;
-  shortName: string | null;
-  vatCode: string | null;
-  countyCode: string | null;
-};
-
-export async function queryTaxpayer(
-  credentials: NavCredentials,
-  software: NavSoftware,
-  taxNumber: string,
-  transport?: NavTransport
-): Promise<TaxpayerCheck> {
-  const root = await navRequest({
-    operation: "QueryTaxpayer",
-    credentials,
-    software,
-    body: tag("taxNumber", taxNumber),
-    transport,
-  });
-
-  const data = el(root, "taxpayerData");
-  const detail = el(data, "taxNumberDetail");
-  return {
-    // NAV omits taxpayerValidity entirely for an unknown tax number.
-    valid: txt(root, "taxpayerValidity") === "true",
-    name: txt(data, "taxpayerName"),
-    shortName: txt(data, "taxpayerShortName"),
-    vatCode: txt(detail, "vatCode"),
-    countyCode: txt(detail, "countyCode"),
-  };
-}
+// There is deliberately no queryTaxpayer here. It looks like the ideal
+// connection test — one cheap call that returns the company's own name from
+// NAV's registry — but NAV gates it behind the "Számlák kezelése" permission,
+// the submission right this app never asks anyone to grant. A perfectly good
+// query-only technical user gets FORBIDDEN from it, which reads as "your
+// credentials are wrong" when they are not. The connection test asks for one
+// page of digests instead: the same operation the feature itself uses.
 
 export function navErrorMessage(err: unknown): string {
   if (!(err instanceof NavError)) {
@@ -240,6 +211,18 @@ export function navErrorMessage(err: unknown): string {
         "A NAV nem fogadta el a technikai felhasználót. Ellenőrizd az adószámot, a felhasználónevet, " +
         "a jelszót és az aláíró kulcsot az Online Számla portálon — és azt, hogy a technikai " +
         "felhasználónak van-e „Számlák lekérdezése” jogosultsága."
+      );
+    // The credentials are right and the request was well formed; the technical
+    // user simply may not ask this. Worth spelling out, because the portal's
+    // two query permissions look interchangeable and only one of them can see
+    // an invoice somebody else issued.
+    case "FORBIDDEN":
+      return (
+        "A NAV elfogadta a technikai felhasználót, de ehhez a lekérdezéshez nincs jogosultsága. " +
+        "Az Online Számla portálon a felhasználó adatlapján a „Jogosultságok módosítása” alatt " +
+        "a „Számlák lekérdezése” legyen bejelölve. A „Saját számlák lekérdezése” ehhez kevés: " +
+        "az csak azokat a számlákat adja vissza, amiket ugyanez a technikai felhasználó küldött " +
+        "be — a bejövő számlákat nem."
       );
     case "INVALID_REQUEST_SIGNATURE":
       return (
