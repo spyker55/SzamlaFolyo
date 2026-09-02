@@ -1,17 +1,57 @@
 name: CI
 
-# main deploys straight to production, so this is the only gate between a
-# commit and the live site.
+# A main ág az éles kód forrása, ezért ez az egyetlen kapu közte és a szerver
+# között: ami itt piros, azt nem telepítjük.
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
-  check:
+  ellenorzes:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: szamlafolyo_test
+          POSTGRES_USER: szamlafolyo
+          POSTGRES_PASSWORD: szamlafolyo
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          # Ugyanaz a kiterjesztéslista, amit a tárhelyen is elvárunk.
+          extensions: pdo_pgsql, mbstring, intl, gd, zip, fileinfo
+          coverage: none
+
+      - name: Composer gyorsítótár
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Kód formázás
+        run: vendor/bin/pint --test
+
+      - name: Tesztek
+        run: vendor/bin/phpunit --no-coverage
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
 
       - uses: actions/setup-node@v4
         with:
@@ -20,19 +60,13 @@ jobs:
 
       - run: npm ci
 
-      - name: Types
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
-      # No Supabase credentials here on purpose: the concurrency and RLS
-      # suites write 50 real documents per run, so they must not be pointed at
-      # the production project on every push. They skip themselves without
-      # credentials; run them by hand against a project you are willing to
-      # write to. Everything that needs no network runs here.
-      - name: Tests
-        run: npm test
-
-      - name: Build
-        run: npm run build
+      # A lefordított eszközök a repóban utaznak (a tárhelyen nincs Node.js),
+      # ezért ellenőrizzük, hogy a bekommitolt build a forrással egyezik-e.
+      - name: Frontend fordítás
+        run: |
+          npm run build
+          if ! git diff --quiet -- public/build; then
+            echo "A public/build nincs szinkronban a forrással. Futtasd: npm run build"
+            git --no-pager diff --stat -- public/build
+            exit 1
+          fi

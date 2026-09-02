@@ -1,0 +1,152 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/*
+  A dizájnrendszer. Minden ismétlődő elem itt van definiálva egyszer — új
+  képernyő ne írjon saját `rounded-lg border bg-white` kombinációt.
+
+  Komponensrétegben állnak, nem @utility-ként: így az elemre írt utility
+  felülírja őket (a .control teljes szélességű, de egy w-48 mellette szűkít).
+*/
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+
+  --color-vaszon: #f1f5f9;
+  --color-jelzo: #1d4ed8;
+
+  /* A konfidencia három sávja. Ez a termék egyetlen valódi színkódja,
+     ezért nem szórjuk szét a komponensekbe. */
+  --color-biztos: #15803d;
+  --color-bizonytalan: #a16207;
+  --color-gyanus: #b91c1c;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-vaszon);
+    color: var(--color-slate-800);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  .card-pad {
+    @apply p-5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm
+           font-medium transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-blue-700 text-white hover:bg-blue-800;
+  }
+  .btn-secondary {
+    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  }
+  .btn-ghost {
+    @apply text-slate-600 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply bg-red-700 text-white hover:bg-red-800;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .control {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+           text-slate-900 placeholder-slate-400
+           focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:outline-none;
+  }
+  .flabel {
+    @apply mb-1 block text-xs font-medium text-slate-600;
+  }
+  .fhiba {
+    @apply mt-1 text-xs text-red-700;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+  .badge-semleges {
+    @apply bg-slate-100 text-slate-700;
+  }
+  .badge-varakozo {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .badge-kesz {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+  .badge-hiba {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .tbl {
+    @apply w-full border-collapse text-sm;
+  }
+  .th {
+    @apply border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold
+           tracking-wide text-slate-500 uppercase;
+  }
+  .td {
+    @apply border-b border-slate-100 px-3 py-2 align-top text-slate-800;
+  }
+  .trow {
+    @apply hover:bg-slate-50;
+  }
+
+  .alert {
+    @apply rounded-lg border px-4 py-3 text-sm;
+  }
+  .alert-hiba {
+    @apply border-red-200 bg-red-50 text-red-800;
+  }
+  .alert-info {
+    @apply border-blue-200 bg-blue-50 text-blue-800;
+  }
+  .alert-figyelem {
+    @apply border-amber-200 bg-amber-50 text-amber-900;
+  }
+  .alert-siker {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-800;
+  }
+
+  .empty {
+    @apply rounded-xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
+           text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+  .nav-item-aktiv {
+    @apply bg-blue-50 text-blue-800 hover:bg-blue-50 hover:text-blue-800;
+  }
+  .nav-szekcio {
+    @apply px-3 pt-5 pb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase;
+  }
+
+  /*
+    A kiolvasott mező három állapota. A keret színe és a bal szegély együtt
+    jelez: színvakság mellett is látszik a különbség, mert a piros mező
+    vastagabb bal szegélyt kap és külön szöveges indoklást.
+  */
+  .mezo-biztos {
+    @apply border-slate-300;
+  }
+  .mezo-bizonytalan {
+    @apply border-amber-400 border-l-4 bg-amber-50/40;
+  }
+  .mezo-gyanus {
+    @apply border-red-500 border-l-4 bg-red-50/40;
+  }
+}
