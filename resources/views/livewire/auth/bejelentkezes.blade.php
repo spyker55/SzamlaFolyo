@@ -15,10 +15,15 @@
             @error('jelszo') <p class="fhiba">{{ $message }}</p> @enderror
         </div>
 
-        <label class="flex items-center gap-2 text-sm text-slate-600">
-            <input type="checkbox" wire:model="emlekezz" class="rounded border-slate-300">
-            Maradjak bejelentkezve
-        </label>
+        <div class="flex items-center justify-between gap-3">
+            <label class="flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" wire:model="emlekezz" class="rounded border-slate-300">
+                Maradjak bejelentkezve
+            </label>
+            <a href="{{ route('password.request') }}" wire:navigate class="text-sm text-blue-700 hover:underline">
+                Elfelejtettem
+            </a>
+        </div>
 
         <button type="submit" class="btn btn-primary w-full">
             <span wire:loading.remove wire:target="bejelentkezes">Bejelentkezés</span>

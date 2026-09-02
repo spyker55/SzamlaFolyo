@@ -1,4 +1,5 @@
 <div>
+    <x-uzenet :uzenet="$uzenet" :tipus="$uzenetTipus ?? 'siker'"/>
     <h1 class="text-xl font-semibold text-slate-900">Archívum</h1>
     <p class="mt-1 mb-6 text-sm text-slate-500">
         A korábbi exportok. Egy tétel visszahívható, vagy véglegesen törölhető.

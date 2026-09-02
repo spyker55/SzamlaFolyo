@@ -14,6 +14,8 @@ use App\Livewire\App\Ellenorzes;
 use App\Livewire\App\ExportKepernyo;
 use App\Livewire\App\Tetelek;
 use App\Livewire\Auth\Bejelentkezes;
+use App\Livewire\Auth\ElfelejtettJelszo;
+use App\Livewire\Auth\JelszoBeallitas;
 use App\Livewire\Auth\Regisztracio;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +24,8 @@ Route::redirect('/', '/beerkezo')->name('kezdolap');
 Route::middleware('guest')->group(function (): void {
     Route::get('/bejelentkezes', Bejelentkezes::class)->name('bejelentkezes');
     Route::get('/regisztracio', Regisztracio::class)->name('regisztracio');
+    Route::get('/elfelejtett-jelszo', ElfelejtettJelszo::class)->name('password.request');
+    Route::get('/jelszo-beallitas/{token}', JelszoBeallitas::class)->name('password.reset');
 });
 
 Route::middleware('auth')->group(function (): void {

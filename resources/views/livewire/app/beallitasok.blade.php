@@ -1,4 +1,5 @@
 <div class="max-w-3xl space-y-6">
+    <x-uzenet :uzenet="$uzenet" :tipus="$uzenetTipus ?? 'siker'"/>
     <h1 class="text-xl font-semibold text-slate-900">Beállítások</h1>
 
     {{-- Előfizetés --}}

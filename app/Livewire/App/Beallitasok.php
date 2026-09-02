@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\Szerep;
+use App\Livewire\Concerns\Uzenetek;
 use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\User;
@@ -20,6 +21,8 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Beallitasok extends Component
 {
+    use Uzenetek;
+
     public string $cegNev = '';
 
     public string $cegAdoszam = '';
@@ -64,7 +67,7 @@ class Beallitasok extends Component
             'file_retention_days' => $adatok['megorzesiNapok'],
         ]);
 
-        session()->flash('siker', 'A cégadatok mentve.');
+        $this->uzenet('A cégadatok mentve.');
     }
 
     /**
@@ -106,7 +109,7 @@ class Beallitasok extends Component
         ActivityLog::rogzit('tag.felveve', null, $user->email, ['szerep' => $adatok['ujTagSzerep']]);
 
         $this->ujTagEmail = '';
-        session()->flash('siker', "{$user->email} hozzáadva. Ha még nem volt fiókja, a bejelentkezésnél az „elfelejtett jelszó” gombbal tud belépni.");
+        $this->uzenet("{$user->email} hozzáadva. Ha még nem volt fiókja, a bejelentkezésnél az „Elfelejtettem” linkkel tud jelszót beállítani.");
     }
 
     public function tagEltavolitas(int $userId): void

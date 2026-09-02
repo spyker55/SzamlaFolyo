@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\DokumentumAllapot;
+use App\Livewire\Concerns\Uzenetek;
 use App\Models\ActivityLog;
 use App\Models\Document;
 use App\Models\Export;
@@ -21,6 +22,8 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Archivum extends Component
 {
+    use Uzenetek;
+
     public ?int $nyitottExportId = null;
 
     public function nyit(int $id): void
@@ -41,7 +44,7 @@ class Archivum extends Component
 
         ActivityLog::rogzit('tetel.visszahivva', $dokumentum, $dokumentum->megnevezes());
 
-        session()->flash('siker', 'A tétel visszakerült a Tételek közé, és újra exportálható.');
+        $this->uzenet('A tétel visszakerült a Tételek közé, és újra exportálható.');
     }
 
     public function tetelTorles(int $dokumentumId): void
@@ -84,7 +87,7 @@ class Archivum extends Component
         });
 
         $this->nyitottExportId = null;
-        session()->flash('siker', 'Az export és a hozzá tartozó tételek véglegesen törölve.');
+        $this->uzenet('Az export és a hozzá tartozó tételek véglegesen törölve.');
     }
 
     public function render()
