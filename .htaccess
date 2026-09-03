@@ -1,21 +1,39 @@
-# Védőháló hibás docroot-beállítás ellen. NEM a normál működés része.
+# Célzott védelem a titkokra, hibás docroot-beállítás esetére.
 #
 # Az alkalmazást a `public/` mappán keresztül kell kiszolgálni. Ha a webcím
-# gyökérkönyvtára helyesen oda mutat, az Apache ezt a fájlt el sem olvassa: a
-# .htaccess-eket a docroottól lefelé keresi, fölfelé nem.
+# gyökérkönyvtára tévedésből a projekt gyökerére mutat, e nélkül a fájl nélkül
+# az `.env` (adatbázis-jelszó, OpenRouter-kulcs, APP_KEY) letölthető lenne.
 #
-# Ha viszont a docroot tévedésből a projekt gyökerén áll, e nélkül a fájl
-# nélkül a `.env` (adatbázis-jelszó, OpenRouter-kulcs, APP_KEY), a `storage/`
-# naplói és a teljes forráskód letölthető lenne. Így helyette 403 jön — a
-# hangos hiba mindig jobb, mint a csendes szivárgás.
+# FONTOS, hogy miért fájlnévre szűrünk, és miért nem `Require all denied`-del:
+# az Apache NEM a DocumentRoottól kezdi a .htaccess fájlok olvasását, hanem
+# attól a könyvtártól, ahol az AllowOverride engedélyezve van — osztott
+# tárhelyen ez tipikusan a fiók gyökere, jóval a docroot fölött. Egy mindent
+# tiltó szabály tehát a helyesen beállított oldalt is megölheti, és pontosan ez
+# is történt: az egész alkalmazás 403-at adott.
+#
+# Az alábbi minták olyan fájlnevekre illeszkednek, amiket egyetlen jogos kérés
+# sem céloz meg. Jó beállítás mellett láthatatlanok, rossz mellett védenek.
+#
+# Amit szándékosan NEM tiltunk: az általános dotfile-mintát (`^\.`). A Let's
+# Encrypt a `.well-known/` könyvtáron át újítja meg a tanúsítványt — egy ilyen
+# szabály hónapokkal később, a megújításkor buktatná meg csendben a HTTPS-t.
 
-<IfModule mod_authz_core.c>
-    # Apache 2.4+
-    Require all denied
-</IfModule>
+<FilesMatch "^\.env">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
 
-<IfModule !mod_authz_core.c>
-    # Apache 2.2
-    Order allow,deny
-    Deny from all
-</IfModule>
+<FilesMatch "^(composer\.(json|lock)|artisan|deploy\.sh|phpunit\.xml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

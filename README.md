@@ -123,9 +123,9 @@ szkript magától megteszi.
 **A sorrend itt számít.** Amíg a docroot a projekt fölötti könyvtáron áll, a
 projekt teljes tartalma webről elérhető — az `.env`-fel együtt, amiben az
 adatbázis-jelszó, az OpenRouter-kulcs és az `APP_KEY` van. Ezért van a projekt
-gyökerében egy mindent tiltó `.htaccess`: helyes beállításnál az Apache el sem
-olvassa (a `.htaccess`-eket a docroottól lefelé keresi), rossznál viszont 403-at
-ad a titkok helyett. Költöztetés után **azonnal** állítsd át a docrootot. Az ellenőrzés az, hogy a
+gyökerében egy `.htaccess`, ami **fájlnév szerint** tiltja az `.env`-et és néhány
+telepítési fájlt: ezekre egyetlen jogos kérés sem irányul, tehát jó beállításnál
+sem zavarnak, rossznál viszont 403 jön a titkok helyett. Költöztetés után **azonnal** állítsd át a docrootot. Az ellenőrzés az, hogy a
 bejelentkező oldal betöltődik-e — a `.env` lekérését *ne* próbáld ki curl-lel, mert azt a
 szolgáltató tűzfala támadásnak minősíti (lásd a harmadik csapdát).
 
@@ -138,12 +138,26 @@ megkülönböztető jel:
 | Amit látsz | Mi az |
 |---|---|
 | A szolgáltató márkázott hibaoldala („A kérést a tűzfalunk elutasította") | a szolgáltató webalkalmazás-tűzfala (WAF) |
-| Csupasz Apache 403, tartalom nélkül | a projekt gyökerében lévő védőháló `.htaccess` — a docroot rossz helyre mutat |
+| Csupasz Apache 403, tartalom nélkül | egy `.htaccess` tiltás — lásd alább |
 | Laravel hibaoldal | a mi kódunk |
 
-WAF esetén a vezérlőpult fejlécében lévő **„Tűzfal tanuló mód"** a megoldás, illetve
-ügyfélszolgálati kérés a szabály feloldására. A saját kódodban ilyenkor hiába keresed a
-hibát: a kérés el sem jut a PHP-ig.
+**Előbb a saját `.htaccess`-t vedd ki a képből**, mert a márkázott hibalap megtévesztő: a
+szolgáltatók minden 403-ra a saját lapjukat szolgálják ki, akkor is, ha a tiltás a te
+fájlodból jön. A próba harminc másodperc:
+
+```bash
+cd ~/home/szamlafolyo && mv .htaccess .htaccess.ki      # majd töltsd újra az oldalt
+```
+
+Ez azért reális gyanú, mert **az Apache nem a DocumentRoottól kezdi a `.htaccess` fájlok
+olvasását**, hanem attól a könyvtártól, ahol az `AllowOverride` engedélyezve van — osztott
+tárhelyen ez tipikusan a fiók gyökere, jóval a docroot fölött. Egy `Require all denied` a
+projekt gyökerében így a helyesen beállított oldalt is megölheti. (Ez meg is történt: a
+mostani, fájlnév szerint szűrő változat pont ezért lépett a mindent tiltó helyébe.)
+
+Ha a fájl nélkül is 403 jön, akkor tényleg a WAF: a vezérlőpult fejlécében lévő **„Tűzfal
+tanuló mód"** a megoldás, illetve ügyfélszolgálati kérés a szabály feloldására. A saját
+kódodban ilyenkor hiába keresed a hibát — a kérés el sem jut a PHP-ig.
 
 **Amire később számíts.** A WAF-ok pont azokra a kérésekre ugranak rá, amikből ez az
 alkalmazás él: a Livewire minden interakciót JSON-törzsű `POST`-ként küld a

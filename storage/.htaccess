@@ -1,0 +1,15 @@
+# A naplók és a feltöltött iratok helye. Ide soha nem érkezik jogos webkérés:
+# a fájlokat aláírt, jogosultság-ellenőrzött útvonalon szolgáljuk ki
+# (App\Http\Controllers\DokumentumFajlController), a `public/storage` symlinket
+# ez az alkalmazás nem használja.
+#
+# Ezért itt a mindent tiltó szabály biztonságos — a projekt gyökerében nem az volt.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
