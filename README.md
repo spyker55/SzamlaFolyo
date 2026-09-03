@@ -140,14 +140,36 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://<domain>/.env    # 403 vagy 40
 2. `.env` feltöltése a `.env.example` alapján, majd `<php> artisan key:generate`.
 3. `./deploy.sh` — megkeresi a PHP-t, telepít, ellenőrzi a környezetet, migrál,
    gyorsítótáraz, és a végén **kiírja a három cron sort a helyes elérési úttal**.
-4. A kiírt cron sorokat másold be a nethely „Időzített folyamatok" felületére.
-   Alakjuk ez (a `<php>` helyén a felismert abszolút út — csupasz `php` nem jó):
+4. A kiírt három időzített feladat felvétele (lásd lentebb).
 
+### Időzített feladatok
+
+A nethely „Időzített folyamatok" felülete űrlap, nem crontab-sor: az időzítés külön
+mezőkbe megy, a parancs pedig a **Kezelő → „Egyedi parancs"** mezőbe. Ne a
+„Parancssori php-cli"-t válaszd: az a vezérlőpult saját PHP-jét használná, ami itt
+7.4, azon pedig az alkalmazás el sem indul.
+
+| Mit csinál | Időzítés | Parancs |
+|---|---|---|
+| Beérkeztetés e-mailből | `*/5 * * * *` | `<php> <projekt>/artisan email:beolvas` |
+| Kiolvasás, elakadt futások | `*/5 * * * *` | `<php> <projekt>/artisan dokumentum:feldolgoz --limit=5` |
+| Lejárt fájlok selejtezése | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
+
+A parancsban **nincs `cd` és nincs `&&`**. Az `artisan` a saját helyéből (`__DIR__`)
+oldja fel az útvonalakat, ezért abszolút úttal hívva bármelyik munkakönyvtárból
+ugyanúgy fut — a shell-operátorokat viszont egyes vezérlőpultok nem értelmezik, és
+akkor a feladat némán nem csinál semmit. Nyers crontabban a két oszlop egyszerűen
+egymás után kerül.
+
+A pontos értékeket a `./deploy.sh` írja ki a futása végén. Mielőtt felveszed őket,
+próbáld ki egyszer kézzel — a cron hibája néma:
+
+```bash
+cd /tmp && <php> <projekt>/artisan dokumentum:feldolgoz --limit=1
 ```
-*/5 * * * * cd ~/szamlafolyo && <php> artisan email:beolvas
-*/5 * * * * cd ~/szamlafolyo && <php> artisan dokumentum:feldolgoz --limit=5
-17 3  * * * cd ~/szamlafolyo && <php> artisan fajl:selejtez
-```
+
+A `cd /tmp` szándékos: pont azt bizonyítja, hogy a parancs a munkakönyvtártól
+függetlenül működik.
 
 ### Ellenőrzés telepítés után
 

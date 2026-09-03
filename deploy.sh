@@ -156,11 +156,27 @@ cat <<CRON
 
 ✓ Kész.
 
-Az időzített feladatokhoz ezt a három sort másold be a nethely „Időzített
-folyamatok" felületére. Az elérési út a most felismert PHP-é — csupasz `php`
-nem jó, mert az a 7.4-re mutat:
+Három időzített feladatot kell felvenni. A vezérlőpult „Időzített folyamatok"
+felületén a Kezelő legyen **Egyedi parancs** — a „Parancssori php-cli" a
+vezérlőpult saját PHP-jét használná, ami itt 7.4, azon pedig az alkalmazás el
+sem indul.
 
-*/5 * * * * cd $PROJEKT && $PHP artisan email:beolvas
-*/5 * * * * cd $PROJEKT && $PHP artisan dokumentum:feldolgoz --limit=5
-17 3 * * * cd $PROJEKT && $PHP artisan fajl:selejtez
+Az időzítés és a parancs külön mezőbe megy:
+
+  1) Beérkeztetés e-mailből          időzítés:  */5 * * * *
+     $PHP $PROJEKT/artisan email:beolvas
+
+  2) Kiolvasás és elakadt futások    időzítés:  */5 * * * *
+     $PHP $PROJEKT/artisan dokumentum:feldolgoz --limit=5
+
+  3) Lejárt fájlok selejtezése       időzítés:  17 3 * * *
+     $PHP $PROJEKT/artisan fajl:selejtez
+
+A parancsban nincs se \`cd\`, se \`&&\`: az artisan a saját helyéből oldja fel az
+útvonalakat, ezért bármelyik munkakönyvtárból ugyanúgy fut. Nyers crontabba írva
+a két rész egyszerűen egymás után kerül.
+
+Mielőtt felveszed, próbáld ki egyszer — a cron hibája néma:
+
+  cd /tmp && $PHP $PROJEKT/artisan dokumentum:feldolgoz --limit=1
 CRON
