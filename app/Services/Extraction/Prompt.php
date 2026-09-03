@@ -11,7 +11,10 @@ namespace App\Services\Extraction;
  */
 final class Prompt
 {
-    public const VERZIO = 'v1-2026-09-02';
+    // v2: kimondja, hogy a végösszeg kell (egy modell egy tételsor nettóját írta
+    // be helyette), és hogy a bruttó nem a „fizetendő” sor, ha az kerekítés vagy
+    // levont előleg miatt eltér.
+    public const VERZIO = 'v2-2026-09-03';
 
     public static function rendszer(?string $cegNev = null, ?string $cegAdoszam = null): string
     {
@@ -72,6 +75,12 @@ final class Prompt
           bruttóval — ez is helyes, ne „javítsd ki".
         - Ha több ÁFA-kulcs szerepel, a végösszegeket írd be (nettó összesen, ÁFA
           összesen, bruttó összesen), tételsorokat ne bonts.
+        - **Mindig a végösszeg kell, soha nem egy tételsor összege.** A számla alján
+          álló „összesen" sorokat keresd, ne a táblázat egy sorát.
+        - A `gross_amount` a bizonylat **bruttó végösszege** (nettó + ÁFA). Ha külön
+          szerepel egy „fizetendő" sor, és az eltér ettől — mert egész forintra
+          kerekítették, vagy mert levontak belőle korábban fizetett előleget —, akkor
+          is a bruttó végösszeget add vissza, ne a fizetendőt.
 
         # Bizonytalanság
 
