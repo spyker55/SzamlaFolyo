@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\PdfFixtura;
+use Tests\Support\XmlFixtura;
 use Tests\TestCase;
 
 /**
@@ -199,15 +200,38 @@ final class KiolvasasProbaTest extends TestCase
     }
 
     /**
-     * A lánc lényege: ha a fájlban strukturált adat van, azt ki kell mondani —
-     * azért ne fizessünk modellhívást, ami ingyen is megvan.
+     * A lánc lényege végponttól végpontig: egy valódi alakú Factur-X PDF-ből
+     * — tömörített melléklettel, ahogy élesben érkezik — a számla adata
+     * modellhívás nélkül jön ki.
      */
-    public function test_jelzi_ha_a_pdf_strukturalt_adatot_rejt(): void
+    public function test_a_beagyazott_e_szamlat_modell_nelkul_olvassa_ki(): void
+    {
+        Company::factory()->create(['name' => 'Próba Kft.']);
+        Http::fake();
+
+        $utvonal = sys_get_temp_dir().'/facturx-'.uniqid().'.pdf';
+        file_put_contents($utvonal, PdfFixtura::beagyazottXmlLel(XmlFixtura::cii(), tomoritve: true));
+
+        try {
+            $this->artisan('kiolvasas:proba', ['fajl' => $utvonal])
+                ->expectsOutputToContain('PDF beágyazott XML-lel')
+                ->expectsOutputToContain('modellhívás nem történt')
+                ->expectsOutputToContain('SZ-2026-0042')
+                ->assertSuccessful();
+        } finally {
+            @unlink($utvonal);
+        }
+
+        Http::assertNothingSent();
+    }
+
+    /** Amit nem ismerünk fel, az nem vész el: a modell még mindig elolvassa. */
+    public function test_az_ertelmezhetetlen_beagyazott_xml_a_modellhez_kerul(): void
     {
         Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
-        $utvonal = sys_get_temp_dir().'/facturx-'.uniqid().'.pdf';
+        $utvonal = sys_get_temp_dir().'/sajat-'.uniqid().'.pdf';
         file_put_contents($utvonal, PdfFixtura::beagyazottXmlLel(
             '<?xml version="1.0"?><Invoice><ID>DV-2025/1170</ID></Invoice>',
         ));
@@ -215,11 +239,13 @@ final class KiolvasasProbaTest extends TestCase
         try {
             $this->artisan('kiolvasas:proba', ['fajl' => $utvonal])
                 ->expectsOutputToContain('PDF beágyazott XML-lel')
-                ->expectsOutputToContain('modellhívás nélkül is kiolvasható')
+                ->expectsOutputToContain('nem sikerült értelmezni')
                 ->assertSuccessful();
         } finally {
             @unlink($utvonal);
         }
+
+        Http::assertSentCount(1);
     }
 
     public function test_a_szovegreteget_felismeri_es_kiirja(): void

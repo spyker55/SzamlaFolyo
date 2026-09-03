@@ -19,6 +19,11 @@ return [
             'image/jpeg' => 'jpg',
             'image/png' => 'png',
             'image/webp' => 'webp',
+            // Önálló e-számla (UBL, Factur-X/ZUGFeRD CII). A tartalomból
+            // megállapított típus ezekre `text/xml`, de a küldő oldal néha
+            // `application/xml`-t mond — mindkettőt elfogadjuk.
+            'text/xml' => 'xml',
+            'application/xml' => 'xml',
         ],
     ],
 

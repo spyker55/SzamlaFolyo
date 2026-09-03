@@ -206,13 +206,18 @@ final class KiolvasasProba extends Command
             return false;
         }
 
-        $this->forras($dokumentum);
+        // Az XML-értelmező sosem hív modellt, ezért nincs prompt-verziója.
+        $xmlbol = $kiolvasas->prompt_version === null;
+
+        $this->forras($dokumentum, $xmlbol);
 
         $konfidencia = (array) ($kiolvasas->confidence['combined'] ?? []);
         $bukott = (array) ($kiolvasas->confidence['validators'] ?? []);
 
         $this->line('');
-        $this->line('  <options=bold>Amit a modell kiolvasott</>');
+        $this->line($xmlbol
+            ? '  <options=bold>Amit az XML tartalmazott</>'
+            : '  <options=bold>Amit a modell kiolvasott</>');
         $this->line('');
 
         foreach (Sema::MEZOK as $mezo) {
@@ -244,14 +249,20 @@ final class KiolvasasProba extends Command
         }
 
         $this->line('');
-        $this->line(sprintf(
-            '  <fg=gray>%s be- / %s kimenő token · %s · %s mp · futtatott modell: %s</>',
-            number_format((float) ($kiolvasas->input_tokens ?? 0), 0, ',', ' '),
-            number_format((float) ($kiolvasas->output_tokens ?? 0), 0, ',', ' '),
-            $kiolvasas->cost !== null ? '$'.rtrim(rtrim(number_format((float) $kiolvasas->cost, 4, '.', ''), '0'), '.') : 'ismeretlen költség',
-            number_format($masodperc, 1, ',', ' '),
-            $kiolvasas->model_version ?? '—',
-        ));
+        $this->line($xmlbol
+            ? sprintf(
+                '  <fg=gray>%s mp · értelmező: %s · <fg=green>0 token, 0 forint</></>',
+                number_format($masodperc, 1, ',', ' '),
+                $kiolvasas->model,
+            )
+            : sprintf(
+                '  <fg=gray>%s be- / %s kimenő token · %s · %s mp · futtatott modell: %s</>',
+                number_format((float) ($kiolvasas->input_tokens ?? 0), 0, ',', ' '),
+                number_format((float) ($kiolvasas->output_tokens ?? 0), 0, ',', ' '),
+                $kiolvasas->cost !== null ? '$'.rtrim(rtrim(number_format((float) $kiolvasas->cost, 4, '.', ''), '0'), '.') : 'ismeretlen költség',
+                number_format($masodperc, 1, ',', ' '),
+                $kiolvasas->model_version ?? '—',
+            ));
 
         return true;
     }
@@ -260,7 +271,7 @@ final class KiolvasasProba extends Command
      * Honnan lehetett volna olvasni ezt a fájlt. Ez a lánc lényege: amit
      * strukturáltan is meg lehet kapni, azért ne fizessünk modellhívást.
      */
-    private function forras(Document $dokumentum): void
+    private function forras(Document $dokumentum, bool $xmlbol): void
     {
         $jelleg = Jelleg::tryFrom((string) $dokumentum->forras_jelleg);
 
@@ -278,8 +289,14 @@ final class KiolvasasProba extends Command
         $this->line('');
         $this->line(sprintf('  <options=bold>Forrás:</> %s <fg=gray>(%s)</>', $jelleg->cimke(), $reszlet));
 
+        if ($xmlbol) {
+            $this->line('  <fg=green>A strukturált adatból olvastuk ki — modellhívás nem történt.</>');
+
+            return;
+        }
+
         if (! $jelleg->igenyelModellt()) {
-            $this->line('  <fg=yellow>Ebben strukturált adat van — modellhívás nélkül is kiolvasható lenne.</>');
+            $this->line('  <fg=yellow>Van benne strukturált adat, de nem sikerült értelmezni — a modell olvasta.</>');
         }
     }
 

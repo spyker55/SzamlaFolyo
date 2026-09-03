@@ -8,6 +8,7 @@ use App\Enums\DokumentumAllapot;
 use App\Models\Document;
 use App\Models\DocumentExtraction;
 use App\Services\Extraction\Forras\Felderito;
+use App\Services\Extraction\Xml\XmlKiolvaso;
 use App\Services\Files\FajlTarolo;
 use App\Support\Adoszam;
 use App\Support\Ido;
@@ -28,6 +29,7 @@ final class Kiolvaso
         private readonly OpenRouterKliens $kliens,
         private readonly FajlTarolo $tarolo,
         private readonly Felderito $felderito,
+        private readonly XmlKiolvaso $xmlKiolvaso,
     ) {}
 
     public function futtat(Document $dokumentum): void
@@ -66,8 +68,27 @@ final class Kiolvaso
             return;
         }
 
-        $ceg = $dokumentum->company;
         $kezdet = microtime(true);
+
+        // A lánc legolcsóbb foka: ha a fájlban strukturált adat van, abból
+        // olvasunk. Nem kerül semmibe, és nem találgatás — a kiállító maga
+        // írta bele. Ha nem sikerül értelmezni, megyünk tovább a modellhez.
+        if ($forras->xml !== null) {
+            $xmlbol = $this->xmlKiolvaso->ertelmez($forras->xml);
+
+            if ($xmlbol !== null) {
+                $this->rogzit(
+                    $dokumentum,
+                    $xmlbol['nyers'],
+                    ['motor' => $xmlbol['nev'], 'cost' => 0.0],
+                    (int) ((microtime(true) - $kezdet) * 1000),
+                );
+
+                return;
+            }
+        }
+
+        $ceg = $dokumentum->company;
 
         try {
             $valasz = $this->kliens->kiolvas(
@@ -91,19 +112,35 @@ final class Kiolvaso
             return;
         }
 
-        $tiszta = Sema::tisztit($valasz['fields']);
+        $this->rogzit($dokumentum, $valasz['fields'], $valasz, (int) ((microtime(true) - $kezdet) * 1000));
+    }
+
+    /**
+     * A kiolvasás eredményének feldolgozása és mentése.
+     *
+     * Ide fut be mindkét út — a strukturált XML és a modell is —, mert a
+     * tisztítás, a normalizálás, az ellenőrzések és a magabiztosság
+     * ugyanaz mindkettőre. Egy csővezeték van, nem kettő: ami az egyik úton
+     * javul, az a másikon is.
+     *
+     * @param  array<string, mixed>  $nyers  a kiolvasott mezők nyers alakja
+     * @param  array<string, mixed>  $valasz  amit a kiolvasás soráról tudunk
+     */
+    private function rogzit(Document $dokumentum, array $nyers, array $valasz, int $idoMs): void
+    {
+        $tiszta = Sema::tisztit($nyers);
         $mezok = $this->normalizal($tiszta['mezok']);
         $mezok['afa_bontas'] = $this->normalizalBontas($tiszta['bontas']);
         $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas']);
         $konfidencia = Konfidencia::osszevon($tiszta['konfidencia'], $bukott, $mezok);
 
-        DB::transaction(function () use ($dokumentum, $valasz, $mezok, $konfidencia, $tiszta, $kezdet): void {
+        DB::transaction(function () use ($dokumentum, $valasz, $mezok, $konfidencia, $tiszta, $idoMs): void {
             $kiolvasas = $this->kiolvasasRogzites(
                 $dokumentum,
                 $mezok,
                 $konfidencia,
                 null,
-                (int) ((microtime(true) - $kezdet) * 1000),
+                $idoMs,
                 $valasz,
             );
 
@@ -223,11 +260,16 @@ final class Kiolvaso
         int $idoMs,
         ?array $valasz = null,
     ): DocumentExtraction {
+        // Ha a hívó megnevezte a motort, akkor nem a modell futott, hanem az
+        // XML-értelmező — ott pedig nincs prompt. A prompt verziójának
+        // odaírása elrontaná az összehasonlítást, amiért az oszlop van.
+        $sajatMotor = isset($valasz['motor']);
+
         $kiolvasas = new DocumentExtraction([
             'document_id' => $dokumentum->id,
-            'model' => (string) config('openrouter.model'),
+            'model' => (string) ($valasz['motor'] ?? config('openrouter.model')),
             'model_version' => $valasz['model'] ?? null,
-            'prompt_version' => Prompt::VERZIO,
+            'prompt_version' => $sajatMotor ? null : Prompt::VERZIO,
             'raw_response' => $valasz['raw'] ?? null,
             'fields' => $mezok,
             'confidence' => $konfidencia,
