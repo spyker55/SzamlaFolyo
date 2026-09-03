@@ -33,6 +33,7 @@ class Document extends Model
             'approved_at' => 'datetime',
             'claimed_at' => 'datetime',
             'tobb_irat_gyanu' => 'boolean',
+            'forras_naplo' => 'array',
             'net_amount' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'gross_amount' => 'decimal:2',

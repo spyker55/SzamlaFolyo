@@ -7,6 +7,7 @@ namespace App\Services\Extraction;
 use App\Enums\DokumentumAllapot;
 use App\Models\Document;
 use App\Models\DocumentExtraction;
+use App\Services\Extraction\Forras\Felderito;
 use App\Services\Files\FajlTarolo;
 use App\Support\Adoszam;
 use App\Support\Ido;
@@ -26,6 +27,7 @@ final class Kiolvaso
     public function __construct(
         private readonly OpenRouterKliens $kliens,
         private readonly FajlTarolo $tarolo,
+        private readonly Felderito $felderito,
     ) {}
 
     public function futtat(Document $dokumentum): void
@@ -37,6 +39,16 @@ final class Kiolvaso
 
             return;
         }
+
+        // Előbb megnézzük, honnan lehetne olvasni ezt a fájlt. Ma még minden
+        // út a modellhez vezet, de a döntést már rögzítjük — ebből derül ki,
+        // mennyi munkát lehet elvenni tőle.
+        $forras = $this->felderito->felderit($tartalom, (string) $dokumentum->mime_type);
+
+        $dokumentum->forceFill([
+            'forras_jelleg' => $forras->jelleg->value,
+            'forras_naplo' => $forras->naplo(),
+        ])->save();
 
         $ceg = $dokumentum->company;
         $kezdet = microtime(true);

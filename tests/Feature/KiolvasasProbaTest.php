@@ -9,6 +9,7 @@ use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\PdfFixtura;
 use Tests\TestCase;
 
 /**
@@ -175,6 +176,47 @@ final class KiolvasasProbaTest extends TestCase
 
         // A kérés is a felülírt modellel ment ki, nem csak a fejlécben látszik.
         Http::assertSent(fn ($keres) => $keres['model'] === 'anthropic/claude-haiku-4.5');
+    }
+
+    /**
+     * A lánc lényege: ha a fájlban strukturált adat van, azt ki kell mondani —
+     * azért ne fizessünk modellhívást, ami ingyen is megvan.
+     */
+    public function test_jelzi_ha_a_pdf_strukturalt_adatot_rejt(): void
+    {
+        Company::factory()->create(['name' => 'Próba Kft.']);
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $utvonal = sys_get_temp_dir().'/facturx-'.uniqid().'.pdf';
+        file_put_contents($utvonal, PdfFixtura::beagyazottXmlLel(
+            '<?xml version="1.0"?><Invoice><ID>DV-2025/1170</ID></Invoice>',
+        ));
+
+        try {
+            $this->artisan('kiolvasas:proba', ['fajl' => $utvonal])
+                ->expectsOutputToContain('PDF beágyazott XML-lel')
+                ->expectsOutputToContain('modellhívás nélkül is kiolvasható')
+                ->assertSuccessful();
+        } finally {
+            @unlink($utvonal);
+        }
+    }
+
+    public function test_a_szovegreteget_felismeri_es_kiirja(): void
+    {
+        Company::factory()->create(['name' => 'Próba Kft.']);
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $utvonal = sys_get_temp_dir().'/szoveges-'.uniqid().'.pdf';
+        file_put_contents($utvonal, PdfFixtura::szovegreteggel());
+
+        try {
+            $this->artisan('kiolvasas:proba', ['fajl' => $utvonal])
+                ->expectsOutputToContain('PDF szövegréteggel')
+                ->assertSuccessful();
+        } finally {
+            @unlink($utvonal);
+        }
     }
 
     private function modellValasz(): array

@@ -9,6 +9,7 @@ use App\Enums\DokumentumTipus;
 use App\Models\Company;
 use App\Models\Document;
 use App\Services\Billing\Kvota;
+use App\Services\Extraction\Forras\Jelleg;
 use App\Services\Extraction\Kiolvaso;
 use App\Services\Extraction\Konfidencia;
 use App\Services\Extraction\Prompt;
@@ -203,6 +204,8 @@ final class KiolvasasProba extends Command
             return false;
         }
 
+        $this->forras($dokumentum);
+
         $konfidencia = (array) ($kiolvasas->confidence['combined'] ?? []);
         $bukott = (array) ($kiolvasas->confidence['validators'] ?? []);
 
@@ -247,6 +250,33 @@ final class KiolvasasProba extends Command
         ));
 
         return true;
+    }
+
+    /**
+     * Honnan lehetett volna olvasni ezt a fájlt. Ez a lánc lényege: amit
+     * strukturáltan is meg lehet kapni, azért ne fizessünk modellhívást.
+     */
+    private function forras(Document $dokumentum): void
+    {
+        $jelleg = Jelleg::tryFrom((string) $dokumentum->forras_jelleg);
+
+        if ($jelleg === null) {
+            return;
+        }
+
+        $naplo = (array) $dokumentum->forras_naplo;
+        $reszlet = match ($jelleg) {
+            Jelleg::StrukturaltXml, Jelleg::BeagyazottXml => sprintf('%d bájt XML', $naplo['xml_bajt'] ?? 0),
+            Jelleg::Szovegreteg => sprintf('%d karakter szöveg', $naplo['szoveg_hossz'] ?? 0),
+            Jelleg::Kep => 'nincs kiolvasható szöveg',
+        };
+
+        $this->line('');
+        $this->line(sprintf('  <options=bold>Forrás:</> %s <fg=gray>(%s)</>', $jelleg->cimke(), $reszlet));
+
+        if (! $jelleg->igenyelModellt()) {
+            $this->line('  <fg=yellow>Ebben strukturált adat van — modellhívás nélkül is kiolvasható lenne.</>');
+        }
     }
 
     private function lezaras(Document $dokumentum, Company $ceg): void
