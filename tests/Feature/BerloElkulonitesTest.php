@@ -67,6 +67,40 @@ final class BerloElkulonitesTest extends TestCase
         $this->assertSame($ceg->id, $dokumentum->company_id);
     }
 
+    /**
+     * Éles hiba volt: a `ceg` middleware csak az oldal első betöltésekor fut
+     * le, minden további Livewire-akció (feltöltés, mentés) egy saját
+     * /livewire/update kérésen megy, amit Livewire alapból nem enged át a
+     * saját middleware-jeinken — a Berlo ott üresen indult, és minden
+     * ilyen kérés "Nincs kiválasztott cég." hibával, 500-zal elszállt.
+     */
+    public function test_egy_kulon_livewire_kerelmen_is_megvan_a_kivalasztott_ceg(): void
+    {
+        [$ceg, $user] = $this->cegFelhasznaloval();
+
+        // A pillanatképet a valódi, /beerkezo-ra érkező HTML-ből szedjük ki:
+        // csak ennek van olyan `path`/`method` memója, ami a `ceg` middleware-t
+        // hordozó valódi útvonalra mutat. A Livewire::test() ehelyett egy
+        // belső teszt-végpontot tesz a memóba, azon meg a middleware sosem
+        // fut le — ez épp azt a hibát rejtette volna el, amit itt ellenőrzünk.
+        $oldal = $this->actingAs($user)->get(route('beerkezo'));
+        $oldal->assertOk();
+
+        preg_match('/wire:snapshot="([^"]+)"/', $oldal->getContent(), $talalat);
+        $this->assertArrayHasKey(1, $talalat, 'Nem található Livewire-pillanatkép a Beérkező oldalon.');
+        $pillanatkep = html_entity_decode($talalat[1], ENT_QUOTES);
+
+        // Az igazi /livewire/update kérés élesben egy önálló folyamatban fut:
+        // a Berlo ott üresen indul, hacsak a middleware nem fut le rá újra.
+        app(Berlo::class)->beallit(null);
+
+        $this->withHeaders(['X-Livewire' => 'true'])
+            ->postJson('/livewire/update', ['components' => [
+                ['snapshot' => $pillanatkep, 'updates' => [], 'calls' => []],
+            ]])
+            ->assertOk();
+    }
+
     /** @return array{0: Company, 1: User} */
     private function cegFelhasznaloval(): array
     {

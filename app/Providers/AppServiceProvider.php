@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Http\Middleware\SetCompany;
 use App\Support\Berlo;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,13 @@ class AppServiceProvider extends ServiceProvider
         // és a nem létező attribútum írása is hangos legyen.
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+
+        // A `ceg` middleware csak az oldal első betöltésekor fut le — minden
+        // további Livewire-akció (gombnyomás, feltöltés) egy saját, belső
+        // /livewire/update kérésen megy, amit Livewire alapból NEM enged át a
+        // saját middleware-jeinken, csak egy rövid listán (auth, kötésfeloldás).
+        // Enélkül a Berlo minden ilyen kérésnél üresen indulna.
+        Livewire::addPersistentMiddleware([SetCompany::class]);
 
         // A jelszóbeállító levél magyarul. Ez az egyetlen levél, amit a
         // rendszer küld, ezért nem építünk köré fordítási réteget.
