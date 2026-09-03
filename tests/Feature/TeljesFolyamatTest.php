@@ -16,8 +16,10 @@ use App\Services\Extraction\Sorkezelo;
 use App\Services\Files\FajlHiba;
 use App\Services\Files\FajlTarolo;
 use App\Support\Berlo;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -151,6 +153,45 @@ final class TeljesFolyamatTest extends TestCase
         $this->expectException(FajlHiba::class);
 
         app(FajlTarolo::class)->tarol($this->ceg, 'sima szöveg', 'jegyzet.txt', 'text/plain');
+    }
+
+    /**
+     * Pontosan azt a hibát reprodukálja, ami az első éles feltöltésnél a
+     * böngészőt 500-ra vitte: a `forras_jelleg`/`forras_naplo` oszlop hiányzik
+     * (mert a migráció nem futott le), a `Kiolvaso::futtat()` erre elszáll —
+     * ennek a dokumentumot hiba-állapotba kell tennie, nem a kérést elvinnie.
+     */
+    public function test_kiolvasas_elokeszitesenek_hibaja_nem_dobja_fel_a_kerelmet(): void
+    {
+        Schema::table('documents', function (Blueprint $table): void {
+            $table->dropColumn(['forras_jelleg', 'forras_naplo']);
+        });
+
+        try {
+            $dokumentum = app(FajlTarolo::class)->tarol(
+                $this->ceg,
+                $this->pdfTartalom(),
+                'szamla.pdf',
+                'application/pdf',
+                'upload',
+                $this->user->id,
+            );
+
+            app(Sorkezelo::class)->egyet($this->ceg);
+        } finally {
+            Schema::table('documents', function (Blueprint $table): void {
+                $table->string('forras_jelleg', 30)->nullable();
+                $table->json('forras_naplo')->nullable();
+            });
+        }
+
+        $dokumentum->refresh();
+
+        // Egy próbálkozás elfogyott, de a max_attempts miatt még visszakerül
+        // a sorba — nem áll meg végleg hiba-állapotban egyetlen kudarctól.
+        $this->assertSame(DokumentumAllapot::Feltoltve, $dokumentum->status);
+        $this->assertSame(1, $dokumentum->attempts);
+        $this->assertSame('Váratlan hiba a kiolvasás előkészítése közben.', $dokumentum->error);
     }
 
     /** A modell válasza szándékosan magyar írásmódú összeggel és egy rossz adószámmal. */

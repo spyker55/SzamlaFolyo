@@ -32,23 +32,39 @@ final class Kiolvaso
 
     public function futtat(Document $dokumentum): void
     {
-        $tartalom = $this->tarolo->tartalom($dokumentum);
+        try {
+            $tartalom = $this->tarolo->tartalom($dokumentum);
 
-        if ($tartalom === null) {
-            $this->hibara($dokumentum, 'A dokumentum fájlja nem található.');
+            if ($tartalom === null) {
+                $this->hibara($dokumentum, 'A dokumentum fájlja nem található.');
+
+                return;
+            }
+
+            // Előbb megnézzük, honnan lehetne olvasni ezt a fájlt. Ma még minden
+            // út a modellhez vezet, de a döntést már rögzítjük — ebből derül ki,
+            // mennyi munkát lehet elvenni tőle.
+            $forras = $this->felderito->felderit($tartalom, (string) $dokumentum->mime_type);
+
+            // Tranzakcióba csomagolva: ha a mentés elszáll, a `hibara()` lenti
+            // mentése ne ugyanabba az elakadt tranzakcióba fusson bele.
+            DB::transaction(function () use ($dokumentum, $forras): void {
+                $dokumentum->forceFill([
+                    'forras_jelleg' => $forras->jelleg->value,
+                    'forras_naplo' => $forras->naplo(),
+                ])->save();
+            });
+        } catch (Throwable $e) {
+            // A sikertelen mentés a most beállított mezőket piszkosan hagyná a
+            // memóriában — enélkül a hibara() alábbi mentése ugyanabba a
+            // (már nem létező oszlopra hivatkozó) hibába futna bele.
+            $dokumentum->discardChanges();
+            $this->hibara($dokumentum, 'Váratlan hiba a kiolvasás előkészítése közben.');
+
+            report($e);
 
             return;
         }
-
-        // Előbb megnézzük, honnan lehetne olvasni ezt a fájlt. Ma még minden
-        // út a modellhez vezet, de a döntést már rögzítjük — ebből derül ki,
-        // mennyi munkát lehet elvenni tőle.
-        $forras = $this->felderito->felderit($tartalom, (string) $dokumentum->mime_type);
-
-        $dokumentum->forceFill([
-            'forras_jelleg' => $forras->jelleg->value,
-            'forras_naplo' => $forras->naplo(),
-        ])->save();
 
         $ceg = $dokumentum->company;
         $kezdet = microtime(true);
