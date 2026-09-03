@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Enums\AfaKategoria;
 use App\Enums\DokumentumAllapot;
 use App\Enums\DokumentumTipus;
 use App\Models\Company;
@@ -16,6 +17,7 @@ use App\Services\Extraction\Prompt;
 use App\Services\Extraction\Sema;
 use App\Services\Files\FajlHiba;
 use App\Services\Files\FajlTarolo;
+use App\Support\AfaBontas;
 use App\Support\Berlo;
 use App\Support\Osszeg;
 use Illuminate\Console\Command;
@@ -225,6 +227,8 @@ final class KiolvasasProba extends Command
             ));
         }
 
+        $this->bontas($dokumentum, $konfidencia['afa_bontas'] ?? null);
+
         if ($dokumentum->tobb_irat_gyanu) {
             $this->line('');
             $this->line('  <fg=yellow>! A modell szerint több bizonylat van ebben a fájlban.</>');
@@ -279,6 +283,41 @@ final class KiolvasasProba extends Command
         }
     }
 
+    /**
+     * A kulcsonkénti ÁFA-bontás. Ez a próba egyik lényegi kérdése: a modell
+     * kulcsonként összesít-e, vagy tételsorokat sorol fel.
+     */
+    private function bontas(Document $dokumentum, ?float $pont): void
+    {
+        $sorok = AfaBontas::sorok($dokumentum->afa_bontas);
+
+        if ($sorok === []) {
+            return;
+        }
+
+        $this->line('');
+        $this->line(sprintf('  <options=bold>ÁFA-bontás</> %s', $this->jelzo($pont)));
+        $this->line('');
+
+        $this->line(sprintf(
+            '  %s%s%s%s',
+            $this->oszlop('Kulcs', 8),
+            $this->oszlop('Kategória', 24),
+            $this->oszlop('Nettó', 16),
+            $this->oszlop('ÁFA', 16),
+        ));
+
+        foreach ($sorok as $sor) {
+            $this->line(sprintf(
+                '  %s%s%s%s',
+                $this->oszlop($sor['kulcs'].'%', 8),
+                $this->oszlop(AfaKategoria::cimkeje($sor['kategoria']), 24),
+                $this->oszlop(Osszeg::formaz($sor['netto']), 16),
+                $this->oszlop(Osszeg::formaz($sor['afa']), 16),
+            ));
+        }
+    }
+
     private function lezaras(Document $dokumentum, Company $ceg): void
     {
         $this->line('');
@@ -324,7 +363,7 @@ final class KiolvasasProba extends Command
             $ertek === null || $ertek === '' => null,
             $ertek instanceof DokumentumTipus => $ertek->cimke(),
             $ertek instanceof \DateTimeInterface => $ertek->format('Y. m. d.'),
-            in_array($mezo, ['net_amount', 'vat_amount', 'gross_amount'], true) => Osszeg::formaz($ertek),
+            in_array($mezo, Sema::OSSZEG_MEZOK, true) => Osszeg::formaz($ertek),
             default => (string) $ertek,
         };
     }

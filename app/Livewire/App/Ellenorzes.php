@@ -11,6 +11,7 @@ use App\Models\DocumentCorrection;
 use App\Services\Extraction\Konfidencia;
 use App\Services\Extraction\Sema;
 use App\Support\Adoszam;
+use App\Support\AfaBontas;
 use App\Support\Ido;
 use App\Support\Osszeg;
 use Illuminate\Support\Facades\DB;
@@ -149,7 +150,7 @@ class Ellenorzes extends Component
             $this->addError('mezok.doc_type', 'Ismeretlen bizonylattípus.');
         }
 
-        foreach (['issue_date', 'fulfillment_date', 'due_date'] as $mezo) {
+        foreach (Sema::DATUM_MEZOK as $mezo) {
             if ($eredmeny[$mezo] === null) {
                 continue;
             }
@@ -165,7 +166,7 @@ class Ellenorzes extends Component
             $eredmeny[$mezo] = $datum;
         }
 
-        foreach (['net_amount', 'vat_amount', 'gross_amount'] as $mezo) {
+        foreach (Sema::OSSZEG_MEZOK as $mezo) {
             if ($eredmeny[$mezo] === null) {
                 continue;
             }
@@ -209,6 +210,7 @@ class Ellenorzes extends Component
         return view('livewire.app.ellenorzes', [
             'cimkek' => Sema::CIMKEK,
             'tipusok' => DokumentumTipus::opciok(),
+            'bontas' => AfaBontas::sorok($this->dokumentum->afa_bontas),
             'hatravan' => Document::query()
                 ->where('status', DokumentumAllapot::EllenorzesreVar->value)
                 ->count(),

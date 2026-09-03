@@ -50,6 +50,26 @@ final class KiolvasasProbaTest extends TestCase
             ->assertSuccessful();
     }
 
+    /**
+     * A bontás kiírása a próba egyik lényegi kérdésére felel: a modell
+     * kulcsonként összesít-e, vagy tételsorokat sorol fel.
+     */
+    public function test_kiirja_az_afa_bontast(): void
+    {
+        Company::factory()->create(['name' => 'Próba Kft.']);
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        // Figyelem: két várt részlet nem lehet ugyanazon a kimeneti soron —
+        // az `expectsOutputToContain` külön elvárásként regisztrálja mindet, és
+        // az első illeszkedő elnyeli a sort a többi elől. A „Normál" ezért a
+        // sor egyetlen állítása: ha az ott van, a sor rendben kiíródott.
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
+            ->expectsOutputToContain('ÁFA-bontás')
+            ->expectsOutputToContain('Kategória')
+            ->expectsOutputToContain('Normál')
+            ->assertSuccessful();
+    }
+
     /** A bukott ellenőrzést nem elég színnel jelezni — ki is kell mondani. */
     public function test_kiirja_a_bukott_ellenorzeseket(): void
     {
@@ -239,6 +259,9 @@ final class KiolvasasProbaTest extends TestCase
                             'net_amount' => '100 000',
                             'vat_amount' => '27 000',
                             'gross_amount' => '127 000',
+                            'afa_bontas' => [
+                                ['kulcs' => 27, 'kategoria' => 'S', 'netto' => '100 000', 'afa' => '27 000'],
+                            ],
                             'tobb_irat_gyanu' => false,
                             'confidence' => ['doc_type' => 0.98, 'supplier_name' => 0.95, 'gross_amount' => 0.99],
                         ]),

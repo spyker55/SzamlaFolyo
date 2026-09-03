@@ -93,7 +93,8 @@ final class Kiolvaso
 
         $tiszta = Sema::tisztit($valasz['fields']);
         $mezok = $this->normalizal($tiszta['mezok']);
-        $bukott = Validatorok::bukottak($mezok);
+        $mezok['afa_bontas'] = $this->normalizalBontas($tiszta['bontas']);
+        $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas']);
         $konfidencia = Konfidencia::osszevon($tiszta['konfidencia'], $bukott, $mezok);
 
         DB::transaction(function () use ($dokumentum, $valasz, $mezok, $konfidencia, $tiszta, $kezdet): void {
@@ -125,17 +126,16 @@ final class Kiolvaso
      */
     private function normalizal(array $mezok): array
     {
-        foreach (['issue_date', 'fulfillment_date', 'due_date'] as $mezo) {
+        foreach (Sema::DATUM_MEZOK as $mezo) {
             $mezok[$mezo] = $mezok[$mezo] !== null ? Ido::datumErtelmez((string) $mezok[$mezo]) : null;
         }
 
-        foreach (['net_amount', 'vat_amount', 'gross_amount'] as $mezo) {
+        foreach (Sema::OSSZEG_MEZOK as $mezo) {
             if ($mezok[$mezo] === null) {
                 continue;
             }
 
-            $eredmeny = Osszeg::ertelmez(is_string($mezok[$mezo]) ? $mezok[$mezo] : (float) $mezok[$mezo]);
-            $mezok[$mezo] = $eredmeny->ok ? $eredmeny->ertek : null;
+            $mezok[$mezo] = $this->osszeg($mezok[$mezo]);
         }
 
         if (is_string($mezok['currency']) && $mezok['currency'] !== '') {
@@ -149,6 +149,70 @@ final class Kiolvaso
         }
 
         return $mezok;
+    }
+
+    /**
+     * Az ÁFA-bontás sorainak értelmezése: a kulcs számmá, az összegek a mi
+     * alakunkra. Amelyik sorból nem marad használható kulcs és adóalap, az
+     * kiesik — egy fél sor rosszabb, mint a hiánya, mert az összegellenőrzést
+     * is elrontaná.
+     *
+     * @param  array<int, array<string, mixed>>|null  $bontas
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function normalizalBontas(?array $bontas): ?array
+    {
+        if ($bontas === null) {
+            return null;
+        }
+
+        $sorok = [];
+
+        foreach ($bontas as $sor) {
+            $kulcs = $this->kulcs($sor['kulcs'] ?? null);
+            $netto = $this->osszeg($sor['netto'] ?? null);
+
+            if ($kulcs === null || $netto === null) {
+                continue;
+            }
+
+            $sorok[] = [
+                'kulcs' => $kulcs,
+                'kategoria' => $sor['kategoria'] ?? null,
+                'netto' => $netto,
+                'afa' => $this->osszeg($sor['afa'] ?? null),
+            ];
+        }
+
+        return $sorok === [] ? null : $sorok;
+    }
+
+    /** Az ÁFA-kulcs százalékban. A „27%" és a „27,0" is 27.0. */
+    private function kulcs(mixed $ertek): ?float
+    {
+        if (is_int($ertek) || is_float($ertek)) {
+            return (float) $ertek;
+        }
+
+        if (! is_string($ertek)) {
+            return null;
+        }
+
+        $tiszta = str_replace([' ', '%', ','], ['', '', '.'], trim($ertek));
+
+        return is_numeric($tiszta) ? (float) $tiszta : null;
+    }
+
+    /** Összeg a mi alakunkra hozva; amit nem értünk, az null. */
+    private function osszeg(mixed $ertek): ?string
+    {
+        if ($ertek === null || $ertek === '') {
+            return null;
+        }
+
+        $eredmeny = Osszeg::ertelmez(is_string($ertek) ? $ertek : (float) $ertek);
+
+        return $eredmeny->ok ? $eredmeny->ertek : null;
     }
 
     private function kiolvasasRogzites(

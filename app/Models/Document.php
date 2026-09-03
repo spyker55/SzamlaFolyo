@@ -34,29 +34,13 @@ class Document extends Model
             'claimed_at' => 'datetime',
             'tobb_irat_gyanu' => 'boolean',
             'forras_naplo' => 'array',
+            'afa_bontas' => 'array',
             'net_amount' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'gross_amount' => 'decimal:2',
+            'fizetendo' => 'decimal:2',
         ];
     }
-
-    /** A mezők, amikért az egész alkalmazás van: ezeket olvassa ki az AI és ezek mennek exportba. */
-    public const KIOLVASOTT_MEZOK = [
-        'doc_type',
-        'supplier_name',
-        'supplier_tax_number',
-        'customer_name',
-        'customer_tax_number',
-        'doc_number',
-        'issue_date',
-        'fulfillment_date',
-        'due_date',
-        'payment_method',
-        'currency',
-        'net_amount',
-        'vat_amount',
-        'gross_amount',
-    ];
 
     public function extractions(): HasMany
     {

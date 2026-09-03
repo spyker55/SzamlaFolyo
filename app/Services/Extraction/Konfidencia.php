@@ -46,6 +46,18 @@ final class Konfidencia
             $eredmeny[$mezo] = round($pont, 3);
         }
 
+        // Az ÁFA-bontás nem skalár mező, ezért kimarad a fenti ciklusból — de
+        // ugyanúgy van magabiztossága, és ugyanúgy lehúzhatja a validátor.
+        if (($mezok['afa_bontas'] ?? null) !== null) {
+            $pont = $modellSzerint['afa_bontas'] ?? 0.5;
+
+            if (isset($bukottValidatorok['afa_bontas'])) {
+                $pont = min($pont, self::BUKAS_PLAFON);
+            }
+
+            $eredmeny['afa_bontas'] = round($pont, 3);
+        }
+
         return [
             'model' => $modellSzerint,
             'validators' => $bukottValidatorok,

@@ -78,10 +78,22 @@ final class TeljesFolyamatTest extends TestCase
         $this->assertSame(DokumentumAllapot::EllenorzesreVar, $dokumentum->status);
         $this->assertSame('szamla', $dokumentum->doc_type->value);
         $this->assertSame('Példa Szállító Kft.', $dokumentum->supplier_name);
-        $this->assertSame('127000.00', $dokumentum->gross_amount);
+        $this->assertSame('124800.00', $dokumentum->gross_amount);
         // A magyar írásmódú összeget a mi alakunkra hozta.
         $this->assertSame('100000.00', $dokumentum->net_amount);
+        $this->assertSame('124800.00', $dokumentum->fizetendo);
         $this->assertSame('2026-03-14', $dokumentum->issue_date->toDateString());
+
+        // Az ÁFA-bontás kulcsonként, a mi alakunkra hozott összegekkel. A
+        // kitalált kategóriakód kiesett, de a sor maga megmaradt.
+        //
+        // A kulcs egész számként jön vissza: a `json_encode(27.0)` „27"-et ír,
+        // tehát a json oda-vissza úton a float elveszti a típusát. Ezért olvas
+        // minden fogyasztó `is_numeric`-kel, és nem hasonlít float-hoz.
+        $this->assertSame([
+            ['kulcs' => 27, 'kategoria' => 'S', 'netto' => '90000.00', 'afa' => '24300.00'],
+            ['kulcs' => 5, 'kategoria' => null, 'netto' => '10000.00', 'afa' => '500.00'],
+        ], $dokumentum->afa_bontas);
 
         // A gépi válasz és a magabiztosság eltéve, a hibás adószám lehúzva.
         $kiolvasas = $dokumentum->utolsoKiolvasas();
@@ -90,9 +102,19 @@ final class TeljesFolyamatTest extends TestCase
         $this->assertArrayHasKey('customer_tax_number', $kiolvasas->confidence['validators']);
         $this->assertLessThanOrEqual(0.3, $kiolvasas->confidence['combined']['customer_tax_number']);
 
+        // A sorok összege kiadja a végösszegeket, tehát a bontás nem bukott —
+        // és a nem skalár mező is kap magabiztosságot.
+        $this->assertArrayNotHasKey('afa_bontas', $kiolvasas->confidence['validators']);
+        $this->assertArrayHasKey('afa_bontas', $kiolvasas->confidence['combined']);
+
         // 3. Ellenőrzés: az ember kijavítja a rossz vevő-adószámot
         Livewire::test(Ellenorzes::class, ['dokumentum' => $dokumentum])
             ->assertSet('mezok.doc_number', 'SZ-2026-0042')
+            // A fizetendő rendes, szerkeszthető mező; a bontás egyelőre csak
+            // olvasható — de látszania kell, különben nem lehet megítélni.
+            ->assertSet('mezok.fizetendo', '124800.00')
+            ->assertSee('ÁFA-bontás')
+            ->assertSee('Normál')
             ->set('mezok.customer_tax_number', '10537914-4-44')
             ->call('jovahagyas')
             ->assertHasNoErrors();
@@ -123,7 +145,7 @@ final class TeljesFolyamatTest extends TestCase
         $this->assertNull($dokumentum->storage_path);
         $this->assertNotNull($dokumentum->file_deleted_at);
         $this->assertFalse(Storage::disk('local')->exists($utvonalExportElott));
-        $this->assertSame('127000.00', $dokumentum->gross_amount);
+        $this->assertSame('124800.00', $dokumentum->gross_amount);
 
         // Az export fájlja viszont megvan és letölthető
         $export = $dokumentum->export;
@@ -216,8 +238,15 @@ final class TeljesFolyamatTest extends TestCase
                                 'due_date' => '2026-03-28',
                                 'currency' => 'huf',
                                 'net_amount' => '100 000',
-                                'vat_amount' => '27 000',
-                                'gross_amount' => '127 000',
+                                'vat_amount' => '24 800',
+                                'gross_amount' => '124 800',
+                                // Kerekítve fizetendő — ettől tér el a bruttótól.
+                                'fizetendo' => '124 800',
+                                'afa_bontas' => [
+                                    ['kulcs' => 27, 'kategoria' => 'S', 'netto' => '90 000', 'afa' => '24 300'],
+                                    // A kitalált kategóriakód kiesik, a sor marad.
+                                    ['kulcs' => 5, 'kategoria' => 'XYZ', 'netto' => '10 000', 'afa' => '500'],
+                                ],
                                 'payment_method' => 'átutalás',
                                 'tobb_irat_gyanu' => false,
                                 'confidence' => [

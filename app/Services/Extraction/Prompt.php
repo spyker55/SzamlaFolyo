@@ -14,7 +14,9 @@ final class Prompt
     // v2: kimondja, hogy a végösszeg kell (egy modell egy tételsor nettóját írta
     // be helyette), és hogy a bruttó nem a „fizetendő” sor, ha az kerekítés vagy
     // levont előleg miatt eltér.
-    public const VERZIO = 'v2-2026-09-03';
+    // v3: kulcsonkénti ÁFA-bontás EN 16931 kategóriakódokkal, és a fizetendő
+    // külön mezőben — így a bruttóról állítani lehet, mi az, nem tiltani, mi nem.
+    public const VERZIO = 'v3-2026-09-03';
 
     public static function rendszer(?string $cegNev = null, ?string $cegAdoszam = null): string
     {
@@ -73,14 +75,39 @@ final class Prompt
         - Sztornó és helyesbítő számlán a **negatív összeg helyes**, ne fordítsd meg.
         - Fordított adózásnál (fordított ÁFA) az ÁFA nulla és a nettó megegyezik a
           bruttóval — ez is helyes, ne „javítsd ki".
-        - Ha több ÁFA-kulcs szerepel, a végösszegeket írd be (nettó összesen, ÁFA
-          összesen, bruttó összesen), tételsorokat ne bonts.
         - **Mindig a végösszeg kell, soha nem egy tételsor összege.** A számla alján
           álló „összesen" sorokat keresd, ne a táblázat egy sorát.
-        - A `gross_amount` a bizonylat **bruttó végösszege** (nettó + ÁFA). Ha külön
-          szerepel egy „fizetendő" sor, és az eltér ettől — mert egész forintra
-          kerekítették, vagy mert levontak belőle korábban fizetett előleget —, akkor
-          is a bruttó végösszeget add vissza, ne a fizetendőt.
+        - A `gross_amount` a bizonylat **bruttó végösszege**: nettó + ÁFA.
+        - A `fizetendo` az, amit ténylegesen ki kell fizetni, **ha eltér a bruttótól** —
+          mert egész forintra kerekítették, vagy mert levontak belőle korábban fizetett
+          előleget. Ha nincs ilyen külön sor, vagy megegyezik a bruttóval, akkor null.
+
+        # ÁFA-bontás (afa_bontas)
+
+        A számla alján álló ÁFA-összesítő táblázat, **kulcsonként egy sorral**.
+
+        - Egy sor egy **ÁFA-kulcsot** jelent, nem egy tételsort. Ha öt tétel van 27%-kal
+          és kettő 5%-kal, akkor **két sor** lesz: a 27%-os tételek összesített nettója
+          és ÁFÁ-ja, majd az 5%-osoké. Soha ne sorolj fel tételsoronként egy-egy sort.
+        - A sorok nettó összegének ki kell adnia a `net_amount`-ot, az ÁFA-összegeknek a
+          `vat_amount`-ot. Ez jó önellenőrzés: ha nem jön ki, valamelyiket rosszul olvastad.
+        - Egyetlen kulcs esetén is töltsd ki — akkor egyetlen sorral.
+        - Ha a bizonylaton nincs ÁFA-összesítő (például nyugtán vagy szállítólevélen),
+          akkor null.
+
+        A `kategoria` mezőbe a következő kódok valamelyike kerül:
+
+        - `S` — normál, adóköteles (27%, 18%, 5%).
+        - `AE` — fordított adózás. Az ÁFA nulla; a számlán „fordított adózás" szerepel.
+        - `Z` — nulla kulcsos (0%-os adómérték).
+        - `E` — mentes: alanyi adómentes (AAM) vagy tárgyi adómentes (TAM).
+        - `K` — közösségi (EU-n belüli) termékértékesítés.
+        - `G` — export az EU-n kívülre.
+        - `O` — az ÁFA hatályán kívüli ügylet.
+
+        A `S` kivételével mindegyiknél nulla az ÁFA. Ha látod a nulla kulcsot, de nem
+        derül ki, **miért** nulla, akkor a `kategoria` legyen null — ne találgass, mert a
+        könyvelésben ez a három eset három különböző dolog.
 
         # Bizonytalanság
 

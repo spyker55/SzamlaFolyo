@@ -102,8 +102,8 @@
                 @endforeach
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-4">
-                @foreach (['net_amount', 'vat_amount', 'gross_amount'] as $mezo)
+            <div class="grid gap-4 sm:grid-cols-5">
+                @foreach (['net_amount', 'vat_amount', 'gross_amount', 'fizetendo'] as $mezo)
                     <div>
                         <label class="flabel" for="{{ $mezo }}">{{ $cimkek[$mezo] }}</label>
                         <input id="{{ $mezo }}" type="text" inputmode="decimal"
@@ -118,6 +118,42 @@
                     <x-mezo-jelzes :hiba="$validatorHibak['currency'] ?? null" mezo="currency"/>
                 </div>
             </div>
+
+            @if ($bontas !== [])
+                <div>
+                    <div class="flex items-baseline justify-between gap-3">
+                        <span class="flabel">{{ $cimkek['afa_bontas'] }}</span>
+                        <span class="text-xs text-slate-400">Tájékoztató — itt még nem szerkeszthető</span>
+                    </div>
+
+                    <table class="mt-1 w-full text-sm tabular-nums">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wide text-slate-400">
+                                <th class="py-1 text-left font-medium">Kulcs</th>
+                                <th class="py-1 text-left font-medium">Kategória</th>
+                                <th class="py-1 text-right font-medium">Nettó</th>
+                                <th class="py-1 text-right font-medium">ÁFA</th>
+                                <th class="py-1 text-right font-medium">Bruttó</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($bontas as $sor)
+                                <tr>
+                                    <td class="py-1.5">{{ $sor['kulcs'] }}%</td>
+                                    <td class="py-1.5 text-slate-500">
+                                        {{ \App\Enums\AfaKategoria::cimkeje($sor['kategoria']) }}
+                                    </td>
+                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['netto']) }}</td>
+                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['afa']) }}</td>
+                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['brutto']) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    <x-mezo-jelzes :hiba="$validatorHibak['afa_bontas'] ?? null" mezo="afa_bontas"/>
+                </div>
+            @endif
 
             <div>
                 <label class="flabel" for="payment_method">{{ $cimkek['payment_method'] }}</label>

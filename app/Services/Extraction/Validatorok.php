@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Extraction;
 
+use App\Enums\AfaKategoria;
 use App\Support\Adoszam;
 use App\Support\Ido;
 use App\Support\Osszeg;
@@ -21,9 +22,10 @@ final class Validatorok
 {
     /**
      * @param  array<string, mixed>  $mezok
+     * @param  array<int, array<string, mixed>>|null  $bontas
      * @return array<string, string> mező => a bukás magyar indoklása
      */
-    public static function bukottak(array $mezok): array
+    public static function bukottak(array $mezok, ?array $bontas = null): array
     {
         $bukas = [];
 
@@ -80,6 +82,93 @@ final class Validatorok
             $bukas['net_amount'] = $indok;
             $bukas['vat_amount'] = $indok;
             $bukas['gross_amount'] = $indok;
+        }
+
+        return $bukas + self::bontasBukasok($bontas, $netto, $afa);
+    }
+
+    /**
+     * Az ÁFA-bontás ellenőrzései.
+     *
+     * A legértékesebb közülük az összegzés: ha a sorok nem adják ki a fejléc
+     * végösszegét, akkor **valamelyik rossz**, és nem tudjuk, melyik — ezért a
+     * fejléc mezőit is lehúzzuk. Pontosan ez fogja meg azt a hibát, amikor a
+     * modell egy tételsor összegét írja be végösszegnek.
+     *
+     * @param  array<int, array<string, mixed>>|null  $bontas
+     * @return array<string, string>
+     */
+    private static function bontasBukasok(?array $bontas, ?float $netto, ?float $afa): array
+    {
+        if ($bontas === null || $bontas === []) {
+            return [];
+        }
+
+        $bukas = [];
+        $osszegNetto = 0.0;
+        $osszegAfa = 0.0;
+        $latottKulcsok = [];
+
+        foreach ($bontas as $sor) {
+            $sorKulcs = is_numeric($sor['kulcs'] ?? null) ? (float) $sor['kulcs'] : null;
+            $sorNetto = self::szam($sor['netto'] ?? null);
+            $sorAfa = self::szam($sor['afa'] ?? null);
+            $kategoria = is_string($sor['kategoria'] ?? null)
+                ? AfaKategoria::tryFrom($sor['kategoria'])
+                : null;
+
+            $osszegNetto += $sorNetto ?? 0.0;
+            $osszegAfa += $sorAfa ?? 0.0;
+
+            if ($sorKulcs === null) {
+                continue;
+            }
+
+            // Ugyanaz a kulcs kétszer: a modell tételsorokat sorolt fel
+            // ahelyett, hogy kulcsonként összevonta volna.
+            $azonosito = $sorKulcs.'|'.($kategoria?->value ?? '');
+            if (isset($latottKulcsok[$azonosito])) {
+                $bukas['afa_bontas'] = 'Ugyanaz az ÁFA-kulcs többször szerepel a bontásban.';
+            }
+            $latottKulcsok[$azonosito] = true;
+
+            // A kulcsból számolt ÁFA. A tűrés a kerekítés miatt kell, de nem
+            // lehet akkora, hogy két kulcs összetévesztését elfedje.
+            if ($sorNetto !== null && $sorAfa !== null) {
+                $varhato = $sorNetto * $sorKulcs / 100;
+
+                if (abs($varhato - $sorAfa) > max(1.0, abs($sorNetto) * 0.005)) {
+                    $bukas['afa_bontas'] = sprintf(
+                        'A %s%%-os sorban a nettóból nem jön ki a feltüntetett ÁFA.',
+                        rtrim(rtrim(number_format($sorKulcs, 1, ',', ''), '0'), ','),
+                    );
+                }
+            }
+
+            if ($kategoria !== null && $sorAfa !== null && $kategoria->nullaAfa() && abs($sorAfa) > 1.0) {
+                $bukas['afa_bontas'] = sprintf(
+                    '„%s" kategóriában nem lehet ÁFA.',
+                    $kategoria->cimke(),
+                );
+            }
+        }
+
+        // Soronként külön kerekítenek, ezért soronként engedünk egy egységet.
+        $tures = max(1.0, (float) count($bontas));
+
+        foreach ([
+            ['net_amount', $netto, $osszegNetto, 'a nettó'],
+            ['vat_amount', $afa, $osszegAfa, 'az ÁFA'],
+        ] as [$mezo, $vegosszeg, $sorokOsszege, $nev]) {
+            if ($vegosszeg === null || abs($sorokOsszege - $vegosszeg) <= $tures) {
+                continue;
+            }
+
+            // A szöveg mindkét helyen olvasható: a bontás alatt és a fejléc
+            // mezője alatt is ez jelenik meg.
+            $indok = "A bontás sorai nem adják ki {$nev} végösszeget.";
+            $bukas['afa_bontas'] = $indok;
+            $bukas[$mezo] = $indok;
         }
 
         return $bukas;
