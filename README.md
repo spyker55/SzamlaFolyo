@@ -125,12 +125,36 @@ projekt teljes tartalma webről elérhető — az `.env`-fel együtt, amiben az
 adatbázis-jelszó, az OpenRouter-kulcs és az `APP_KEY` van. Ezért van a projekt
 gyökerében egy mindent tiltó `.htaccess`: helyes beállításnál az Apache el sem
 olvassa (a `.htaccess`-eket a docroottól lefelé keresi), rossznál viszont 403-at
-ad a titkok helyett. Költöztetés után **azonnal** állítsd át a docrootot, és
-ellenőrizd:
+ad a titkok helyett. Költöztetés után **azonnal** állítsd át a docrootot. Az ellenőrzés az, hogy a
+bejelentkező oldal betöltődik-e — a `.env` lekérését *ne* próbáld ki curl-lel, mert azt a
+szolgáltató tűzfala támadásnak minősíti (lásd a harmadik csapdát).
 
-```bash
-curl -sS -o /dev/null -w '%{http_code}\n' https://<domain>/.env    # 403 vagy 404 kell
-```
+### A harmadik csapda: a szolgáltató tűzfala
+
+Ha minden be van állítva, és az oldal mégis **403**-at ad — mindenhonnan, laptopról,
+mobilnetről és VPN-en át is —, akkor nézd meg, **kinek a hibaoldala** jön vissza. Ez a
+megkülönböztető jel:
+
+| Amit látsz | Mi az |
+|---|---|
+| A szolgáltató márkázott hibaoldala („A kérést a tűzfalunk elutasította") | a szolgáltató webalkalmazás-tűzfala (WAF) |
+| Csupasz Apache 403, tartalom nélkül | a projekt gyökerében lévő védőháló `.htaccess` — a docroot rossz helyre mutat |
+| Laravel hibaoldal | a mi kódunk |
+
+WAF esetén a vezérlőpult fejlécében lévő **„Tűzfal tanuló mód"** a megoldás, illetve
+ügyfélszolgálati kérés a szabály feloldására. A saját kódodban ilyenkor hiába keresed a
+hibát: a kérés el sem jut a PHP-ig.
+
+**Amire később számíts.** A WAF-ok pont azokra a kérésekre ugranak rá, amikből ez az
+alkalmazás él: a Livewire minden interakciót JSON-törzsű `POST`-ként küld a
+`/livewire/update` végpontra, a feltöltés több megabájtos bináris `multipart/form-data`,
+a Beérkező pedig másodpercenként kérdez vissza, amíg feldolgozás folyik. Ha ezek közül
+bármelyik „ok nélkül" hibázik, **előbb a tűzfal naplóját nézd, ne a kódot.**
+
+**Amit ne csinálj:** ne kérd le a `.env`-et curl-lel a szervertől annak ellenőrzésére, hogy
+zárva van-e. Pont ez az a kérés, amit minden WAF támadásnak minősít — és emiatt átmenetileg
+a fejlesztői géped IP-jét is kitilthatja. A docroot helyessége abból látszik, hogy a
+bejelentkező oldal betöltődik.
 
 ### Lépések
 
