@@ -255,6 +255,15 @@ mv ~/home/szamlafolyo/public/szamla.pdf ~/szamla.pdf
 A parancs egyébként szól, ha webről elérhető helyen lévő fájlt kap — de lefut,
 mert a figyelmeztetés nem tiltás.
 
+Cég nélkül is működik: ha még egyet sem nyitottál (a cégnyitás a webfelületen
+történne, ami épp lehet elérhetetlen), a parancs csinál egy ideiglenest, és a
+végén el is takarítja. Éles méréshez add meg a valódi cégnevet — a modell ebből
+tudja eldönteni, melyik fél a partner a bizonylaton:
+
+```bash
+<php> artisan kiolvasas:proba ~/szamla.pdf --ceg-nev="Példa Kereskedelmi Kft."
+```
+
 A próba **valódi modellhívás, tehát valódi pénzbe kerül.** A vizsgált iratot
 alapból törli maga után, hogy ne szemetelje tele a Beérkezőt és ne fogyassza a
 cég keretét; a `--megtart` kapcsolóval bent marad ellenőrzésre.

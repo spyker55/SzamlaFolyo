@@ -26,7 +26,6 @@ final class KiolvasasProbaTest extends TestCase
         parent::setUp();
 
         Storage::fake('local');
-        Company::factory()->create(['name' => 'Próba Kft.']);
 
         $this->pdf = sys_get_temp_dir().'/proba-'.uniqid().'.pdf';
         file_put_contents($this->pdf, "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n");
@@ -40,6 +39,7 @@ final class KiolvasasProbaTest extends TestCase
 
     public function test_kiirja_amit_a_modell_felismert(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
         $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
@@ -52,6 +52,7 @@ final class KiolvasasProbaTest extends TestCase
     /** A bukott ellenőrzést nem elég színnel jelezni — ki is kell mondani. */
     public function test_kiirja_a_bukott_ellenorzeseket(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
         $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
@@ -62,6 +63,7 @@ final class KiolvasasProbaTest extends TestCase
     /** A próba nem szemetel: alapból eltakarít maga után, és nem fogyaszt keretet. */
     public function test_alapbol_torli_a_probatetelt(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
         $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])->assertSuccessful();
@@ -71,6 +73,7 @@ final class KiolvasasProbaTest extends TestCase
 
     public function test_a_megtart_kapcsoloval_bent_marad(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
         $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf, '--megtart' => true])
@@ -86,6 +89,7 @@ final class KiolvasasProbaTest extends TestCase
      */
     public function test_hiba_eseten_megmutatja_az_okot(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response(['error' => ['message' => 'nincs ilyen modell']], 400)]);
 
         $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
@@ -102,6 +106,7 @@ final class KiolvasasProbaTest extends TestCase
      */
     public function test_figyelmeztet_ha_a_fajl_a_webgyokerben_van(): void
     {
+        Company::factory()->create(['name' => 'Próba Kft.']);
         Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
 
         $nyilvanos = public_path('proba-szamla.pdf');
@@ -121,6 +126,36 @@ final class KiolvasasProbaTest extends TestCase
     public function test_nem_letezo_fajlt_elutasit(): void
     {
         $this->artisan('kiolvasas:proba', ['fajl' => '/nincs/ilyen.pdf'])->assertFailed();
+    }
+
+    /**
+     * A cégnyitás a webfelületen történne — és épp az lehet elérhetetlen,
+     * részben ezért van ez a parancs. Cég nélkül is működnie kell.
+     */
+    public function test_ceg_nelkul_ideiglenes_ceget_hasznal_es_eltakaritja(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->assertSame(0, Company::query()->count());
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf, '--ceg-nev' => 'Példa Kereskedelmi Kft.'])
+            ->expectsOutputToContain('Példa Kereskedelmi Kft.')
+            ->expectsOutputToContain('ideiglenes cég törölve')
+            ->assertSuccessful();
+
+        $this->assertSame(0, Company::query()->count(), 'Az ideiglenes cég nem maradhat bent.');
+        $this->assertSame(0, Document::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_megtart_eseten_az_ideiglenes_ceg_bent_marad_de_szol_rola(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf, '--megtart' => true])
+            ->expectsOutputToContain('cég is')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Company::query()->count());
     }
 
     private function modellValasz(): array

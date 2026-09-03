@@ -37,9 +37,13 @@ final class KiolvasasProba extends Command
     protected $signature = 'kiolvasas:proba
         {fajl : A vizsgálandó bizonylat elérési útja}
         {--ceg= : Melyik cég nevében (azonosító); alapból az első}
+        {--ceg-nev= : Ideiglenes cég neve, ha még egy sincs (alapból: Próba Kft.)}
         {--megtart : Maradjon bent a Beérkezőben ellenőrzésre}';
 
     protected $description = 'Kiolvas egy bizonylatot, és kiírja, mit ismert fel a modell.';
+
+    /** Mi hoztuk létre a céget, tehát mi is takarítjuk el. */
+    private bool $ideiglenesCeg = false;
 
     public function handle(FajlTarolo $tarolo, Kiolvaso $kiolvaso, Berlo $berlo): int
     {
@@ -121,19 +125,38 @@ final class KiolvasasProba extends Command
         $this->line('  <fg=gray>egy valódi bizonylatnak nem a nyilvános mappában a helye.</>');
     }
 
+    /**
+     * A próba akkor is működjön, amikor még egy cég sincs — a cégnyitás a
+     * webfelületen történne, és épp az lehet elérhetetlen (ez a parancs
+     * részben pont ezért van). Ilyenkor csinálunk egy ideiglenes céget, és a
+     * végén el is takarítjuk.
+     */
     private function ceg(): ?Company
     {
-        $ceg = $this->option('ceg') !== null
-            ? Company::query()->find((int) $this->option('ceg'))
-            : Company::query()->orderBy('id')->first();
+        if ($this->option('ceg') !== null) {
+            $ceg = Company::query()->find((int) $this->option('ceg'));
 
-        if ($ceg === null) {
-            $this->error($this->option('ceg') !== null
-                ? 'Nincs ilyen azonosítójú cég.'
-                : 'Még egy cég sincs a rendszerben — előbb regisztrálj és nyiss céget.');
+            if ($ceg === null) {
+                $this->error('Nincs ilyen azonosítójú cég.');
+            }
+
+            return $ceg;
         }
 
-        return $ceg;
+        $ceg = Company::query()->orderBy('id')->first();
+
+        if ($ceg !== null) {
+            return $ceg;
+        }
+
+        // A cég neve és adószáma a promptba is bekerül (abból dönti el a
+        // modell, melyik fél a partner), ezért érdemes a valódit megadni:
+        //   --ceg-nev="Példa Kereskedelmi Kft."
+        $this->ideiglenesCeg = true;
+
+        return Company::create([
+            'name' => (string) ($this->option('ceg-nev') ?: 'Próba Kft.'),
+        ]);
     }
 
     private function fejlec(Document $dokumentum, Company $ceg): void
@@ -219,9 +242,15 @@ final class KiolvasasProba extends Command
 
     private function lezaras(Document $dokumentum, Company $ceg): void
     {
+        $this->line('');
+
         if ($this->option('megtart')) {
-            $this->line('');
             $this->line("  <fg=green>A tétel a Beérkezőben maradt (#{$dokumentum->id}), ellenőrizhető a felületen.</>");
+
+            if ($this->ideiglenesCeg) {
+                $this->line("  <fg=yellow>Ehhez létrejött a(z) „{$ceg->name}” cég is (#{$ceg->id}) — ha nem kell, töröld.</>");
+            }
+
             $this->line('');
 
             return;
@@ -230,10 +259,18 @@ final class KiolvasasProba extends Command
         app(FajlTarolo::class)->torol($dokumentum);
         $dokumentum->delete();
 
-        $kvota = new Kvota($ceg);
-        $maradek = $kvota->maradek();
+        if ($this->ideiglenesCeg) {
+            $ceg->delete();
+            $this->line('  <fg=gray>A próbatétel és az ideiglenes cég törölve.</>');
+            $this->line('  <fg=gray>Éles méréshez add meg a valódi cégnevet: --ceg-nev="Példa Kft." —</>');
+            $this->line('  <fg=gray>a modell ebből tudja eldönteni, melyik fél a partner.</>');
+            $this->line('');
 
-        $this->line('');
+            return;
+        }
+
+        $maradek = (new Kvota($ceg))->maradek();
+
         $this->line('  <fg=gray>A próbatétel törölve — nem fogyasztotta a keretet.'
             .($maradek === PHP_INT_MAX ? '' : " Hátralévő keret: {$maradek} dokumentum.")
             .' A --megtart kapcsolóval bent marad.</>');
