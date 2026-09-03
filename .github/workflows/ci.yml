@@ -11,9 +11,19 @@ jobs:
   ellenorzes:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        # A 8.2 a composer.json-ban ígért minimum: ez fogja meg, ha véletlenül
+        # újabb nyelvi elemet írunk. A 8.4 az, ami élesben a webcímen fut.
+        php: ['8.2', '8.4']
+
     services:
       postgres:
-        image: postgres:16
+        # Szándékosan 11: ez fut a nethely tárhelyen. A CI akkor ér valamit, ha
+        # a tényleges éles adatbázis-verzió ellen bizonyít. Ha a szolgáltató
+        # frissít, ezt a sort kell átírni — és a tesztsor megmondja, mikor lehet.
+        image: postgres:11
         env:
           POSTGRES_DB: szamlafolyo_test
           POSTGRES_USER: szamlafolyo
@@ -25,27 +35,41 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    name: PHP ${{ matrix.php }} · PostgreSQL 11
+
     steps:
       - uses: actions/checkout@v4
 
       - name: PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          # Ugyanaz a kiterjesztéslista, amit a tárhelyen is elvárunk.
-          extensions: pdo_pgsql, mbstring, intl, gd, zip, fileinfo
+          php-version: ${{ matrix.php }}
+          # Ugyanaz a kiterjesztéslista, amit a tárhelyen is elvárunk
+          # (App\Console\Commands\KornyezetEllenoriz).
+          extensions: pdo_pgsql, mbstring, intl, gd, zip, fileinfo, curl, xmlreader
           coverage: none
 
       - name: Composer gyorsítótár
         uses: actions/cache@v4
         with:
           path: ~/.composer/cache
-          key: composer-${{ hashFiles('composer.lock') }}
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
 
       - run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Kód formázás
+        if: matrix.php == '8.4'
         run: vendor/bin/pint --test
+
+      - name: Környezet-ellenőrzés
+        run: php artisan kornyezet:ellenoriz
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: szamlafolyo_test
+          DB_USERNAME: szamlafolyo
+          DB_PASSWORD: szamlafolyo
 
       - name: Tesztek
         run: vendor/bin/phpunit --no-coverage
@@ -54,15 +78,18 @@ jobs:
           DB_PORT: 5432
 
       - uses: actions/setup-node@v4
+        if: matrix.php == '8.4'
         with:
           node-version: 22
           cache: npm
 
       - run: npm ci
+        if: matrix.php == '8.4'
 
       # A lefordított eszközök a repóban utaznak (a tárhelyen nincs Node.js),
       # ezért ellenőrizzük, hogy a bekommitolt build a forrással egyezik-e.
       - name: Frontend fordítás
+        if: matrix.php == '8.4'
         run: |
           npm run build
           if ! git diff --quiet -- public/build; then

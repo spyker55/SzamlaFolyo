@@ -65,7 +65,8 @@ npm run build          # vagy: npm run dev
 php artisan serve
 ```
 
-Tesztek (PostgreSQL ellen futnak, mint az éles rendszer):
+Tesztek (PostgreSQL ellen futnak, mint az éles rendszer — a CI konkrétan
+`postgres:11` ellen, PHP 8.2-n és 8.4-en is):
 
 ```bash
 php vendor/bin/phpunit
@@ -74,16 +75,58 @@ vendor/bin/pint
 
 ## Telepítés a nethely tárhelyre
 
-1. A webcím **gyökérkönyvtára a projekt `public/` mappájára** mutasson.
-2. `.env` feltöltése a `.env.example` alapján, majd `php artisan key:generate`.
-3. `./deploy.sh` — ez húzza a kódot, telepít, migrál és gyorsítótáraz.
-4. Három cron sor:
+### Előbb egy csapda: a `php` nem az, aminek látszik
+
+Ezen a tárhelyen **az SSH alapértelmezett PHP-je 7.4, a webcímé viszont 8.4**.
+A Laravel 12 PHP 8.2+-t kér, tehát a csupasz `php artisan` vagy `composer install`
+a rossz értelmezőt indítaná — és ez a fajta hiba a legdrágább: a `composer` régi
+csomagverziókat oldana fel, az `artisan` fatalt dobna, a **cron pedig némán nem
+csinálna semmit**. Az első visszajelzés az lenne, hogy egy ügyfél e-mailben
+beküldött bizonylata nem jelenik meg.
+
+Ezért a `deploy.sh` **maga keresi meg** a megfelelő PHP-t (`php8.4`, `ea-php84`,
+`/opt/php*/bin/php` és társai), és megáll, ha nem talál 8.2+-t. Megnézni,
+mit választana:
+
+```bash
+./deploy.sh --check          # csak kiírja, melyik PHP-t használná
+PHP_BIN=/eleresi/ut/php ./deploy.sh    # ha te tudod jobban
+```
+
+A függőségfa szándékosan **PHP 8.2-re van feloldva** (`composer.json` →
+`config.platform`), hogy bármelyik 8.x-en telepíthető legyen — nem csak azon,
+amit épp a webcím használ.
+
+### Lépések
+
+1. A webcím **gyökérkönyvtára a projekt `public/` mappájára** mutasson,
+   a PHP verziója **8.4** (nethely admin → Webcím → PHP verzió).
+2. `.env` feltöltése a `.env.example` alapján, majd `<php> artisan key:generate`.
+3. `./deploy.sh` — megkeresi a PHP-t, telepít, ellenőrzi a környezetet, migrál,
+   gyorsítótáraz, és a végén **kiírja a három cron sort a helyes elérési úttal**.
+4. A kiírt cron sorokat másold be a nethely „Időzített folyamatok" felületére.
+   Alakjuk ez (a `<php>` helyén a felismert abszolút út — csupasz `php` nem jó):
 
 ```
-*/5 * * * * cd ~/szamlafolyo && php artisan email:beolvas
-*/5 * * * * cd ~/szamlafolyo && php artisan dokumentum:feldolgoz --limit=5
-17 3  * * * cd ~/szamlafolyo && php artisan fajl:selejtez
+*/5 * * * * cd ~/szamlafolyo && <php> artisan email:beolvas
+*/5 * * * * cd ~/szamlafolyo && <php> artisan dokumentum:feldolgoz --limit=5
+17 3  * * * cd ~/szamlafolyo && <php> artisan fajl:selejtez
 ```
+
+### Ellenőrzés telepítés után
+
+```bash
+<php> artisan kornyezet:ellenoriz
+```
+
+Végigmegy a PHP-verzión, a kötelező kiterjesztéseken, az adatbázis-kapcsolaton
+(kiírja a **szerver** verzióját is, nem csak a `psql` kliensét), a könyvtárak
+írhatóságán és azon, hogy a külső szolgáltatások be vannak-e állítva. Hiba
+esetén nem nulla kilépési kóddal áll meg, ezért a `deploy.sh` is ráfut.
+
+Ez a parancs a **CLI** PHP-t nézi. A webes PHP-ra a próba egyszerűbb: ha a
+bejelentkező oldal betöltődik és a regisztráció + cégnyitás lefut, megvan minden
+kiterjesztés, ami kell.
 
 A frontend eszközök **le vannak fordítva a repóban** (`public/build`), mert a
 tárhelyen nincs Node.js. Ha a CSS-t vagy a JS-t módosítod, futtasd az
@@ -91,7 +134,12 @@ tárhelyen nincs Node.js. Ha a CSS-t vagy a JS-t módosítod, futtasd az
 
 ### Amit a szolgáltatónál be kell állítani
 
-- **PostgreSQL** adatbázis (vagy MySQL 8, ha az adott csomagon nincs Postgres).
+- **PostgreSQL** adatbázis. A tárhelyen ez ma **11.22**. Az alkalmazás elmegy
+  rajta — a séma nem használ 12+ elemet, a Laravel séma-értelmezője pedig
+  kifejezetten kezeli a 12 alatti verziót —, és a CI is `postgres:11` ellen fut,
+  hogy ez bizonyított maradjon. Amit tudni kell: a PostgreSQL 11 2023 novembere
+  óta **lejárt támogatású**, biztonsági javítást nem kap. Érdemes rákérdezni a
+  szolgáltatónál, terveznek-e frissítést.
 - **Catch-all postafiók** egy aldoménre (`*@bekuldes.<domain>` → egy fiók).
   Ha nincs catch-all, `INBOX_MODE=plus` mellett plusz-címzés is működik.
 - **PHP 8.2+** a webcímhez, `pdo_pgsql`, `mbstring`, `intl`, `gd`, `zip`,
