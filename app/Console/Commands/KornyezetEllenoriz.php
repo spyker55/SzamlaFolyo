@@ -57,6 +57,7 @@ final class KornyezetEllenoriz extends Command
 
         $this->phpVerzio();
         $this->kiterjesztesek();
+        $this->kornyezetiFajl();
         $this->adatbazis();
         $this->konyvtarak();
         $this->beallitasok();
@@ -96,6 +97,26 @@ final class KornyezetEllenoriz extends Command
             "PHP {$verzio} — legalább ".self::MIN_PHP.' kell',
             'Ezen a tárhelyen az SSH alapértelmezett PHP-je régebbi, mint a webcímé. '
             .'Add meg a helyeset: PHP_BIN=/eleresi/ut/php ./deploy.sh',
+        );
+    }
+
+    /**
+     * Az első telepítéskor ez a leggyakoribb hiba, és a következménye
+     * („nem érhető el az adatbázis") elfedi az okot: `.env` nélkül a Laravel
+     * a konfigurációs alapértékekkel indul, és sqlite-ot keres.
+     */
+    private function kornyezetiFajl(): void
+    {
+        if (file_exists(base_path('.env'))) {
+            $this->ok('Megvan a .env fájl');
+
+            return;
+        }
+
+        $this->hiba(
+            'Nincs .env fájl — a beállítások alapértéken állnak',
+            'cp .env.example .env, töltsd ki a DB_* értékeket, majd: '
+            .PHP_BINARY.' artisan key:generate',
         );
     }
 
@@ -177,7 +198,7 @@ final class KornyezetEllenoriz extends Command
         $this->ok('A könyvtárak írhatók');
 
         if ((string) config('app.key') === '') {
-            $this->hiba('Nincs APP_KEY', 'Futtasd: artisan key:generate');
+            $this->hiba('Nincs APP_KEY', 'Futtasd: '.PHP_BINARY.' artisan key:generate');
         }
     }
 
