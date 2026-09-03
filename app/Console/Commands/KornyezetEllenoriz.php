@@ -172,9 +172,46 @@ final class KornyezetEllenoriz extends Command
         } catch (Throwable $e) {
             $this->hiba(
                 'Az adatbázis nem érhető el: '.$e->getMessage(),
-                'Ellenőrizd a DB_* értékeket a .env fájlban.',
+                $this->adatbazisTanacs($e->getMessage()),
             );
         }
+    }
+
+    /**
+     * A „nem érhető el" háromfélét jelenthet, és mindháromra más a teendő.
+     * A puszta „ellenőrizd a DB_* értékeket" igaz, de nem segít: ez itt
+     * megmondja, melyik hármat érdemes megnézni.
+     */
+    private function adatbazisTanacs(string $uzenet): string
+    {
+        $u = mb_strtolower($uzenet);
+
+        $hitelesitesiHiba = str_contains($u, 'login rejected')
+            || str_contains($u, 'authentication failed')
+            || str_contains($u, 'role "')
+            || str_contains($u, 'does not exist')
+            || str_contains($u, 'pg_hba');
+
+        if ($hitelesitesiHiba) {
+            return 'A szerver válaszol, csak a belépést utasítja vissza. Három szokásos ok: '
+                .'(1) a .env-ben a jelszó idézőjel nélkül áll és # vagy szóköz van benne — '
+                .'a # után minden megjegyzésnek számít, tedd aposztrófok közé; '
+                .'(2) a felhasználónév vagy az adatbázisnév nem pontosan az, ami a '
+                .'szolgáltató felületén szerepel (gyakran van előtag); '
+                .'(3) az adatbázis távoli elérése nincs engedélyezve erre a gépre. '
+                .'Próbáld ki a hitelesítést a kerettől függetlenül: '
+                .'PGPASSWORD=... psql -h '.(string) config('database.connections.pgsql.host')
+                .' -U <felhasznalo> -d <adatbazis> -c "select 1"';
+        }
+
+        if (str_contains($u, 'could not connect') || str_contains($u, 'connection refused')
+            || str_contains($u, 'timeout') || str_contains($u, 'timed out')
+            || str_contains($u, 'could not translate host name')) {
+            return 'A szerver el sem érhető. Ellenőrizd a DB_HOST és DB_PORT értékét, '
+                .'és azt, hogy a szolgáltatónál engedélyezve van-e a távoli elérés.';
+        }
+
+        return 'Ellenőrizd a DB_* értékeket a .env fájlban.';
     }
 
     private function konyvtarak(): void
