@@ -264,6 +264,17 @@ tudja eldönteni, melyik fél a partner a bizonylaton:
 <php> artisan kiolvasas:proba ~/szamla.pdf --ceg-nev="Példa Kereskedelmi Kft."
 ```
 
+Két modell összemérése ugyanazon a bizonylaton — ez az árazási döntés
+alapja, mert a kimenet a költséget és a mezőnkénti magabiztosságot is kiírja:
+
+```bash
+<php> artisan kiolvasas:proba ~/szamla.pdf --modell="anthropic/claude-haiku-4.5"
+```
+
+A `--modell` futásidőben ír felül, nem környezeti változóval: élesben a
+konfiguráció gyorsítótárazva van (`config:cache`), ott az `OPENROUTER_MODEL=…`
+előtag már nem érvényesülne.
+
 A próba **valódi modellhívás, tehát valódi pénzbe kerül.** A vizsgált iratot
 alapból törli maga után, hogy ne szemetelje tele a Beérkezőt és ne fogyassza a
 cég keretét; a `--megtart` kapcsolóval bent marad ellenőrzésre.

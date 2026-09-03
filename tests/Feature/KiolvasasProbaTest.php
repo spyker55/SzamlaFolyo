@@ -158,6 +158,25 @@ final class KiolvasasProbaTest extends TestCase
         $this->assertSame(1, Company::query()->count());
     }
 
+    /**
+     * Modell-összehasonlításhoz. Élesben a konfiguráció gyorsítótárazva van,
+     * ezért környezeti változóval nem lehetne felülírni — csak így.
+     */
+    public function test_a_modell_kapcsolo_felulirja_a_beallitottat(): void
+    {
+        Company::factory()->create(['name' => 'Próba Kft.']);
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        config(['openrouter.model' => 'anthropic/claude-sonnet-5']);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf, '--modell' => 'anthropic/claude-haiku-4.5'])
+            ->expectsOutputToContain('anthropic/claude-haiku-4.5')
+            ->assertSuccessful();
+
+        // A kérés is a felülírt modellel ment ki, nem csak a fejlécben látszik.
+        Http::assertSent(fn ($keres) => $keres['model'] === 'anthropic/claude-haiku-4.5');
+    }
+
     private function modellValasz(): array
     {
         return [

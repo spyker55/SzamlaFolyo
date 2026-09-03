@@ -38,6 +38,7 @@ final class KiolvasasProba extends Command
         {fajl : A vizsgálandó bizonylat elérési útja}
         {--ceg= : Melyik cég nevében (azonosító); alapból az első}
         {--ceg-nev= : Ideiglenes cég neve, ha még egy sincs (alapból: Próba Kft.)}
+        {--modell= : Ezzel a modellel olvassunk ki, a beállított helyett}
         {--megtart : Maradjon bent a Beérkezőben ellenőrzésre}';
 
     protected $description = 'Kiolvas egy bizonylatot, és kiírja, mit ismert fel a modell.';
@@ -56,6 +57,14 @@ final class KiolvasasProba extends Command
         }
 
         $this->nyilvanosHelyEllenorzes($utvonal);
+
+        // Futásidőben írjuk felül, nem környezeti változóval: élesben a
+        // konfiguráció gyorsítótárazva van (`config:cache`), ott az env()
+        // értéke már nem érvényesülne. Így két modell ugyanazon a bizonylaton
+        // egy-egy paranccsal összemérhető.
+        if ($this->option('modell') !== null) {
+            config(['openrouter.model' => (string) $this->option('modell')]);
+        }
 
         $ceg = $this->ceg();
 
