@@ -51,6 +51,8 @@ final class KiolvasasProba extends Command
             return self::FAILURE;
         }
 
+        $this->nyilvanosHelyEllenorzes($utvonal);
+
         $ceg = $this->ceg();
 
         if ($ceg === null) {
@@ -90,6 +92,33 @@ final class KiolvasasProba extends Command
 
             return $sikeres ? self::SUCCESS : self::FAILURE;
         });
+    }
+
+    /**
+     * A tárhelyen a webcímhez tartozó FTP-fiók a `public/` mappába lép be —
+     * oda a legkönnyebb feltölteni, és pont az a webgyökér. Egy valódi
+     * ügyfélszámla partnernevekkel és összegekkel onnan bárkinek letölthető.
+     *
+     * A kiolvasást ettől még lefuttatjuk: a felhasználó tudja, mit csinál, egy
+     * próbaparancsnak pedig nem dolga megtagadni a munkát. A dolga az, hogy ne
+     * hagyja csendben.
+     */
+    private function nyilvanosHelyEllenorzes(string $utvonal): void
+    {
+        $valodi = realpath($utvonal);
+        $nyilvanos = realpath(public_path());
+
+        if ($valodi === false || $nyilvanos === false || ! str_starts_with($valodi, $nyilvanos.DIRECTORY_SEPARATOR)) {
+            return;
+        }
+
+        $url = rtrim((string) config('app.url'), '/').'/'.ltrim(str_replace('\\', '/', substr($valodi, strlen($nyilvanos))), '/');
+
+        $this->line('');
+        $this->line('  <fg=yellow;options=bold>! Ez a fájl a webgyökérben van, tehát bárki letöltheti:</>');
+        $this->line("  <fg=yellow>{$url}</>");
+        $this->line('  <fg=gray>Tedd a home könyvtárba (pl. ~/szamla.pdf), és töröld innen —</>');
+        $this->line('  <fg=gray>egy valódi bizonylatnak nem a nyilvános mappában a helye.</>');
     }
 
     private function ceg(): ?Company

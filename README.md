@@ -242,6 +242,19 @@ Tartósan pedig ez a mérőeszköz: prompt- vagy modellcsere után ugyanazon a
 bizonylaton összehasonlítható, javult-e a pontosság (a kimenet ezért írja ki a
 prompt verzióját is).
 
+**A próbafájl ne a `public/` mappába kerüljön.** A webcímhez tartozó FTP-fiók
+éppen oda lép be, tehát oda a legkönnyebb feltölteni — csakhogy az a webgyökér,
+és onnan a bizonylat bárkinek letölthető. Tedd a home könyvtárba
+(`~/szamla.pdf`); ha csak az az FTP-fiók áll rendelkezésre, feltöltés után SSH-ból
+mozgasd arrébb:
+
+```bash
+mv ~/home/szamlafolyo/public/szamla.pdf ~/szamla.pdf
+```
+
+A parancs egyébként szól, ha webről elérhető helyen lévő fájlt kap — de lefut,
+mert a figyelmeztetés nem tiltás.
+
 A próba **valódi modellhívás, tehát valódi pénzbe kerül.** A vizsgált iratot
 alapból törli maga után, hogy ne szemetelje tele a Beérkezőt és ne fogyassza a
 cég keretét; a `--megtart` kapcsolóval bent marad ellenőrzésre.

@@ -94,6 +94,30 @@ final class KiolvasasProbaTest extends TestCase
             ->assertFailed();
     }
 
+    /**
+     * A webcímhez tartozó FTP-fiók a `public/`-ba lép be, tehát oda a
+     * legkönnyebb feltölteni — és az a webgyökér. Egy valódi ügyfélszámla
+     * onnan bárkinek letölthető, ezért ezt ki kell mondani. A kiolvasás
+     * viszont attól még fusson le: a figyelmeztetés nem tiltás.
+     */
+    public function test_figyelmeztet_ha_a_fajl_a_webgyokerben_van(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $nyilvanos = public_path('proba-szamla.pdf');
+        copy($this->pdf, $nyilvanos);
+
+        try {
+            $this->artisan('kiolvasas:proba', ['fajl' => $nyilvanos])
+                ->expectsOutputToContain('bárki letöltheti')
+                ->expectsOutputToContain('proba-szamla.pdf')
+                ->expectsOutputToContain('Számla')
+                ->assertSuccessful();
+        } finally {
+            @unlink($nyilvanos);
+        }
+    }
+
     public function test_nem_letezo_fajlt_elutasit(): void
     {
         $this->artisan('kiolvasas:proba', ['fajl' => '/nincs/ilyen.pdf'])->assertFailed();
