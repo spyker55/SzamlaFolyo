@@ -57,7 +57,11 @@ final class BejaratTest extends TestCase
     public function test_a_bejelentkezo_oldal_vendegkent_megnyilik(): void
     {
         $this->get(route('bejelentkezes'))->assertOk()->assertSee('Bejelentkezés');
-        $this->get(route('regisztracio'))->assertOk()->assertSee('Regisztráció');
+
+        // Csak arra állítunk, ami a regisztráció nyitott és zárt állapotában
+        // is igaz — hogy az oldal betölt. Hogy melyik állapotban mit ír ki,
+        // az a RegisztracioZarvaTest dolga.
+        $this->get(route('regisztracio'))->assertOk()->assertSee('Bejelentkezem');
     }
 
     /** Aki már belépett, annak a bejelentkező oldalon nincs dolga. */

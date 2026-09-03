@@ -22,8 +22,20 @@ class Regisztracio extends Component
 
     public string $jelszo_megerosites = '';
 
+    /** Nyitva van-e a nyilvános regisztráció. A nézet ebből dönt. */
+    public function nyitva(): bool
+    {
+        return (bool) config('szamlafolyo.regisztracio_nyitva');
+    }
+
     public function regisztracio(): void
     {
+        // A zárat itt kell tartani, nem (csak) az útvonalon: a Livewire-akciók
+        // a saját /livewire/update végpontjukon mennek, nem a `regisztracio`
+        // útvonalon. Aki a lezárás előtt nyitotta meg az oldalt — vagy maga
+        // állítja össze a kérést —, az útvonal-őrt megkerülné.
+        abort_unless($this->nyitva(), 403, 'A regisztráció jelenleg zárva van.');
+
         $adatok = $this->validate([
             'nev' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],

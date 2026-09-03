@@ -31,8 +31,16 @@
         </button>
     </form>
 
-    <p class="mt-5 text-center text-sm text-slate-500">
-        Még nincs fiókod?
-        <a href="{{ route('regisztracio') }}" wire:navigate class="font-medium text-blue-700 hover:underline">Regisztrálok</a>
-    </p>
+    @if (config('szamlafolyo.regisztracio_nyitva'))
+        <p class="mt-5 text-center text-sm text-slate-500">
+            Még nincs fiókod?
+            <a href="{{ route('regisztracio') }}" wire:navigate class="font-medium text-blue-700 hover:underline">Regisztrálok</a>
+        </p>
+    @else
+        <p class="mt-5 text-center text-sm text-slate-500">
+            Új fiókot jelenleg nem lehet nyitni. Kérdés esetén:
+            <a href="mailto:{{ config('szamlafolyo.kapcsolat_email') }}"
+               class="font-medium text-blue-700 hover:underline">{{ config('szamlafolyo.kapcsolat_email') }}</a>
+        </p>
+    @endif
 </div>

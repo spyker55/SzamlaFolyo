@@ -29,6 +29,25 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Nyitottság
+    |---------------------------------------------------------------------------
+    | Amíg az oldal fejlesztés alatt áll, a nyilvános regisztráció zárva van, és
+    | a belépés előtti képernyőkön figyelmeztetés fogadja a látogatót.
+    |
+    | A kollégák meghívása **nem** ezen múlik: azt a Beállítások képernyőn a
+    | cég tulajdonosa intézi, belépve — az nem nyilvános regisztráció.
+    |
+    | Mindkettő .env-ből átbillenthető, újratelepítés nélkül:
+    |   REGISZTRACIO_NYITVA=true
+    |   FEJLESZTES_ALATT=false
+    */
+
+    'regisztracio_nyitva' => (bool) env('REGISZTRACIO_NYITVA', false),
+    'fejlesztes_alatt' => (bool) env('FEJLESZTES_ALATT', true),
+    'kapcsolat_email' => env('KAPCSOLAT_EMAIL', 'info@szamlafolyo.hu'),
+
+    /*
+    |---------------------------------------------------------------------------
     | Kiolvasás
     |---------------------------------------------------------------------------
     | A `review_threshold` fölött zöld a mező, a `warn_threshold` alatt piros,
