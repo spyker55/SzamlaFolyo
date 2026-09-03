@@ -125,6 +125,9 @@ echo "→ Adatbázis"
 "$PHP" artisan migrate --force
 
 echo "→ Gyorsítótárak"
+# A gyorsítótárak abszolút útvonalakat sütnek be, ezért költöztetés után a régi
+# tartalom rejtélyes hibákat okozna. Előbb takarítunk, aztán építünk.
+"$PHP" artisan optimize:clear
 "$PHP" artisan config:cache
 "$PHP" artisan route:cache
 "$PHP" artisan view:cache

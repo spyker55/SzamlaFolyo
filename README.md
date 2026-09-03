@@ -97,10 +97,46 @@ A függőségfa szándékosan **PHP 8.2-re van feloldva** (`composer.json` →
 `config.platform`), hogy bármelyik 8.x-en telepíthető legyen — nem csak azon,
 amit épp a webcím használ.
 
+### A második csapda: az SSH home nem az FTP gyökere
+
+A nethely-n a két belépési pont **más könyvtárba érkezik**:
+
+```
+/var/www/customers/<azonosito>/web        ← ide lép be az SSH ($HOME)
+/var/www/customers/<azonosito>/web/home   ← ezt látja az FTP és a vezérlőpult
+```
+
+A vezérlőpult könyvtár-tallózója csak az utóbbi fát mutatja, ezért **a projektnek
+a `~/home` alá kell kerülnie** — ha a `~`-ba klónozod, a docroot beállításánál
+egyszerűen nem lesz kiválasztható:
+
+```bash
+git clone https://github.com/spyker55/SzamlaFolyo.git ~/home/szamlafolyo
+cd ~/home/szamlafolyo
+```
+
+Ha már máshová klónoztad, elég átmozgatni (`mv ~/szamlafolyo ~/home/szamlafolyo`),
+majd az új helyről lefuttatni a `./deploy.sh`-t — a gyorsítótárak abszolút
+útvonalakat tárolnak, ezért a költöztetés után újra kell építeni őket. Ezt a
+szkript magától megteszi.
+
+**A sorrend itt számít.** Amíg a docroot a projekt fölötti könyvtáron áll, a
+projekt teljes tartalma webről elérhető — az `.env`-fel együtt, amiben az
+adatbázis-jelszó, az OpenRouter-kulcs és az `APP_KEY` van. Ezért van a projekt
+gyökerében egy mindent tiltó `.htaccess`: helyes beállításnál az Apache el sem
+olvassa (a `.htaccess`-eket a docroottól lefelé keresi), rossznál viszont 403-at
+ad a titkok helyett. Költöztetés után **azonnal** állítsd át a docrootot, és
+ellenőrizd:
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' https://<domain>/.env    # 403 vagy 404 kell
+```
+
 ### Lépések
 
-1. A webcím **gyökérkönyvtára a projekt `public/` mappájára** mutasson,
-   a PHP verziója **8.4** (nethely admin → Webcím → PHP verzió).
+1. A webcím **gyökérkönyvtára a projekt `public/` mappájára** mutasson
+   (a tallózóban: `szamlafolyo/public`), a PHP verziója **8.4**
+   (nethely admin → Webcím → PHP verzió).
 2. `.env` feltöltése a `.env.example` alapján, majd `<php> artisan key:generate`.
 3. `./deploy.sh` — megkeresi a PHP-t, telepít, ellenőrzi a környezetet, migrál,
    gyorsítótáraz, és a végén **kiírja a három cron sort a helyes elérési úttal**.
