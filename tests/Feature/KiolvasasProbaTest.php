@@ -1,0 +1,130 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Models\Company;
+use App\Models\Document;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+/**
+ * A parancssori próba. Akkor is működnie kell, amikor a webfelület nem érhető
+ * el — éppen ezért létezik.
+ */
+final class KiolvasasProbaTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $pdf;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('local');
+        Company::factory()->create(['name' => 'Próba Kft.']);
+
+        $this->pdf = sys_get_temp_dir().'/proba-'.uniqid().'.pdf';
+        file_put_contents($this->pdf, "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n");
+    }
+
+    protected function tearDown(): void
+    {
+        @unlink($this->pdf);
+        parent::tearDown();
+    }
+
+    public function test_kiirja_amit_a_modell_felismert(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
+            ->expectsOutputToContain('Számla')
+            ->expectsOutputToContain('Példa Szállító Kft.')
+            ->expectsOutputToContain('127 000')
+            ->assertSuccessful();
+    }
+
+    /** A bukott ellenőrzést nem elég színnel jelezni — ki is kell mondani. */
+    public function test_kiirja_a_bukott_ellenorzeseket(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
+            ->expectsOutputToContain('ellenőrző számjegye nem stimmel')
+            ->assertSuccessful();
+    }
+
+    /** A próba nem szemetel: alapból eltakarít maga után, és nem fogyaszt keretet. */
+    public function test_alapbol_torli_a_probatetelt(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])->assertSuccessful();
+
+        $this->assertSame(0, Document::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_a_megtart_kapcsoloval_bent_marad(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response($this->modellValasz())]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf, '--megtart' => true])
+            ->expectsOutputToContain('Beérkezőben maradt')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Document::query()->withoutGlobalScopes()->count());
+    }
+
+    /**
+     * Ez a parancs legfontosabb ága: ha a modellhívás elszáll, a hibát kell
+     * megmutatnia, mert épp azért futtatjuk, hogy megtudjuk, mi a baj.
+     */
+    public function test_hiba_eseten_megmutatja_az_okot(): void
+    {
+        Http::fake(['*/chat/completions' => Http::response(['error' => ['message' => 'nincs ilyen modell']], 400)]);
+
+        $this->artisan('kiolvasas:proba', ['fajl' => $this->pdf])
+            ->expectsOutputToContain('A kiolvasás nem sikerült')
+            ->expectsOutputToContain('nincs ilyen modell')
+            ->assertFailed();
+    }
+
+    public function test_nem_letezo_fajlt_elutasit(): void
+    {
+        $this->artisan('kiolvasas:proba', ['fajl' => '/nincs/ilyen.pdf'])->assertFailed();
+    }
+
+    private function modellValasz(): array
+    {
+        return [
+            'model' => 'teszt/modell-v1',
+            'usage' => ['prompt_tokens' => 2100, 'completion_tokens' => 320, 'cost' => 0.0091],
+            'choices' => [[
+                'message' => ['tool_calls' => [[
+                    'function' => [
+                        'name' => 'record_extraction',
+                        'arguments' => json_encode([
+                            'doc_type' => 'szamla',
+                            'supplier_name' => 'Példa Szállító Kft.',
+                            'supplier_tax_number' => '10773381-2-44',
+                            'customer_tax_number' => '12345678-2-42',   // rossz ellenőrző számjegy
+                            'doc_number' => 'SZ-2026-0042',
+                            'issue_date' => '2026.03.14.',
+                            'currency' => 'huf',
+                            'net_amount' => '100 000',
+                            'vat_amount' => '27 000',
+                            'gross_amount' => '127 000',
+                            'tobb_irat_gyanu' => false,
+                            'confidence' => ['doc_type' => 0.98, 'supplier_name' => 0.95, 'gross_amount' => 0.99],
+                        ]),
+                    ],
+                ]]],
+            ]],
+        ];
+    }
+}

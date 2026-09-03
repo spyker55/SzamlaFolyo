@@ -224,6 +224,28 @@ Ez a parancs a **CLI** PHP-t nézi. A webes PHP-ra a próba egyszerűbb: ha a
 bejelentkező oldal betöltődik és a regisztráció + cégnyitás lefut, megvan minden
 kiterjesztés, ami kell.
 
+### A kiolvasás próbája parancssorból
+
+```bash
+<php> artisan kiolvasas:proba ~/szamla.pdf
+```
+
+Végigfuttatja a teljes kiolvasást egy bizonylaton, és kiírja, mit ismert fel a
+modell, mekkora magabiztossággal (ugyanazzal a három színsávval, mint az
+ellenőrző képernyő), mit kifogásoltak az ellenőrzések, mennyi tokenbe és
+mennyi pénzbe került, és **melyik modellt futtatta ténylegesen** a szolgáltató.
+
+Két dologra való. Telepítéskor ez a leggyorsabb út annak eldöntéséhez, hogy a
+kulcs, a modellnév és a PDF-formátum stimmel-e — és mivel nem megy át a
+webrétegen, akkor is használható, amikor a felület valamiért nem érhető el.
+Tartósan pedig ez a mérőeszköz: prompt- vagy modellcsere után ugyanazon a
+bizonylaton összehasonlítható, javult-e a pontosság (a kimenet ezért írja ki a
+prompt verzióját is).
+
+A próba **valódi modellhívás, tehát valódi pénzbe kerül.** A vizsgált iratot
+alapból törli maga után, hogy ne szemetelje tele a Beérkezőt és ne fogyassza a
+cég keretét; a `--megtart` kapcsolóval bent marad ellenőrzésre.
+
 A frontend eszközök **le vannak fordítva a repóban** (`public/build`), mert a
 tárhelyen nincs Node.js. Ha a CSS-t vagy a JS-t módosítod, futtasd az
 `npm run build`-ot, és kommitold az eredményt is — a CI ezt ellenőrzi.
