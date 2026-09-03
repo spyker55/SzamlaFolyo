@@ -118,8 +118,22 @@ echo "→ Függőségek (fejlesztői csomagok nélkül)"
 echo "→ Környezet ellenőrzése"
 "$PHP" artisan kornyezet:ellenoriz
 
+# Innentől az oldal karbantartási módban van. Ha a szkript bármi miatt megáll
+# — hiba, Ctrl+C, megszakadt kapcsolat —, az oldal magától visszakapcsol.
+# Enélkül egy félbemaradt telepítés 503-at szolgálna ki, amíg valaki észre nem
+# veszi és kézzel fel nem hozza.
+KARBANTARTAS=0
+karbantartas_vege() {
+    if [ "$KARBANTARTAS" = "1" ]; then
+        echo "→ Karbantartási mód kikapcsolása"
+        "$PHP" artisan up >/dev/null 2>&1 || true
+    fi
+}
+trap karbantartas_vege EXIT INT TERM
+
 echo "→ Karbantartási mód"
 "$PHP" artisan down --render="errors::503" || true
+KARBANTARTAS=1
 
 echo "→ Adatbázis"
 "$PHP" artisan migrate --force
@@ -134,6 +148,7 @@ echo "→ Gyorsítótárak"
 "$PHP" artisan event:cache
 
 "$PHP" artisan up
+KARBANTARTAS=0
 
 PROJEKT="$(pwd)"
 
