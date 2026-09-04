@@ -155,15 +155,28 @@
                 </div>
 
                 @if ($bontas !== [])
-                    <table class="mt-1 w-full text-sm tabular-nums">
+                {{-- Rögzített oszlopszélességek: enélkül a hosszú kategórianév
+                     („Mentes (AAM, TAM)") összenyomta a szám oszlopokat, a
+                     fejlécek egymásra csúsztak, a számolt bruttó pedig kilógott
+                     a táblázatból. A vízszintes görgetés a szűk képernyőé. --}}
+                <div class="-mx-1 overflow-x-auto px-1">
+                    <table class="mt-1 w-full min-w-[34rem] text-sm tabular-nums">
+                        <colgroup>
+                            <col class="w-20">
+                            <col>
+                            <col class="w-32">
+                            <col class="w-28">
+                            <col class="w-24">
+                            <col class="w-7">
+                        </colgroup>
                         <thead>
                             <tr class="text-xs uppercase tracking-wide text-slate-400">
-                                <th class="py-1 text-left font-medium">Kulcs</th>
-                                <th class="py-1 text-left font-medium">Kategória</th>
+                                <th class="py-1 text-right font-medium">Kulcs</th>
+                                <th class="py-1 pl-2 text-left font-medium">Kategória</th>
                                 <th class="py-1 text-right font-medium">Nettó</th>
                                 <th class="py-1 text-right font-medium">ÁFA</th>
                                 <th class="py-1 text-right font-medium">Bruttó</th>
-                                <th class="w-8"><span class="sr-only">Törlés</span></th>
+                                <th><span class="sr-only">Törlés</span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -175,7 +188,7 @@
                                                class="control px-2 py-1 text-right">
                                         @error('bontas.'.$i.'.kulcs')<p class="fhiba">{{ $message }}</p>@enderror
                                     </td>
-                                    <td class="py-1 pr-1">
+                                    <td class="py-1 pr-1 pl-2">
                                         <select aria-label="ÁFA-kategória" wire:model.blur="bontas.{{ $i }}.kategoria"
                                                 class="control px-2 py-1">
                                             <option value="">—</option>
@@ -196,18 +209,19 @@
                                                class="control px-2 py-1 text-right">
                                         @error('bontas.'.$i.'.afa')<p class="fhiba">{{ $message }}</p>@enderror
                                     </td>
-                                    <td class="py-2 text-right text-slate-500">
+                                    <td class="py-2 pr-1 text-right whitespace-nowrap text-slate-500">
                                         {{ \App\Support\Osszeg::formaz(\App\Support\AfaBontas::brutto($sor['netto'] ?? null, $sor['afa'] ?? null)) }}
                                     </td>
-                                    <td class="py-2 pl-1 text-right">
+                                    <td class="py-2 text-right">
                                         <button type="button" wire:click="sorTorol({{ $i }})"
-                                                class="btn btn-ghost btn-sm px-1.5 text-slate-400 hover:text-red-700"
+                                                class="btn btn-ghost btn-sm px-1 text-slate-400 hover:text-red-700"
                                                 aria-label="Sor törlése">&times;</button>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                </div>
                 @endif
 
                 <x-mezo-jelzes :hiba="$validatorHibak['afa_bontas'] ?? null" mezo="afa_bontas"/>
