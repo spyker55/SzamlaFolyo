@@ -27,25 +27,6 @@
         </div>
     @endif
 
-    {{-- A „nem a te cégednek szól" jelzés önmagában zsákutca: látszik, hogy
-         baj van, de nem derül ki, mit kezdjen vele az ember. Ha az adószám a
-         felhasználó **másik cégére** mutat, akkor a válasz is megvan, és az
-         irat egy kattintással a helyére kerül. --}}
-    @if ($ajanlottCeg !== null)
-        <div class="alert alert-figyelem mb-4">
-            <p>
-                Ez az irat a(z) <strong>{{ $ajanlottCeg->name }}</strong> adószámára szól — az is a te céged.
-                Valószínűleg oda tartozik.
-            </p>
-            @error('athelyezes') <p class="fhiba mt-2">{{ $message }}</p> @enderror
-            <button type="button" wire:click="athelyez"
-                    wire:confirm="Az irat és a hozzá tartozó kiolvasás átkerül a(z) {{ $ajanlottCeg->name }} céghez. Folytatod?"
-                    class="btn btn-secondary btn-sm mt-3">
-                Áthelyezem a(z) {{ $ajanlottCeg->name }} céghez
-            </button>
-        </div>
-    @endif
-
     @if ($dokumentum->tobb_irat_gyanu)
         <div class="alert alert-figyelem mb-4">
             Úgy tűnik, ebben a fájlban <strong>több különálló bizonylat</strong> van. Az alábbi adatok

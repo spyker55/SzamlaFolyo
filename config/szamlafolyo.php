@@ -175,7 +175,12 @@ return [
         'nagy' => [
             'nev' => 'Pro',
             'documents' => 500,
-            'users' => 10,
+            // `null` = korlátlan, és ez **szándékos**, nem elmaradt beállítás.
+            // A felhasználó nem kerül nekünk semmibe: a költség oldalarányos,
+            // azt a darabszám fogja meg. A korlátlan *dokumentum* volt az, ami
+            // véletlenül keletkezett és tilos (lásd `Kvota::keret()`); a fejszám
+            // más kérdés, és a legnagyobb csomagon nincs értelme szorongatni.
+            'users' => null,
             'ar_havi' => 9990,
             'extra_ft' => 24,
             'price_id' => env('STRIPE_PRICE_NAGY'),

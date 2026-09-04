@@ -140,19 +140,18 @@ final class NyitolapTest extends TestCase
     }
 
     /**
-     * Az ár **egysége** ugyanolyan ígéret, mint az összeg.
+     * A korlátlan felhasználószám **kimondott** ajánlat, nem elmaradt korlát.
      *
-     * Egy előfizetés egy céget fed le, saját kerettel és beküldési címmel. Az
-     * árlista sokáig csak felhasználószámot mutatott, amiből egy tíz ügyfelet
-     * könyvelő iroda azt olvasta ki, hogy egy Flow elég neki — pedig tíz
-     * csomag kell. Ez nem apróbetűs részlet, hanem a végösszeg nagyságrendje.
+     * A fejszám nem kerül nekünk semmibe — a költség oldalarányos, azt a
+     * darabszám fogja meg. A korlátlan *dokumentum* volt az, ami véletlenül
+     * keletkezett, és az tilos maradt (`ArazasTest`).
      */
-    public function test_az_arlista_kimondja_hogy_az_ar_cegenkent_ertendo(): void
+    public function test_a_legnagyobb_csomag_korlatlan_felhasznalot_hirdet(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('cégenként, saját kerettel')
-            ->assertSee('Az ár egy cégre szól')
-            ->assertSee('ügyfelenként egy cég');
+            ->assertSee('Korlátlan felhasználó', escape: false)
+            ->assertSee('2 felhasználó', escape: false)
+            ->assertSee('5 felhasználó', escape: false);
     }
 }

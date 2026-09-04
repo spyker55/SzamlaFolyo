@@ -339,16 +339,14 @@
                         <span @class(['font-medium', 'text-white/80' => $ajanlott, 'text-vaszon/70' => ! $ajanlott])>
                             Ft / hó
                         </span>
-                        {{-- Az ár egysége ott álljon, ahol a szám: egy előfizetés egy céget fed le. --}}
-                        <div @class(['mt-1 text-sm', 'text-white/70' => $ajanlott, 'text-vaszon/60' => ! $ajanlott])>
-                            cégenként, saját kerettel
-                        </div>
                     </div>
 
                     <ul @class(['mb-8 flex-1 space-y-4 text-sm', 'text-white/90' => $ajanlott, 'text-vaszon/90' => ! $ajanlott])>
                         @foreach ([
                             '<strong>'.number_format((int) $cs['documents'], 0, ',', ' ').' dokumentum</strong> / hó',
-                            '<strong>'.$cs['users'].' felhasználó</strong> ebben a cégben',
+                            $cs['users'] === null
+                                ? '<strong>Korlátlan felhasználó</strong>'
+                                : '<strong>'.$cs['users'].' felhasználó</strong>',
                             'Extra dokumentum: '.$cs['extra_ft'].' Ft',
                             'Feltöltés + saját beküldési e-mail cím',
                             'Számla, nyugta, külföldi bizonylat',
@@ -382,12 +380,6 @@
             Amit az árlista elhallgat, azt a felhasználó a számlán tudja meg.
         --}}
         <div class="mx-auto mt-12 max-w-3xl space-y-3 text-center text-sm text-vaszon/60">
-            <p>
-                <strong class="text-vaszon/80">Az ár egy cégre szól</strong>, mert a keret is: minden cégnek
-                saját havi darabszáma, saját beküldési e-mail címe és saját előfizetése van. Egy fiókban
-                tetszőleges számú céget kezelhetsz — a fejlécben válthatsz köztük —, de mindegyikhez külön
-                csomag tartozik. Ez a könyvelőiroda alapesete: ügyfelenként egy cég.
-            </p>
             <p>
                 A feltüntetett árak nettó árak, a keret minden csomagnál havi.
                 Ha elfogy a havi keret, a feldolgozás

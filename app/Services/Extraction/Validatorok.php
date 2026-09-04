@@ -223,27 +223,6 @@ final class Validatorok
      */
     private static function idegenBizonylat(array $mezok, ?string $cegAdoszam): array
     {
-        if (! self::idegenE($mezok, $cegAdoszam)) {
-            return [];
-        }
-
-        $indok = 'Ez a bizonylat nem a te cégednek szól: sem a vevő, sem a szállító adószáma nem a tiéd.';
-
-        return ['customer_tax_number' => $indok, 'supplier_tax_number' => $indok];
-    }
-
-    /**
-     * Ugyanaz a kérdés, igen-nem alakban.
-     *
-     * Az ellenőrző képernyőnek tudnia kell, hogy **ez** a jelzés szólalt-e
-     * meg (és nem például az ellenőrző számjegyé), mert csak ilyenkor van
-     * értelme másik céget ajánlani. Hibaüzenet-szövegre illeszteni erre
-     * törékeny volna: a szöveg fogalmazás kérdése, ez a tény.
-     *
-     * @param  array<string, mixed>  $mezok
-     */
-    public static function idegenE(array $mezok, ?string $cegAdoszam): bool
-    {
         $vevoNyers = is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null;
         $szallitoNyers = is_string($mezok['supplier_tax_number'] ?? null) ? $mezok['supplier_tax_number'] : null;
 
@@ -251,14 +230,20 @@ final class Validatorok
         $vevo = Adoszam::torzsszam($vevoNyers);
 
         if ($mienk === null || $vevo === null) {
-            return false;
+            return [];
         }
 
         if (Adoszam::biztosanRossz($vevoNyers) || Adoszam::biztosanRossz($szallitoNyers)) {
-            return false;
+            return [];
         }
 
-        return $vevo !== $mienk && Adoszam::torzsszam($szallitoNyers) !== $mienk;
+        if ($vevo === $mienk || Adoszam::torzsszam($szallitoNyers) === $mienk) {
+            return [];
+        }
+
+        $indok = 'Ez a bizonylat nem a te cégednek szól: sem a vevő, sem a szállító adószáma nem a tiéd.';
+
+        return ['customer_tax_number' => $indok, 'supplier_tax_number' => $indok];
     }
 
     public static function vevoIgazolt(array $mezok, ?string $cegAdoszam): bool

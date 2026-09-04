@@ -44,9 +44,9 @@ prompt- vagy modellcsere javított-e a pontosságon.
 ellenőrzés a papírt önmagához méri; ez az egy méri valamihez. Igazol — ha a vevő
 adószáma a miénk, a vevő neve nem találgatás többé —, és vádol is: ha sem a
 vevő, sem a szállító nem mi vagyunk, akkor ez a bizonylat nem ide tartozik. A
-vádoló fele egyszer ki volt véve, mert cégváltó nélkül egy könyvelőiroda minden
-számlájára tüzelt volna; a cégváltóval visszakerült. Lásd *Az idegen bizonylat*
-pontot.
+vádoló fele alapból néma: adószám nélkül nincs mihez hasonlítani, és aki sok
+ügyfél iratát kezeli egy fiókban, épp ezért hagyja üresen. Lásd *Az idegen
+bizonylat* pontot.
 
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
@@ -101,12 +101,10 @@ szerződéses ígéret.
 | Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
 | Extra dokumentum | 49 Ft | 29 Ft | 24 Ft |
 
-**Az ár egy cégre szól**, mert a keret is: egy előfizetés egy céget fed le, saját
-havi darabszámmal, saját beküldési címmel. Egy fiók tetszőleges számú céget
-kezelhet, de mindegyikhez külön csomag tartozik — ez a könyvelőiroda alapesete,
-ügyfelenként egy cég. A nyitólapon és a Beállításokban ez ki is van írva, mert az
-egység ugyanolyan ígéret, mint az összeg: felhasználószámot hirdetni egy
-cégenkénti ár mellett annyi, mint a végösszeg nagyságrendjét elhallgatni.
+**Egy fiók egy cég**, egy kerettel és egy beküldési címmel. Egy könyvelőiroda
+ezért az összes ügyfelét egy fiókban dolgozza fel, és az ügyfelenkénti
+szétválasztást az export vevő-adószám szűrője adja meg — nem cégek
+adminisztrálása. Ez tudatos csere: kevesebb fogalom a felhasználónak.
 
 Próba: **14 nap vagy 50 dokumentum, amelyik előbb elfogy**, bankkártya nélkül —
 pontosan egy Start-hónap. Húsz dokumentum volt itt korábban, abból viszont egy
@@ -188,37 +186,6 @@ szándékosan maradt: a jelentésük „semleges" és „kiemelt", nem az, hogy 
 A konfidencia három színe (`biztos`, `bizonytalan`, `gyanus`) **nem** követi ezt
 a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
-### Több cég egy fiókban
-
-A könyvelőiroda alapesete: ügyfelenként egy cég, saját beküldési címmel, saját
-kerettel, saját előfizetéssel. A fejléc cégváltójából lehet köztük váltani, és
-onnan nyílik az új cég is.
-
-**A választás a munkamenetben él, de a munkamenet nem hitelesítés.** Az ott álló
-azonosítót minden olvasásnál a tagsághoz mérjük (`App\Support\CegValasztas`);
-egy odaírt idegen azonosító nem cégváltás, hanem semmi. A cégváltó különben pont
-azt a falat bontaná le, amit a `BerloElkulonitesTest` őriz.
-
-**A feloldás a `User::ceg()`-ben van, és ez nem esetleges.** A route model
-binding (`BelongsToCompany::resolveRouteBinding`) a bérlő-middleware **előtt**
-fut, és ugyanezt a metódust kérdezi. Ha a kettő nem ugyanazt a céget adná, a
-felület a második cég listáját mutatná, a megnyitott bizonylatot viszont az
-elsőben keresné. Erre van teszt, és le is ellenőriztük, hogy elbukik nélküle:
-`CegValtasTest::test_a_valtas_utan_a_masik_ceg_irata_nem_nyithato`.
-
-**A váltás teljes újratöltés**, nem Livewire-akció. Cégváltáskor a képernyőn lévő
-minden komponens állapota — szűrők, kijelölések, félig kitöltött ellenőrzés — az
-előző cég adataira vonatkozik; egy részleges frissítés ezek egy részét meghagyná,
-és két cég adatait tenné egy képernyőre. A cél mindig a Beérkező, sosem az előző
-oldal: az lehetett egy bizonylat, ami a másik cégben nem létezik.
-
-**A próbaidő a felhasználóé, nem a cégé.** Ez a váltóval együtt vált fontossá:
-minden új cég egyébként saját 14 napos, 50 dokumentumos próbát kapna
-(`Company::booted()`), a fejlécből pedig bárki nyithat újat — aki kéthetente nyit
-egy céget, örökké ingyen dolgozna. Az első cég kapja a próbát, a további cégek
-`trial_ends_at = null`-lal jönnek létre, és rögtön csomagot kérnek. A
-létrehozó képernyő ezt előre ki is írja, nem az első feltöltésnél derül ki.
-
 ### Az idegen bizonylat
 
 Minden más validátor a papírt **önmagához** méri: a nettó és az ÁFA kiadja-e a
@@ -246,14 +213,16 @@ Ugyanez a tény visszafelé is működik: ha a vevő adószáma a miénk, a vev�
 nem találgatás többé — tudjuk, kinek szól a számla —, ezért rá nem vonatkozik a
 kézírás miatti magabiztosság-plafon (`Konfidencia`).
 
-**Ez az ellenőrzés egyszer már ki volt véve** (`5ea25ab`), és érdemes tudni,
-miért: egy könyvelőiroda, amelyik minden ügyfele iratát egyetlen cégben kezeli,
-minden bizonylatára pirosat kapott volna. Egy validátor, ami jogos munkamenetre
-tüzel, rosszabb a semminél — két hét alatt mindenki átlép a piroson, és viszi
-magával a többi jelzés súlyát is. A cégváltó oldotta fel: ügyfelenként külön
-cég, külön adószámmal. **Aki mégis egyetlen cégben dolgozik, annak üresen kell
-hagynia az adószámot** — akkor az ellenőrzés néma. Ez a Beállítások képernyőn ki
-is van írva, nem kell kitalálni.
+**Ez az ellenőrzés alapból néma, és ez szándékos.** Az adószám nem kötelező mező;
+amíg üres, a validátornak nincs mihez hasonlítania. Egy könyvelőiroda, amelyik
+sok ügyfél iratát kezeli egy fiókban, üresen hagyja — különben minden bizonylata
+piros lenne, és egy validátor, ami jogos munkamenetre tüzel, rosszabb a
+semminél: két hét alatt mindenki átlép a piroson, és viszi magával a többi
+jelzés súlyát is. Ezért volt egyszer már kivéve (`5ea25ab`).
+
+Akkor kapcsol be, ha valaki **a saját cége** bizonylatait kezeli, és megadja az
+adószámát — ott viszont pont az a hiba derül ki belőle, amit semmi más nem fog
+meg. A Beállítások képernyő mindkét irányt kiírja, nem kell kitalálni.
 
 A bekötés két ponton él, és **mindkettőre külön teszt** van, mert az egységteszt
 akkor is zöld maradna, ha a cég adószáma sosem jutna el a validátorig: az
@@ -262,57 +231,19 @@ gépi verdiktben (`IdegenBizonylatTest`). A tárolt verdikt azért számít, mer
 fogja vissza a magabiztosságot is — enélkül a frissen érkezett idegen irat a
 listában ártatlannak látszana, amíg valaki meg nem nyitja.
 
-#### „Akkor hova tartozik?"
-
-A jelzés önmagában zsákutca: látszik, hogy baj van, de nem derül ki, mit kezdjen
-vele az ember. Amióta egy fiók több céget kezel, a válasz gyakran ott van a saját
-cégei között — ezt a kérdést korábban nem is lehetett feltenni. Ha a bizonylat
-adószáma a felhasználó **másik cégére** mutat, az ellenőrző képernyő felajánlja,
-és egy kattintással átviszi (`CegAjanlas`, `DokumentumAthelyezes`).
-
-Az ajánlás a **képernyőn lévő** értékekből dolgozik, nem a tárolt sorból: ha az
-ember javítja az adószámot, az ajánlás követi. Különben a piros jelzés és az
-ajánlás ellentmondhatna egymásnak ugyanazon a képernyőn. Hibás ellenőrző
-számjegyre itt sem építünk: egy félreolvasott számjegy nem irányíthat át egy
-bizonylatot egy másik céghez.
-
-**Ez az egyetlen művelet a rendszerben, ami átlép a bérlőhatáron**, ezért a
-feltételei szigorúak, és a tesztek fele nem arról szól, hogy működik, hanem hogy
-mikor tagadja meg:
-
-- **Mindkét cégben szerkesztési jog kell.** Elvinni onnan, ahol van, és letenni
-  oda, ahova megy. A célcégbeli tagság ellenőrzése nélkül ez a művelet pont a
-  bérlőhatárt bontaná le. A célcéget a képernyő újraszámolja, nem a kérésből
-  veszi: hamisított paraméter nem hozhat be idegen cégazonosítót.
-- **Csak ellenőrzés előtt álló irat.** A jóváhagyott vagy exportált már a
-  forráscég könyvelése; utólag, észrevétlenül megváltoztatni rosszabb, mint nem
-  engedni.
-- **Duplikátum nem megy.** Az eredeti és a másolatai ugyanarra a fájlra
-  mutatnak; az egyik elvitele a másik útvonalát a semmibe irányítaná.
-- **Ha a célcégnél már bent van ugyanaz a fájl**, nem csinálunk belőle kettőt.
-
-Ami átmegy: a dokumentum, a kiolvasás és a javítás sorai, és **a fájl is** — az
-útvonal a cég azonosítója alatt van (`iratok/{cég}/{irat}/…`), a forráscég
-tárhelyszámlálója nem viheti tovább a másik cég iratát. A fájl átnevezése a
-tranzakción **belül** történik: ha elbukik, nem marad olyan sor, ami nem létező
-fájlra mutat.
-
-A keret ezzel együtt mozog: a kiolvasás sorai viszik a `credits` értéküket, tehát
-a forráscég felhasználása csökken, a célcégé nő. Ez a helyes irány — a
-modellhívás a célcég iratáért történt. Ami **nem** megy át: az
-`inbound_email_id`. A levél tényleg a forráscég beküldési címére érkezett, ez
-történelmi tény róla; a hivatkozás megmarad, a célcég egyszerűen nem látja.
-
-Mindkét cég naplójában nyoma marad (`dokumentum.elvitte`, `dokumentum.erkezett`):
-az egyikből eltűnt egy irat, a másikban megjelent.
 
 ## Hátralék
 
-**Amit a nyitólap ezért nem ígér.** A csomagok között továbbra sincs cégszám-alapú
-különbség, és a mai modellben nem is kell: **minden cég külön fizet**, tehát a
-cégek száma nem korlát, hanem szorzó. Ha valaha lesz irodai csomag (egy
-előfizetés, több cég), akkor kerül az árlistára a „hány céget kezelhetsz" sor —
-addig az árlista felhasználószámot ígér, azt pedig betartatjuk.
+**Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
+könyvelőiroda ezért egyetlen cégben dolgozza fel az összes ügyfelét, és az
+ügyfelenkénti szétválasztást az export vevő-adószám szűrője adja meg. Ez
+működik, és egyszerű — de a bizonylatok egy kupacban állnak a feldolgozásig, és
+az „idegen bizonylat" ellenőrzés ilyenkor nem használható. A cégenkénti
+szétválasztás (több cég egy előfizetés alatt, közös kerettel) meg volt építve
+cégváltóval együtt, és **tudatosan lett visszabontva**: a felhasználónak kellett
+volna cégeket adminisztrálnia ahhoz, hogy szétválassza, amit egy szűrő is
+szétválaszt. A `git log` őrzi (`098310d`, `4f59ab4`), ha egyszer valódi igény
+lesz rá.
 
 ## Felépítés
 

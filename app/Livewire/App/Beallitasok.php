@@ -108,9 +108,10 @@ class Beallitasok extends Component
         // gombbal — egy Livewire-akció közvetlenül is meghívható. Kettő: az
         // ellenőrzés a fiók létrehozása **előtt** áll, különben egy elutasított
         // meghívás is hagyna maga után egy árva, véletlen jelszavú fiókot.
+        // A `null` korlátlant jelent — ott nincs mit ellenőrizni.
         $keret = $ceg->felhasznaloKeret();
 
-        if ($ceg->users()->count() >= $keret) {
+        if ($keret !== null && $ceg->users()->count() >= $keret) {
             $this->addError('ujTagEmail', sprintf(
                 'A csomagodban %d felhasználó szerepelhet. Nagyobb csomaggal többen is dolgozhattok.',
                 $keret,

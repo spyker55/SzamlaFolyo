@@ -9,6 +9,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full">
+@php($ceg = app(\App\Support\Berlo::class)->ceg())
 <div class="min-h-full lg:flex">
 
     {{-- Oldalsáv nagy képernyőn --}}
@@ -35,7 +36,10 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <x-ceg-valto/>
+                <div class="hidden text-right sm:block">
+                    <div class="text-sm font-medium text-slate-900">{{ $ceg?->nevRovid() }}</div>
+                    <div class="text-xs text-slate-500">{{ auth()->user()?->email }}</div>
+                </div>
                 <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white">
                     {{ auth()->user()?->monogram() }}
                 </div>

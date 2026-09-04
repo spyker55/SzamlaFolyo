@@ -49,15 +49,7 @@ class Company extends Model
     {
         static::creating(function (self $ceg): void {
             $ceg->inbox_token ??= self::ujToken();
-
-            // A próbaidő alapértelmezés, **de felülírható nullal**. Ezért nem
-            // `??=`: a `null` értelmes válasz — „ez a cég nem kap próbaidőt" —,
-            // és a `??=` épp azt nem tudná megkülönböztetni a „nem mondtam
-            // semmit" esettől. A `CegLetrehozas` erre épít: a próba a
-            // felhasználóé, nem a cégé.
-            if (! array_key_exists('trial_ends_at', $ceg->getAttributes())) {
-                $ceg->trial_ends_at = now()->addDays((int) config('szamlafolyo.trial.days'));
-            }
+            $ceg->trial_ends_at ??= now()->addDays((int) config('szamlafolyo.trial.days'));
         });
     }
 
@@ -175,21 +167,26 @@ class Company extends Model
     }
 
     /**
-     * Hány felhasználó tartozhat a céghez. Próbaidőben a konfigurációban
-     * megadott szám; ismeretlen csomagnál a legkisebb — felfelé sosem
-     * tévedünk egy olyan állításban, ami nincs kifizetve.
+     * Hány felhasználó tartozhat a céghez; `null` = korlátlan.
+     *
+     * Próbaidőben a konfigurációban megadott szám; ismeretlen csomagnál a
+     * legkisebb — felfelé sosem tévedünk egy olyan állításban, ami nincs
+     * kifizetve. A korlátlan itt **kimondott** érték a csomagban, nem az,
+     * hogy elfelejtettünk korlátozni: a fejszám nem kerül nekünk semmibe.
      */
-    public function felhasznaloKeret(): int
+    public function felhasznaloKeret(): ?int
     {
         $csomag = $this->csomag();
 
         if ($csomag !== null) {
-            return (int) $csomag['users'];
+            return $csomag['users'] === null ? null : (int) $csomag['users'];
         }
 
-        return $this->probaidosE()
-            ? (int) config('szamlafolyo.trial.users')
-            : (int) config('szamlafolyo.plans.kicsi.users');
+        $ertek = $this->probaidosE()
+            ? config('szamlafolyo.trial.users')
+            : config('szamlafolyo.plans.kicsi.users');
+
+        return $ertek === null ? null : (int) $ertek;
     }
 
     /** Engedélyezte-e a tulajdonos a keret fölötti, darabonként számlázott munkát. */

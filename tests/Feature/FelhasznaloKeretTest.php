@@ -47,11 +47,26 @@ final class FelhasznaloKeretTest extends TestCase
 
     public function test_a_csomag_keretet_orokli(): void
     {
+        config(['szamlafolyo.plans.kozepes.price_id' => 'price_kozepes']);
+
+        $ceg = Company::factory()->create(['stripe_status' => 'active', 'stripe_price_id' => 'price_kozepes']);
+
+        $this->assertSame(5, $ceg->felhasznaloKeret());
+    }
+
+    /**
+     * A legnagyobb csomagon nincs fejszámkorlát, és ez **kimondott** érték a
+     * konfigurációban, nem elmaradt beállítás. A felhasználó nem kerül nekünk
+     * semmibe: a költség oldalarányos, azt a darabszám fogja meg. A korlátlan
+     * *dokumentum* volt az, ami véletlenül keletkezett — az tilos maradt.
+     */
+    public function test_a_legnagyobb_csomagon_korlatlan_a_fejszam(): void
+    {
         config(['szamlafolyo.plans.nagy.price_id' => 'price_nagy']);
 
         $ceg = Company::factory()->create(['stripe_status' => 'active', 'stripe_price_id' => 'price_nagy']);
 
-        $this->assertSame(10, $ceg->felhasznaloKeret());
+        $this->assertNull($ceg->felhasznaloKeret());
     }
 
     /** Ismeretlen árnál lefelé tévedünk: nem adunk olyat, ami nincs kifizetve. */

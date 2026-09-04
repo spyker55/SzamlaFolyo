@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\Szerep;
-use App\Support\CegValasztas;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -39,26 +37,16 @@ class User extends Authenticatable
     }
 
     /**
-     * A cég, amelynek nevében a felhasználó éppen dolgozik.
+     * A felhasználó cége.
      *
-     * Egy felhasználó több céghez is tartozhat; hogy melyik az aktív, azt a
-     * `CegValasztas` dönti el a munkamenetből — tagsághoz mérve, tehát a
-     * munkamenetbe írt idegen azonosító nem cégváltás. Aki egyetlen céghez
-     * tartozik, annak ez ugyanaz a cég marad, mint korábban.
+     * A séma (`company_user`) több céget is elbírna, a termék viszont
+     * szándékosan egyet mutat: egy könyvelőiroda az ügyfeleit egy fiókban
+     * kezeli, és az ügyfelenkénti szétválasztást az export vevő-adószám
+     * szűrője adja — nem cégek adminisztrálása.
      */
     public function ceg(): ?Company
     {
-        return CegValasztas::valasztott($this);
-    }
-
-    /**
-     * A felhasználó cégei, a váltóhoz.
-     *
-     * @return EloquentCollection<int, Company>
-     */
-    public function cegei(): EloquentCollection
-    {
-        return $this->companies()->orderBy('companies.name')->get();
+        return $this->companies()->orderBy('companies.id')->first();
     }
 
     public function szerepe(Company $ceg): ?Szerep

@@ -79,10 +79,7 @@
                     <button wire:click="portal" class="btn btn-ghost">Számlázás kezelése</button>
                 @endif
             </div>
-            <p class="mt-2 text-xs text-slate-400">
-                A feltüntetett árak nettó árak, és <strong>erre a cégre</strong> vonatkoznak — a többi cégednek
-                saját csomagja van.
-            </p>
+            <p class="mt-2 text-xs text-slate-400">A feltüntetett árak nettó árak.</p>
         @else
             <p class="text-xs text-slate-400">A csomagot a cég tulajdonosa tudja módosítani.</p>
         @endif
@@ -154,8 +151,8 @@
                 <p class="mt-1 text-xs text-slate-400">
                     Ez az egyetlen adat, amit a bizonylaton kívülről ismerünk: ebből tudjuk, hogy te vagy-e a
                     szállító vagy a vevő, és ebből derül ki, ha egy irat <strong>nem a te cégedhez tartozik</strong>.
-                    Üresen hagyva ez az ellenőrzés nem fut — így tedd, ha több ügyfél iratát kezeled ebben az
-                    egy cégben; ügyfelenként külön cég viszont többet ad, a fejlécben válthatsz köztük.
+                    Üresen hagyva ez az ellenőrzés nem fut — így tedd, ha több ügyfél iratát kezeled itt.
+                    Ügyfelenkénti szétválasztásra ilyenkor az Export képernyő vevő-adószám szűrője való.
                 </p>
                 @error('cegAdoszam') <p class="fhiba">{{ $message }}</p> @enderror
             </div>
@@ -181,7 +178,7 @@
     <div class="card card-pad">
         <h2 class="mb-1 font-medium text-slate-900">Felhasználók</h2>
         <p class="mb-3 text-sm text-slate-500">
-            {{ $tagok->count() }} / {{ $felhasznaloKeret }} felhasználó a jelenlegi csomagban.
+            {{ $tagok->count() }} / {{ $felhasznaloKeret ?? 'korlátlan' }} felhasználó a jelenlegi csomagban.
         </p>
 
         <table class="tbl mb-4">

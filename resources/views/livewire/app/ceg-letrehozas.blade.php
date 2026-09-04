@@ -1,22 +1,6 @@
 <div>
-    <h1 class="mb-1 text-lg font-semibold text-slate-900">
-        {{ $vanMarCege ? 'Új cég hozzáadása' : 'Cég létrehozása' }}
-    </h1>
-    <p class="mb-5 text-sm text-slate-500">
-        Két adat, és indulhat a feltöltés.
-        @if ($vanMarCege)
-            Az elkészülte után rögtön erre a cégre váltunk; a többi megmarad, a fejlécben válthatsz köztük.
-        @endif
-    </p>
-
-    @if ($vanMarCege)
-        {{-- Ezt előre kell mondani, nem az első feltöltésnél kiderülnie. --}}
-        <div class="alert alert-figyelem mb-5">
-            <strong>Ez a cég nem kap próbaidőt.</strong>
-            A próba a fiókodhoz tartozik, nem cégenként jár — a további cégekhez a
-            Beállításokban kell csomagot választani, mielőtt bizonylatot dolgoznának fel.
-        </div>
-    @endif
+    <h1 class="mb-1 text-lg font-semibold text-slate-900">Cég létrehozása</h1>
+    <p class="mb-5 text-sm text-slate-500">Két adat, és indulhat a feltöltés.</p>
 
     <form wire:submit="letrehoz" class="space-y-4">
         <div>
@@ -37,10 +21,5 @@
         </div>
 
         <button type="submit" class="btn btn-primary w-full">Létrehozás</button>
-
-        @if ($vanMarCege)
-            <a href="{{ route('beerkezo') }}" wire:navigate
-               class="block text-center text-sm text-slate-500 hover:text-slate-700">Mégse</a>
-        @endif
     </form>
 </div>
