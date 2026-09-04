@@ -133,7 +133,7 @@ final class Kiolvaso
         $mezok = $this->normalizal($tiszta['mezok']);
         $mezok['afa_bontas'] = $this->normalizalBontas($tiszta['bontas']);
         $cegAdoszam = $dokumentum->company?->tax_number;
-        $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas'], $cegAdoszam);
+        $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas']);
 
         // Ha a vevő adószáma a miénk, a vevő neve nem találgatás többé: tudjuk,
         // kinek szól a számla. Ezért a kézírás miatti plafon alól kikerül.

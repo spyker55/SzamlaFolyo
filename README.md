@@ -32,18 +32,13 @@ munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 `document_corrections` táblába kerül. Enélkül nem mérhető, hogy egy
 prompt- vagy modellcsere javított-e a pontosságon.
 
-**A saját cég adószáma külső fogódzó.** Ez az egyetlen adat, amit nem a
-bizonylatról tudunk. Ha a papíron ki van töltve a vevő adószáma, és az sem a
-miénk — miközben a szállító sem mi vagyunk —, akkor ez az irat nem hozzánk
-tartozik: rossz fájl, a szállító saját példánya, vagy másnak szóló számla. Ez a
-legsúlyosabb hiba, amit fel tudunk ismerni, mert nem egy mező téved, hanem az
-egész bizonylat. Három csapdát kerül ki: a **kimenő** számlán mi vagyunk a
-szállító (ezért nézzük mindkét oldalt), a **nyugtán** nincs vevő adószáma (ezért
-csak kitöltött vevő-adószámra szólunk), és a **hibás ellenőrző számjegyű**
-adószámra nem építünk következtetést (kézírásnál a félreolvasás a valószínűbb).
-
-Fordítva ugyanez igazol: ha a vevő adószáma a miénk, a vevő neve nem találgatás
-többé, ezért a kézírás miatti plafon sem vonatkozik rá.
+**A saját cég adószáma csak igazolni tud, vádolni nem.** Ha a vevő adószáma a
+miénk, a vevő neve nem találgatás többé, ezért a kézírás miatti plafon sem
+vonatkozik rá. A fordítottja — „ez a bizonylat nem a te cégednek szól" — **meg
+volt írva, és tudatosan ki lett véve**: egy könyvelőiroda több cég bizonylatát
+dolgozza fel, nála egyik sem a regisztrált cégnek szólna, és minden számla
+pirosat kapna. Egy validátor, ami egy jogos munkafolyamatra tüzel, rosszabb,
+mint ha nem lenne: vele veszne a többi piros súlya is. Lásd a *Hátralék* pontot.
 
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
@@ -81,6 +76,26 @@ tény — szemben a magabiztossággal, ami háromszor is használhatatlan volt.
 opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
 e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a
 feldolgozás idempotens (`message_id` cégenként egyedi).
+
+## Hátralék
+
+**Cégváltó a felületen.** A `company_user` tábla szerepekkel támogatja, hogy egy
+felhasználó több céghez tartozzon, és van `CegLetrehozas` képernyő is — de a
+fejlécben nincs váltó, tehát a többcéges működés fele kész. Ez a könyvelőiroda
+alapesete: ügyfelenként egy cég, saját beérkező címmel, saját kerettel.
+
+**Az „idegen bizonylat" ellenőrzés**, amíg a fenti nincs meg. Ha a vevő adószáma
+ki van töltve és sem a vevő, sem a szállító nem a kiválasztott cég, akkor az
+irat nem oda tartozik: rossz fájl, a szállító saját példánya, vagy másnak szóló
+számla. Ez a legsúlyosabb felismerhető hiba — nem egy mező téved, hanem az egész
+bizonylat —, de csak akkor van értelme, ha a bizonylat *tényleg* a kiválasztott
+céghez tartozna. Cégváltó nélkül ez nem igaz, ezért vár.
+
+A megírt változat három csapdát kerül ki, érdemes megőrizni: a **kimenő** számlán
+mi vagyunk a szállító (mindkét oldalt nézni kell), a **nyugtán** nincs vevő
+adószáma (csak kitöltött vevő-adószámra szabad szólni), és **hibás ellenőrző
+számjegyű** adószámra nem szabad következtetést építeni (kézírásnál a
+félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 
 ## Felépítés
 

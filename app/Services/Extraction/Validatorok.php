@@ -23,12 +23,11 @@ final class Validatorok
     /**
      * @param  array<string, mixed>  $mezok
      * @param  array<int, array<string, mixed>>|null  $bontas
-     * @param  ?string  $cegAdoszam  a saját cég adószáma, ha ismert
      * @return array<string, string> mező => a bukás magyar indoklása
      */
-    public static function bukottak(array $mezok, ?array $bontas = null, ?string $cegAdoszam = null): array
+    public static function bukottak(array $mezok, ?array $bontas = null): array
     {
-        $bukas = self::idegenBizonylat($mezok, $cegAdoszam);
+        $bukas = [];
 
         foreach (['supplier_tax_number' => 'szállító', 'customer_tax_number' => 'vevő'] as $mezo => $ki) {
             if (Adoszam::biztosanRossz(is_string($mezok[$mezo] ?? null) ? $mezok[$mezo] : null)) {
@@ -176,68 +175,31 @@ final class Validatorok
     }
 
     /**
-     * Ez a bizonylat egyáltalán a miénk-e.
-     *
-     * Az egyetlen olyan adat, amit **kívülről** ismerünk: a saját cég adószáma.
-     * Ha a bizonylaton szerepel vevő adószáma, és az sem a miénk — miközben a
-     * szállító sem mi vagyunk —, akkor ez a papír nem hozzánk tartozik: rossz
-     * fájl, a szállító saját példánya, vagy másnak szóló számla. Ez ma némán
-     * átmegy, pedig súlyosabb minden mezőhibánál.
-     *
-     * Két csapdát kerül ki. A **kimenő** számlán mi vagyunk a szállító, a vevő
-     * adószáma jogosan másé — ezért nézzük mindkét oldalt. A **nyugtán** pedig
-     * nincs vevő adószáma, az eladó meg természetesen nem mi vagyunk — ezért
-     * csak akkor szólunk, ha a vevő adószáma ki van töltve.
-     *
-     * A törzsszámot hasonlítjuk, nem a teljes adószámot: az ÁFA-kód és a
-     * megyekód változhat, az adóalanyt az első nyolc jegy azonosítja.
-     *
-     * @param  array<string, mixed>  $mezok
-     * @return array<string, string>
-     */
-    private static function idegenBizonylat(array $mezok, ?string $cegAdoszam): array
-    {
-        $vevoNyers = is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null;
-        $szallitoNyers = is_string($mezok['supplier_tax_number'] ?? null) ? $mezok['supplier_tax_number'] : null;
-
-        $mienk = Adoszam::torzsszam($cegAdoszam);
-        $vevo = Adoszam::torzsszam($vevoNyers);
-
-        if ($mienk === null || $vevo === null) {
-            return [];
-        }
-
-        // Hibás ellenőrző számjegyű adószámra nem építünk következtetést: a
-        // számjegyek megbízhatatlanok, és ilyenkor éppen az a valószínű, hogy
-        // félreolvasta — nem az, hogy a bizonylat idegen. A rossz számjegyet a
-        // saját ellenőrzése amúgy is megjelöli.
-        if (Adoszam::biztosanRossz($vevoNyers) || Adoszam::biztosanRossz($szallitoNyers)) {
-            return [];
-        }
-
-        if ($vevo === $mienk || Adoszam::torzsszam($szallitoNyers) === $mienk) {
-            return [];
-        }
-
-        $indok = 'Ez a bizonylat nem a te cégednek szól: sem a vevő, sem a szállító adószáma nem a tiéd.';
-
-        return ['customer_tax_number' => $indok, 'supplier_tax_number' => $indok];
-    }
-
-    /**
      * Igazolt-e a vevő azzal, hogy az adószáma a miénk.
      *
      * Ilyenkor a vevő neve nem találgatás többé: tudjuk, kinek szól a számla.
      * Ezért a kézírás miatti plafon sem vonatkozik rá — lásd `Konfidencia`.
      *
+     * Ez **csak elvenni** tud egy figyelmeztetést, hozzáadni soha. Ezért marad
+     * bent akkor is, amikor a fordítottja („ez a bizonylat nem a tiéd") nem:
+     * egy könyvelőirodánál, ahol a bizonylatok nem a regisztrált cégnek
+     * szólnak, ez egyszerűen sosem sül el — nem zajt csinál, csak hallgat.
+     *
      * @param  array<string, mixed>  $mezok
      */
     public static function vevoIgazolt(array $mezok, ?string $cegAdoszam): bool
     {
-        $mienk = Adoszam::torzsszam($cegAdoszam);
-        $vevo = Adoszam::torzsszam(is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null);
+        $vevoNyers = is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null;
 
-        return $mienk !== null && $vevo === $mienk;
+        // Hibás ellenőrző számjegyű adószámra nem építünk következtetést —
+        // sem terhelőt, sem mentesítőt.
+        if (Adoszam::biztosanRossz($vevoNyers)) {
+            return false;
+        }
+
+        $mienk = Adoszam::torzsszam($cegAdoszam);
+
+        return $mienk !== null && Adoszam::torzsszam($vevoNyers) === $mienk;
     }
 
     private const PENZNEMEK = [
