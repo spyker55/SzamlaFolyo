@@ -156,7 +156,7 @@ cat <<CRON
 
 ✓ Kész.
 
-Három időzített feladatot kell felvenni. A vezérlőpult „Időzített folyamatok"
+Négy időzített feladatot kell felvenni. A vezérlőpult „Időzített folyamatok"
 felületén a Kezelő legyen **Egyedi parancs** — a „Parancssori php-cli" a
 vezérlőpult saját PHP-jét használná, ami itt 7.4, azon pedig az alkalmazás el
 sem indul.
@@ -172,6 +172,9 @@ Az időzítés és a parancs külön mezőbe megy:
   3) Lejárt fájlok selejtezése       időzítés:  17 3 * * *
      $PHP $PROJEKT/artisan fajl:selejtez
 
+  4) Túlhasználat elszámolása        időzítés:  41 4 * * *
+     $PHP $PROJEKT/artisan tulhasznalat:elszamol
+
 A parancsban nincs se \`cd\`, se \`&&\`: az artisan a saját helyéből oldja fel az
 útvonalakat, ezért bármelyik munkakönyvtárból ugyanúgy fut. Nyers crontabba írva
 a két rész egyszerűen egymás után kerül.
@@ -179,4 +182,11 @@ a két rész egyszerűen egymás után kerül.
 Mielőtt felveszed, próbáld ki egyszer — a cron hibája néma:
 
   cd /tmp && $PHP $PROJEKT/artisan dokumentum:feldolgoz --limit=1
+
+Végül vesd össze a kiírt árakat azzal, amit a Stripe ténylegesen terhel. A
+felületen a config számai állnak, a pénzt a Stripe árai mozgatják, és a kettő
+között semmi nem garantálja az egyezést — ha elcsúsznak, minden képernyő
+helyesnek látszik, és az eltérésről a vevő a számláján értesül:
+
+  $PHP $PROJEKT/artisan arak:ellenoriz
 CRON
