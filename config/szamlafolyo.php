@@ -87,9 +87,9 @@ return [
         // A kettő **vagy** kapcsolatban van: amelyik előbb elfogy, az zárja le
         // a próbát. Ezt a `Kvota` így is számolja.
         'documents' => 50,
-        // Próbaidőben a Flow csomag felhasználószáma jár. A költséget a
-        // darabszám fogja meg, nem a fejszám — egy könyvelőiroda pedig ne
-        // egyedül kényszerüljön kipróbálni a terméket.
+        // Három fő a próbában. A költséget a darabszám fogja meg, nem a
+        // fejszám — egy könyvelőiroda pedig ne egyedül kényszerüljön
+        // kipróbálni a terméket.
         'users' => 3,
     ],
 
@@ -166,7 +166,7 @@ return [
         'kozepes' => [
             'nev' => 'Flow',
             'documents' => 200,
-            'users' => 3,
+            'users' => 5,
             'ar_havi' => 4990,
             'extra_ft' => 29,
             'price_id' => env('STRIPE_PRICE_KOZEPES'),

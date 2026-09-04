@@ -97,9 +97,16 @@ szerződéses ígéret.
 |---|---:|---:|---:|
 | Havi nettó | 1 990 Ft | 4 990 Ft | 9 990 Ft |
 | Dokumentum / hó | 50 | 200 | 500 |
-| Felhasználó | 2 | 3 | 10 |
+| Felhasználó | 2 | 5 | 10 |
 | Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
 | Extra dokumentum | 49 Ft | 29 Ft | 24 Ft |
+
+**Az ár egy cégre szól**, mert a keret is: egy előfizetés egy céget fed le, saját
+havi darabszámmal, saját beküldési címmel. Egy fiók tetszőleges számú céget
+kezelhet, de mindegyikhez külön csomag tartozik — ez a könyvelőiroda alapesete,
+ügyfelenként egy cég. A nyitólapon és a Beállításokban ez ki is van írva, mert az
+egység ugyanolyan ígéret, mint az összeg: felhasználószámot hirdetni egy
+cégenkénti ár mellett annyi, mint a végösszeg nagyságrendjét elhallgatni.
 
 Próba: **14 nap vagy 50 dokumentum, amelyik előbb elfogy**, bankkártya nélkül —
 pontosan egy Start-hónap. Húsz dokumentum volt itt korábban, abból viszont egy

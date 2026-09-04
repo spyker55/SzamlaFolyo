@@ -138,4 +138,21 @@ final class NyitolapTest extends TestCase
 
         $this->get('/')->assertOk()->assertSee('Az oldal fejlesztés alatt áll');
     }
+
+    /**
+     * Az ár **egysége** ugyanolyan ígéret, mint az összeg.
+     *
+     * Egy előfizetés egy céget fed le, saját kerettel és beküldési címmel. Az
+     * árlista sokáig csak felhasználószámot mutatott, amiből egy tíz ügyfelet
+     * könyvelő iroda azt olvasta ki, hogy egy Flow elég neki — pedig tíz
+     * csomag kell. Ez nem apróbetűs részlet, hanem a végösszeg nagyságrendje.
+     */
+    public function test_az_arlista_kimondja_hogy_az_ar_cegenkent_ertendo(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('cégenként, saját kerettel')
+            ->assertSee('Az ár egy cégre szól')
+            ->assertSee('ügyfelenként egy cég');
+    }
 }

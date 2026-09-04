@@ -79,7 +79,10 @@
                     <button wire:click="portal" class="btn btn-ghost">Számlázás kezelése</button>
                 @endif
             </div>
-            <p class="mt-2 text-xs text-slate-400">A feltüntetett árak nettó árak.</p>
+            <p class="mt-2 text-xs text-slate-400">
+                A feltüntetett árak nettó árak, és <strong>erre a cégre</strong> vonatkoznak — a többi cégednek
+                saját csomagja van.
+            </p>
         @else
             <p class="text-xs text-slate-400">A csomagot a cég tulajdonosa tudja módosítani.</p>
         @endif
