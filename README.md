@@ -19,6 +19,14 @@ ugyanazt a claimet használja — egy feltételes `UPDATE ... WHERE status =
 'feltoltve'` —, ezért nem tudják ugyanazt az iratot kétszer feldolgozni.
 Lásd `app/Services/Extraction/Sorkezelo.php`.
 
+**A keret abból számol, amit a felhasználó nem tud eltüntetni.** A felhasznált
+darabszám a `document_extractions` hibátlan sorait kérdezi, nem a
+`documents` táblát: azt a Beérkezőből, az Archívumból vagy egy egész export
+törlésével bárki elviheti, és akkor a takarítás visszaadná a keretet. A
+modellhívásért viszont már fizettünk. Ezért éli túl a kiolvasás sora a
+dokumentumot (`document_id` nullázódik, a sor marad) — ez egyben az az
+audit-nyom is, amiből utólag kiderül, mit csinált a modell.
+
 **Az export fájlt töröl.** Az eredeti PDF-ek és képek az export elkészültével
 törlődnek a szerverről (a cég beállíthat türelmi időt). A képernyő ezt előre
 kimondja, és felkínálja az eredetik letöltését ZIP-ben. A sorrend a

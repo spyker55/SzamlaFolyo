@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Billing;
 
 use App\Models\Company;
-use App\Models\Document;
+use App\Models\DocumentExtraction;
 use Illuminate\Support\Carbon;
 
 /**
@@ -15,9 +15,18 @@ use Illuminate\Support\Carbon;
  * lekérdezés az aktuális időszakra. Egy számláló elcsúszhat (kétszer nő, vagy
  * elfelejtjük nullázni), egy lekérdezés nem tud.
  *
- * Egy dokumentum akkor fogyaszt a keretből, ha **ténylegesen kiolvastuk** —
- * a duplikátum és a feltöltés utáni azonnali hiba nem számít bele, mert azért
- * nem fizettünk a modellnek.
+ * De **azt kell megkérdezni, amit a felhasználó nem tud eltüntetni.** A
+ * darabszám korábban a `documents` táblából jött, vagyis olyan sorokból, amiket
+ * a Beérkezőből, az Archívumból vagy egy export törlésével bárki elvihet — aki
+ * exportált és utána rendet rakott, annak a felhasznált szám visszaugrott
+ * nullára, és a próbaidős keret gyakorlatilag korlátlan lett. Ezért a
+ * `document_extractions` a forrás: a modellhívás megtörténtét egy takarítás nem
+ * teheti meg nem történtté.
+ *
+ * Egy dokumentum akkor fogyaszt a keretből, ha **ténylegesen kiolvastuk**: csak
+ * a hibátlan kiolvasás számít. A duplikátum meg sem jut idáig, a hibába futott
+ * kísérlet (lejárt kulcs, olvashatatlan fájl, újrapróbálkozás) pedig nem a
+ * felhasználó hibája, és jórészt nem is került pénzbe.
  */
 final class Kvota
 {
@@ -44,11 +53,11 @@ final class Kvota
     {
         [$tol, $ig] = $this->idoszak();
 
-        return Document::query()
+        return DocumentExtraction::query()
             ->withoutGlobalScopes()
             ->where('company_id', $this->ceg->id)
             ->whereBetween('created_at', [$tol, $ig])
-            ->whereHas('extractions')
+            ->whereNull('error')
             ->count();
     }
 
@@ -88,10 +97,15 @@ final class Kvota
             return [$this->ceg->current_period_start, $this->ceg->current_period_end];
         }
 
-        // Próbaidőben a teljes próbaidőszak egyetlen keret.
+        // Próbaidőben a teljes próbaidőszak egyetlen keret. A vég nem a
+        // `trial_ends_at`, hanem a mai nap, ha az későbbi: a lejárat után a
+        // felhasznált darabszám ne ugorjon vissza nullára a képernyőn — a
+        // keretet a `keret()` zárja le, nem az, hogy elrejtjük a fogyást.
+        $vege = $this->ceg->trial_ends_at ?? now();
+
         return [
             $this->ceg->created_at ?? now()->subYear(),
-            $this->ceg->trial_ends_at ?? now(),
+            $vege->isFuture() ? $vege : now(),
         ];
     }
 }

@@ -75,7 +75,10 @@ return [
 
     'trial' => [
         'days' => 14,
-        'documents' => 50,
+        // Az ingyen keret valódi pénz: minden darab egy modellhívás. Húsz
+        // bizonylat bőven elég annak eldöntésére, hogy jó-e a termék, és épp
+        // kevés ahhoz, hogy valaki ingyen könyveljen belőle egy hónapot.
+        'documents' => 20,
     ],
 
     'plans' => [

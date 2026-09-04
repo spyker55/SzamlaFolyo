@@ -92,4 +92,74 @@ final class KvotaTest extends TestCase
         $this->assertSame(200, (new Kvota($ceg))->keret());
         $this->assertTrue($ceg->elofizetettE());
     }
+
+    /**
+     * A keretet nem lehet takarítással visszaszerezni.
+     *
+     * A darabszám korábban a `documents` táblából jött — olyan sorokból, amiket
+     * a Beérkezőből, az Archívumból vagy egy **teljes export törlésével** bárki
+     * elvihet. Aki exportált és utána rendet rakott, annál a felhasznált szám
+     * visszaugrott nullára, és a próbaidős keret gyakorlatilag korlátlan lett.
+     * A modellhívásért viszont már fizettünk.
+     */
+    public function test_a_dokumentum_torlese_nem_adja_vissza_a_keretet(): void
+    {
+        $ceg = Company::factory()->create();
+        app(Berlo::class)->beallit($ceg);
+
+        $dokumentum = $this->kiolvasottDokumentum($ceg);
+
+        $this->assertSame(1, (new Kvota($ceg))->felhasznalt(), 'törlés előtt');
+
+        $dokumentum->delete();
+
+        $this->assertSame(1, (new Kvota($ceg))->felhasznalt(), 'törlés után');
+    }
+
+    /** A hibába futott kísérlet nem a felhasználó hibája, és nem is került pénzbe. */
+    public function test_a_hibas_kiserlet_nem_fogyaszt(): void
+    {
+        $ceg = Company::factory()->create();
+        app(Berlo::class)->beallit($ceg);
+
+        $dokumentum = Document::factory()->create(['company_id' => $ceg->id]);
+        $kiolvasas = new DocumentExtraction([
+            'document_id' => $dokumentum->id,
+            'prompt_version' => 'teszt',
+            'error' => 'Nincs beállítva az OpenRouter API-kulcs.',
+        ]);
+        $kiolvasas->company_id = $ceg->id;
+        $kiolvasas->save();
+
+        $this->assertSame(0, (new Kvota($ceg))->felhasznalt());
+    }
+
+    /**
+     * A lejárt próbaidő után a fogyás **látszik** — a keretet a `keret()` zárja
+     * le, nem az, hogy elrejtjük, mennyit használt el.
+     */
+    public function test_a_lejart_probaido_utan_is_latszik_a_fogyas(): void
+    {
+        $ceg = Company::factory()->lejartProbaido()->create();
+        app(Berlo::class)->beallit($ceg);
+
+        $this->kiolvasottDokumentum($ceg);
+
+        $this->assertSame(1, (new Kvota($ceg))->felhasznalt());
+        $this->assertSame(0, (new Kvota($ceg))->keret());
+    }
+
+    private function kiolvasottDokumentum(Company $ceg): Document
+    {
+        $dokumentum = Document::factory()->create(['company_id' => $ceg->id]);
+
+        $kiolvasas = new DocumentExtraction([
+            'document_id' => $dokumentum->id,
+            'prompt_version' => 'teszt',
+        ]);
+        $kiolvasas->company_id = $ceg->id;
+        $kiolvasas->save();
+
+        return $dokumentum;
+    }
 }

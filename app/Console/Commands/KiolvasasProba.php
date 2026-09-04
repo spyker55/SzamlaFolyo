@@ -358,6 +358,11 @@ final class KiolvasasProba extends Command
         }
 
         app(FajlTarolo::class)->torol($dokumentum);
+
+        // A kiolvasás sora túléli a dokumentumot (abból számol a keret), ezért
+        // a próbáét külön visszük el. A parancs kiírja, hogy nem fogyasztott —
+        // ez teszi igazzá.
+        $dokumentum->extractions()->delete();
         $dokumentum->delete();
 
         if ($this->ideiglenesCeg) {
