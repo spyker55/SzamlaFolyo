@@ -18,5 +18,8 @@ return [
         'protocol' => 'imap',
         'folder' => env('IMAP_FOLDER', 'INBOX'),
         'processed_folder' => env('IMAP_PROCESSED_FOLDER', 'Feldolgozott'),
+        // A besorolatlan levél külön mappába megy: a feldolgozottak közé
+        // keverve pont az veszne el, amit keresni kell.
+        'unmatched_folder' => env('IMAP_UNMATCHED_FOLDER', 'Besorolatlan'),
     ],
 ];

@@ -10,6 +10,7 @@ use App\Services\Files\FajlHiba;
 use App\Services\Files\FajlTarolo;
 use App\Support\Berlo;
 use Illuminate\Support\Facades\Log;
+use Webklex\PHPIMAP\Client;
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Message;
 
@@ -33,16 +34,14 @@ final class PostafiokOlvaso
         private readonly Berlo $berlo,
     ) {}
 
-    /** @return array{levelek: int, iratok: int, atugrott: int} */
-    public function olvas(int $maxLevel = 25): array
+    /** @param  array<string, mixed>  $beallitas */
+    private function kliens(array $beallitas): Client
     {
-        $beallitas = (array) config('inbox.imap');
-
         if (($beallitas['host'] ?? '') === '' || ($beallitas['username'] ?? '') === '') {
-            throw new \RuntimeException('A beérkeztető postafiók nincs beállítva.');
+            throw new \RuntimeException('A beérkeztető postafiók nincs beállítva (IMAP_HOST, IMAP_USERNAME).');
         }
 
-        $kliens = (new ClientManager)->make([
+        return (new ClientManager)->make([
             'host' => $beallitas['host'],
             'port' => $beallitas['port'],
             'encryption' => $beallitas['encryption'],
@@ -51,7 +50,14 @@ final class PostafiokOlvaso
             'password' => $beallitas['password'],
             'protocol' => $beallitas['protocol'],
         ]);
+    }
 
+    /** @return array{levelek: int, iratok: int, atugrott: int} */
+    public function olvas(int $maxLevel = 25): array
+    {
+        $beallitas = (array) config('inbox.imap');
+
+        $kliens = $this->kliens($beallitas);
         $kliens->connect();
 
         $mappa = $kliens->getFolderByPath((string) $beallitas['folder']);
@@ -64,8 +70,17 @@ final class PostafiokOlvaso
         foreach ($levelek as $level) {
             $osszes++;
 
+            $besorolatlan = false;
+
             try {
                 $iratok += $this->egyLevel($level);
+            } catch (BesorolatlanLevel $e) {
+                $atugrott++;
+                $besorolatlan = true;
+                Log::warning('Besorolatlan levél', [
+                    'ok' => $e->getMessage(),
+                    'cimzettek' => $e->fejlecek,
+                ]);
             } catch (\Throwable $e) {
                 $atugrott++;
                 Log::error('Beérkeztetési hiba', ['uzenet' => $e->getMessage()]);
@@ -74,12 +89,103 @@ final class PostafiokOlvaso
             // Olvasottnak jelöljük akkor is, ha nem tudtuk hova tenni:
             // különben minden körben újra próbálkoznánk ugyanazzal.
             $level->setFlag('Seen');
-            $this->athelyez($level, (string) $beallitas['processed_folder']);
+
+            // A besorolatlan levél **nem** a feldolgozottak közé megy: ott
+            // elvegyülne, és pont azt nem lehetne megtalálni, ami elveszett.
+            $this->athelyez($level, (string) $beallitas[$besorolatlan ? 'unmatched_folder' : 'processed_folder']);
         }
 
         $kliens->disconnect();
 
         return ['levelek' => $osszes, 'iratok' => $iratok, 'atugrott' => $atugrott];
+    }
+
+    /**
+     * Mit lát a rendszer a postafiókban — módosítás nélkül.
+     *
+     * A „nem érkezik meg a számla" bejelentés öt különböző dolgot jelenthet, és
+     * a különbség nem látszik a felületen: nem is jött be levél (akkor a
+     * levelezés a hibás, nem az alkalmazás), rossz mappát nézünk, a címzettben
+     * nincs token, a tokenhez nincs cég, vagy a melléklet nem támogatott
+     * típus. Ez a lekérdezés mind az ötöt megkülönbözteti.
+     *
+     * Semmit nem jelöl olvasottnak és nem mozgat: a `--proba` futtatható
+     * nyugodtan, akkor is, ha a cron már átment a fiókon.
+     *
+     * @return array{mappak: array<int, string>, mappa: string, talalt_mappa: bool, levelek: array<int, array<string, mixed>>}
+     */
+    public function diagnosztika(int $darab = 5): array
+    {
+        $beallitas = (array) config('inbox.imap');
+        $kliens = $this->kliens($beallitas);
+        $kliens->connect();
+
+        $mappak = [];
+        foreach ($kliens->getFolders(false) as $mappa) {
+            $mappak[] = $mappa->full_name;
+        }
+
+        $utvonal = (string) $beallitas['folder'];
+        $mappa = $kliens->getFolderByPath($utvonal, soft_fail: true);
+
+        if ($mappa === null) {
+            $kliens->disconnect();
+
+            return ['mappak' => $mappak, 'mappa' => $utvonal, 'talalt_mappa' => false, 'levelek' => []];
+        }
+
+        $levelek = [];
+
+        foreach ($mappa->query()->whereAll()->setFetchOrder('desc')->limit($darab)->get() as $level) {
+            $fejlecek = $this->fejlecek($level);
+
+            $token = CimzettToken::kereses(
+                $fejlecek,
+                (string) config('inbox.mode'),
+                (string) config('inbox.domain'),
+                config('inbox.plus_address'),
+            );
+
+            $mellekletek = [];
+            foreach ($this->mellekletek($level) as $melleklet) {
+                $mellekletek[] = $melleklet['nev'].' · '.($melleklet['mime'] ?: 'ismeretlen típus');
+            }
+
+            $levelek[] = [
+                'targy' => (string) $level->getSubject()?->first(),
+                'felado' => (string) ($fejlecek['from'] ?? '—'),
+                'cimzettek' => $this->cimzettek($fejlecek),
+                'token' => $token,
+                'ceg' => $token === null ? null : Company::query()->where('inbox_token', $token)->value('name'),
+                'mellekletek' => $mellekletek,
+            ];
+        }
+
+        $kliens->disconnect();
+
+        return ['mappak' => $mappak, 'mappa' => $utvonal, 'talalt_mappa' => true, 'levelek' => $levelek];
+    }
+
+    /**
+     * A fejlécekben talált címek, egy sorban. Ez az a lista, amiben a tokent
+     * kerestük — ha üres vagy nincs benne a beküldési cím, ott a hiba.
+     *
+     * @param  array<string, string>  $fejlecek
+     */
+    private function cimzettek(array $fejlecek): string
+    {
+        $cimek = [];
+
+        foreach ($fejlecek as $nev => $ertek) {
+            if ($nev === 'from') {
+                continue;
+            }
+
+            preg_match_all('/[\w.+\-]+@[\w\-]+(?:\.[\w\-]+)+/', (string) $ertek, $talalatok);
+            $cimek = array_merge($cimek, $talalatok[0] ?? []);
+        }
+
+        return $cimek === [] ? '—' : implode(', ', array_unique($cimek));
     }
 
     /** @return int hány irat lett belőle */
@@ -95,14 +201,16 @@ final class PostafiokOlvaso
         );
 
         if ($token === null) {
-            // Nem tudjuk, kihez tartozik. Nem találgatunk: eldobjuk.
-            return 0;
+            // Nem tudjuk, kihez tartozik. Nem találgatunk — de nem is
+            // hallgatunk: enélkül a „nem érkezik meg a számla" bejelentésre
+            // nincs mit megnézni.
+            throw new BesorolatlanLevel('A címzettben nincs érvényes beküldési token.', $fejlecek);
         }
 
         $ceg = Company::query()->where('inbox_token', $token)->first();
 
         if ($ceg === null) {
-            return 0;
+            throw new BesorolatlanLevel("A(z) {$token} tokenhez nincs cég.", $fejlecek);
         }
 
         $uzenetId = (string) ($level->getMessageId()?->first() ?: 'no-id-'.md5((string) $level->getHeader()?->raw));
@@ -158,14 +266,27 @@ final class PostafiokOlvaso
         });
     }
 
+    /**
+     * Aláírásban lévő logó-e a melléklet.
+     *
+     * Korábban minden `inline` mellékletet kizártunk. Ez hibás: több
+     * levelezőprogram a **PDF-et is** `inline` diszpozícióval küldi, hogy a
+     * levéltörzsben megjelenítse — így pont a számla veszett el. Csak a kép
+     * gyanús, és az is csak akkor, ha inline.
+     */
+    public static function alairasKepe(?string $diszpozicio, ?string $mime): bool
+    {
+        return strtolower((string) $diszpozicio) === 'inline'
+            && str_starts_with(strtolower((string) $mime), 'image/');
+    }
+
     /** @return array<int, array{nev: string, mime: ?string, tartalom: string}> */
     private function mellekletek(Message $level): array
     {
         $ki = [];
 
         foreach ($level->getAttachments() as $melleklet) {
-            // Az `inline` mellékletek az aláírásban lévő logók — nem bizonylatok.
-            if (strtolower((string) $melleklet->getDisposition()) === 'inline') {
+            if (self::alairasKepe($melleklet->getDisposition(), $melleklet->getMimeType())) {
                 continue;
             }
 

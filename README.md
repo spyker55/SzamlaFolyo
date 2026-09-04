@@ -273,6 +273,36 @@ cd /tmp && <php> <projekt>/artisan dokumentum:feldolgoz --limit=1
 A `cd /tmp` szándékos: pont azt bizonyítja, hogy a parancs a munkakönyvtártól
 függetlenül működik.
 
+### Ha nem érkezik meg az e-mailben küldött számla
+
+A bejelentés öt különböző dolgot jelenthet, és a felületen egyik sem látszik.
+Ez a parancs megkülönbözteti őket — **semmit nem jelöl olvasottnak és nem
+mozgat**, tehát akkor is nyugodtan futtatható, ha a cron már átment a fiókon:
+
+```bash
+<php> <projekt>/artisan email:beolvas --proba
+```
+
+Kiírja a cégek beküldési címét, a fiók mappáit, és a legutóbbi levelekre
+soronként, hogy mely címeket találta a fejlécekben, kijött-e belőlük token, van-e
+hozzá cég, és mely mellékleteket fogadná el.
+
+| Amit mutat | Hol a hiba |
+|---|---|
+| „A postafiók nem érhető el" | `IMAP_HOST`, `IMAP_USERNAME`, `IMAP_PASSWORD` |
+| „A(z) … mappa nem létezik" | `IMAP_FOLDER` — a kiírt mappalistából válassz |
+| „A(z) … mappa üres" | a levél be sem jött: MX-rekord, catch-all átirányítás, spam mappa |
+| „nincs érvényes beküldési token" | rossz címre ment, vagy a továbbküldés levágta a fejlécet |
+| „ehhez nincs cég" | a token jó alakú, de nem szerepel az adatbázisban |
+| „nincs feldolgozható melléklet" | nem támogatott fájltípus (docx, zip) |
+
+Ha a mappa üresnek látszik, mert a cron már átmozgatta a leveleket, nézz bele a
+feldolgozottakba is: `IMAP_FOLDER=Feldolgozott <php> <projekt>/artisan email:beolvas --proba`.
+
+A besorolatlan levél a `Besorolatlan` mappába kerül (`IMAP_UNMATCHED_FOLDER`), és
+`warning` szinten a naplóba is bekerül a megvizsgált címekkel — a feldolgozottak
+közé keverve pont az veszne el, amit keresni kell.
+
 ### Ellenőrzés telepítés után
 
 ```bash
