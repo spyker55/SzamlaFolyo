@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Livewire\App;
 
+use App\Enums\AfaKategoria;
 use App\Enums\DokumentumAllapot;
 use App\Enums\DokumentumTipus;
 use App\Models\Document;
 use App\Models\DocumentCorrection;
 use App\Services\Extraction\Konfidencia;
 use App\Services\Extraction\Sema;
+use App\Services\Extraction\Validatorok;
 use App\Support\Adoszam;
 use App\Support\AfaBontas;
 use App\Support\Ido;
@@ -34,12 +36,26 @@ class Ellenorzes extends Component
     /** @var array<string, mixed> */
     public array $mezok = [];
 
+    /**
+     * Az ÁFA-bontás szerkesztés alatti alakja: soronként sztringek, mert az
+     * ember úgy gépel, ahogy a papíron látja („1 270,50"), nem ahogy tárolni
+     * fogjuk. Az értelmezés a `parseoltBontas()` dolga.
+     *
+     * @var array<int, array<string, string>>
+     */
+    public array $bontas = [];
+
     public string $megjegyzes = '';
 
     /** @var array<string, float> */
     public array $konfidencia = [];
 
-    /** @var array<string, string> */
+    /**
+     * A bukott ellenőrzések — **a képernyőn lévő értékekre**, nem a gépiekre.
+     * A `render()` tölti újra minden körben; lásd az ottani indoklást.
+     *
+     * @var array<string, string>
+     */
     public array $validatorHibak = [];
 
     public function mount(Document $dokumentum): void
@@ -61,9 +77,35 @@ class Ellenorzes extends Component
             };
         }
 
+        foreach (AfaBontas::sorok($dokumentum->afa_bontas) as $sor) {
+            $this->bontas[] = [
+                'kulcs' => $sor['kulcs'] === '—' ? '' : $sor['kulcs'],
+                'kategoria' => (string) $sor['kategoria'],
+                'netto' => (string) $sor['netto'],
+                'afa' => (string) $sor['afa'],
+            ];
+        }
+
         $kiolvasas = $dokumentum->utolsoKiolvasas();
         $this->konfidencia = (array) ($kiolvasas?->confidence['combined'] ?? []);
-        $this->validatorHibak = (array) ($kiolvasas?->confidence['validators'] ?? []);
+    }
+
+    /** Új, üres bontássor. */
+    public function sorHozzaad(): void
+    {
+        // Ugyanaz a felső határ, amit a gépi út is betart: az ember ne tudjon
+        // olyat előállítani, amit a séma nem fogadna el.
+        if (count($this->bontas) >= Sema::BONTAS_MAX_SOR) {
+            return;
+        }
+
+        $this->bontas[] = ['kulcs' => '', 'kategoria' => '', 'netto' => '', 'afa' => ''];
+    }
+
+    public function sorTorol(int $index): void
+    {
+        unset($this->bontas[$index]);
+        $this->bontas = array_values($this->bontas);
     }
 
     /** A mező állapota: 'nincs_adat' | 'biztos' | 'bizonytalan' | 'gyanus'. */
@@ -83,10 +125,20 @@ class Ellenorzes extends Component
     public function jovahagyas(): void
     {
         $mezok = $this->ellenorzottMezok();
+        $bontas = $this->parseoltBontas();
 
-        if ($mezok === null) {
+        // A bontás hibái ugyanúgy megállítanak, mint a mezőké: csendben nullát
+        // menteni rosszabb, mint visszakérdezni. A **bukott ellenőrzés**
+        // viszont nem állít meg — a papír az emberé, nem a miénk.
+        foreach ($bontas['hibak'] as $kulcs => $uzenet) {
+            $this->addError("bontas.{$kulcs}", $uzenet);
+        }
+
+        if ($mezok === null || $bontas['hibak'] !== []) {
             return;
         }
+
+        $mezok['afa_bontas'] = $bontas['sorok'] === [] ? null : $bontas['sorok'];
 
         $kovetkezoId = $this->kovetkezoId();
 
@@ -117,6 +169,27 @@ class Ellenorzes extends Component
                 $javitas->save();
             }
 
+            // A bontás nincs a MEZOK között (a fenti ciklus skalárt feltételez),
+            // a javítását viszont ugyanúgy el akarjuk tenni — egyetlen sorban,
+            // mindkét oldalt json alakban. A laza összehasonlítás szándékos: a
+            // `json_encode(27.0)` „27"-et ír, tehát a tárolt kulcs int-ként jön
+            // vissza, és a szigorú egyezés minden jóváhagyáskor fantomjavítást
+            // szülne.
+            $gepiBontas = $gepi['afa_bontas'] ?? null;
+
+            if ($gepiBontas != $mezok['afa_bontas']) {
+                $javitas = new DocumentCorrection([
+                    'document_id' => $this->dokumentum->id,
+                    'extraction_id' => $kiolvasas?->id,
+                    'field' => 'afa_bontas',
+                    'machine_value' => self::bontasSzoveg($gepiBontas),
+                    'human_value' => self::bontasSzoveg($mezok['afa_bontas']),
+                    'corrected_by' => auth()->id(),
+                ]);
+                $javitas->company_id = $this->dokumentum->company_id;
+                $javitas->save();
+            }
+
             $this->dokumentum->forceFill($mezok + [
                 'note' => $this->megjegyzes !== '' ? $this->megjegyzes : null,
                 'status' => DokumentumAllapot::Jovahagyva->value,
@@ -133,6 +206,70 @@ class Ellenorzes extends Component
 
         session()->flash('siker', 'Kész: minden beérkezett irat ellenőrizve. A jóváhagyott tételek a Tételek képernyőn várnak.');
         $this->redirect(route('tetelek', absolute: false), navigate: true);
+    }
+
+    /**
+     * A szerkesztett bontás értelmezése — egy helyen a képernyő és a mentés
+     * számára is, hogy a jelzés ne másról szóljon, mint ami mentődni fog.
+     *
+     * A teljesen üres sor némán kiesik: a törléshez ne kelljen gombot keresni.
+     * Ami félig kitöltött, az viszont hiba — a kulcs és az adóalap nélküli sor
+     * se nem könyvelhető, se nem ellenőrizhető (ugyanezt a két mezőt követeli
+     * meg a gépi úton a `Sema::tisztitBontas()`).
+     *
+     * @return array{sorok: array<int, array<string, mixed>>, hibak: array<string, string>}
+     */
+    private function parseoltBontas(): array
+    {
+        $sorok = [];
+        $hibak = [];
+
+        foreach ($this->bontas as $i => $sor) {
+            $nyers = array_map(fn ($ertek) => trim((string) $ertek), $sor);
+
+            if (implode('', $nyers) === '') {
+                continue;
+            }
+
+            $kulcs = AfaBontas::kulcsErtelmez($nyers['kulcs'] ?? '');
+            $netto = Osszeg::ertelmez($nyers['netto'] ?? '');
+            $afa = Osszeg::ertelmez($nyers['afa'] ?? '');
+
+            if ($kulcs === null) {
+                $hibak["{$i}.kulcs"] = 'Az ÁFA-kulcsot százalékban kell megadni.';
+            }
+
+            if (! $netto->ok || $netto->ertek === null) {
+                $hibak["{$i}.netto"] = $netto->ok
+                    ? 'Az adóalapot meg kell adni.'
+                    : 'Ezt az összeget nem tudjuk értelmezni.';
+            }
+
+            if (! $afa->ok) {
+                $hibak["{$i}.afa"] = 'Ezt az összeget nem tudjuk értelmezni.';
+            }
+
+            if ($kulcs === null || $netto->ertek === null || ! $afa->ok) {
+                continue;
+            }
+
+            $sorok[] = [
+                'kulcs' => $kulcs,
+                'kategoria' => AfaKategoria::tryFrom($nyers['kategoria'] ?? '')?->value,
+                'netto' => $netto->ertek,
+                'afa' => $afa->ertek,
+            ];
+        }
+
+        return ['sorok' => $sorok, 'hibak' => $hibak];
+    }
+
+    /** @param  array<int, array<string, mixed>>|null  $bontas */
+    private static function bontasSzoveg(?array $bontas): ?string
+    {
+        return $bontas === null || $bontas === []
+            ? null
+            : (json_encode($bontas, JSON_UNESCAPED_UNICODE) ?: null);
     }
 
     /**
@@ -215,10 +352,24 @@ class Ellenorzes extends Component
 
     public function render()
     {
+        // A jelzés arról szóljon, ami a képernyőn van.
+        //
+        // Korábban a kiolvasás sorában tárolt verdiktet mutattuk — az viszont a
+        // **gépi** értékekről szól. Amint az ember átír egy számot, az az
+        // állítás elavul: a javított mező pirosan maradna, a frissen elrontott
+        // meg tisztán. A validátorok tiszta függvények és a nyers emberi
+        // bemenetet is bírják (az összeg az `Osszeg`-en, a dátum az `Ido`-n át
+        // megy), ezért olcsóbb újrafuttatni, mint magyarázkodni.
+        //
+        // A tárolt gépi verdikt ettől érintetlen marad: az az audit-nyom,
+        // abból derül ki utólag, mit hibázott a modell.
+        $this->validatorHibak = Validatorok::bukottak($this->mezok, $this->parseoltBontas()['sorok']);
+
         return view('livewire.app.ellenorzes', [
             'cimkek' => Sema::CIMKEK,
             'tipusok' => DokumentumTipus::opciok(),
-            'bontas' => AfaBontas::sorok($this->dokumentum->afa_bontas),
+            'kategoriak' => AfaKategoria::opciok(),
+            'maxSor' => Sema::BONTAS_MAX_SOR,
             'hatravan' => Document::query()
                 ->where('status', DokumentumAllapot::EllenorzesreVar->value)
                 ->count(),

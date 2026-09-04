@@ -7,6 +7,11 @@ namespace App\Services\Export;
 /**
  * JSON gépi feldolgozásra: a szám szám marad, a dátum ISO alakú, a hiányzó
  * érték null — nem üres sztring.
+ *
+ * Egyedül itt fér el az ÁFA-bontás **teljes** alakja. A táblázatos formátumok
+ * kulcsonkénti oszlopokra lapítják (27/18/5/0/egyéb), mert egy sor egy
+ * bizonylat; a beágyazott lista viszont megőrzi a kategóriakódot is, ami
+ * nélkül egy nulla százalékos sor értelmezhetetlen.
  */
 final class JsonIro
 {
@@ -28,6 +33,10 @@ final class JsonIro
                 }
 
                 $tetel[$kulcs] = $ertek === '' ? null : $ertek;
+            }
+
+            if (isset($sor['afa_bontas']) && is_array($sor['afa_bontas'])) {
+                $tetel['afa_bontas'] = $sor['afa_bontas'];
             }
 
             $tetelek[] = $tetel;

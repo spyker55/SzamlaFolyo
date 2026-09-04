@@ -11,6 +11,7 @@ use App\Services\Extraction\Forras\Felderito;
 use App\Services\Extraction\Xml\XmlKiolvaso;
 use App\Services\Files\FajlTarolo;
 use App\Support\Adoszam;
+use App\Support\AfaBontas;
 use App\Support\Ido;
 use App\Support\Osszeg;
 use Illuminate\Support\Facades\DB;
@@ -206,7 +207,7 @@ final class Kiolvaso
         $sorok = [];
 
         foreach ($bontas as $sor) {
-            $kulcs = $this->kulcs($sor['kulcs'] ?? null);
+            $kulcs = AfaBontas::kulcsErtelmez($sor['kulcs'] ?? null);
             $netto = $this->osszeg($sor['netto'] ?? null);
 
             if ($kulcs === null || $netto === null) {
@@ -222,22 +223,6 @@ final class Kiolvaso
         }
 
         return $sorok === [] ? null : $sorok;
-    }
-
-    /** Az ÁFA-kulcs százalékban. A „27%" és a „27,0" is 27.0. */
-    private function kulcs(mixed $ertek): ?float
-    {
-        if (is_int($ertek) || is_float($ertek)) {
-            return (float) $ertek;
-        }
-
-        if (! is_string($ertek)) {
-            return null;
-        }
-
-        $tiszta = str_replace([' ', '%', ','], ['', '', '.'], trim($ertek));
-
-        return is_numeric($tiszta) ? (float) $tiszta : null;
     }
 
     /** Összeg a mi alakunkra hozva; amit nem értünk, az null. */

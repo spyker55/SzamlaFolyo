@@ -27,12 +27,18 @@ final class ExportFormatumTest extends TestCase
                 'netto' => 100000.0,
                 'afa' => 27000.0,
                 'brutto' => 127000.0,
+                'fizetendo' => 127000.0,
+                'netto_27' => 100000.0,
+                'afa_27' => 27000.0,
                 'penznem' => 'HUF',
                 'fizetesi_mod' => 'átutalás',
                 'konyvelendo' => 'igen',
                 'megjegyzes' => null,
                 'beerkezes' => '2026-03-15',
                 'forras' => 'feltöltés',
+                'afa_bontas' => [
+                    ['kulcs' => 27.0, 'kategoria' => 'S', 'netto' => '100000.00', 'afa' => '27000.00'],
+                ],
             ],
         ];
     }
@@ -74,6 +80,51 @@ final class ExportFormatumTest extends TestCase
 
         $this->assertStringContainsString('-127000,00', $csv);
         $this->assertStringNotContainsString("'-127000", $csv);
+    }
+
+    /**
+     * A kulcsonkénti oszlopok az egész exportbővítés értelme: a könyvelő
+     * ezekkel tud számolni. Szövegként kiírva használhatatlanok lennének.
+     */
+    public function test_csv_szamkent_irja_a_kulcsonkenti_oszlopokat(): void
+    {
+        $csv = CsvIro::ir($this->sorok());
+
+        $this->assertStringContainsString('"Nettó 27"', $csv);
+        $this->assertStringContainsString('"ÁFA egyéb"', $csv);
+        $this->assertStringContainsString('27000,00', $csv);
+
+        // Amelyik kulcsra nincs sor, az üresen marad — nem nullával, mert a
+        // nulla azt állítaná, hogy volt ilyen adóalap, és éppen semmi.
+        $this->assertStringNotContainsString('0,00;0,00', $csv);
+    }
+
+    /** A beágyazott lista csak a JSON-ban fér el, a táblázat nem látja. */
+    public function test_a_csv_nem_irja_ki_a_beagyazott_bontast(): void
+    {
+        $csv = CsvIro::ir($this->sorok());
+
+        $this->assertStringNotContainsString('kategoria', $csv);
+        $this->assertStringNotContainsString('afa_bontas', $csv);
+    }
+
+    /**
+     * A kategóriakód nélkül egy nulla százalékos sor értelmezhetetlen: nem
+     * derül ki, fordított adózás, mentesség vagy közösségi értékesítés-e. Ez
+     * csak a beágyazott alakban fér el.
+     */
+    public function test_json_viszi_a_teljes_bontast_kategoriakoddal(): void
+    {
+        $json = json_decode(JsonIro::ir($this->sorok()), true);
+        $tetel = $json['tetelek'][0];
+
+        $this->assertSame('S', $tetel['afa_bontas'][0]['kategoria']);
+        $this->assertSame('100000.00', $tetel['afa_bontas'][0]['netto']);
+
+        // A lapos oszlopok emellett is ott vannak: aki csak azokat olvassa,
+        // ugyanazt a számot kapja.
+        $this->assertEqualsWithDelta(27000.0, $tetel['afa_27'], 0.001);
+        $this->assertEqualsWithDelta(127000.0, $tetel['fizetendo'], 0.001);
     }
 
     public function test_json_szamot_ir_szamkent_es_null_t_null_kent(): void

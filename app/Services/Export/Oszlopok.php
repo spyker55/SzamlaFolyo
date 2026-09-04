@@ -6,6 +6,7 @@ namespace App\Services\Export;
 
 use App\Enums\DokumentumTipus;
 use App\Models\Document;
+use App\Support\AfaBontas;
 
 /**
  * Az export egyetlen igazsága: mi a fejléc, és mi kerül a cellába.
@@ -29,6 +30,16 @@ final class Oszlopok
         'netto' => 'Nettó',
         'afa' => 'ÁFA',
         'brutto' => 'Bruttó',
+        'fizetendo' => 'Fizetendő',
+        'netto_27' => 'Nettó 27',
+        'afa_27' => 'ÁFA 27',
+        'netto_18' => 'Nettó 18',
+        'afa_18' => 'ÁFA 18',
+        'netto_5' => 'Nettó 5',
+        'afa_5' => 'ÁFA 5',
+        'netto_0' => 'Nettó 0',
+        'netto_egyeb' => 'Nettó egyéb',
+        'afa_egyeb' => 'ÁFA egyéb',
         'penznem' => 'Pénznem',
         'fizetesi_mod' => 'Fizetési mód',
         'konyvelendo' => 'Könyvelendő',
@@ -37,18 +48,33 @@ final class Oszlopok
         'forras' => 'Forrás',
     ];
 
-    /** Melyik oszlop szám — ezeket az xlsx számként, a csv tizedesvesszővel írja. */
-    public const SZAM_OSZLOPOK = ['netto', 'afa', 'brutto'];
+    /**
+     * Melyik oszlop szám — ezeket az xlsx számként, a csv tizedesvesszővel írja.
+     * A kulcsonkénti oszlopok is ide tartoznak: az az egész értelmük, hogy a
+     * könyvelő össze tudja adni őket az Excelben.
+     */
+    public const SZAM_OSZLOPOK = ['netto', 'afa', 'brutto', 'fizetendo', ...AfaBontas::OSZLOPOK];
 
     /** Melyik oszlop dátum. */
     public const DATUM_OSZLOPOK = ['kelt', 'teljesites', 'fizetesi_hatarido'];
 
-    /** @return array<string, string|float|null> */
+    /**
+     * Egy bizonylat exportsora. A visszaadott tömb az `afa_bontas` kulcson a
+     * bontás beágyazott alakját is viszi — a FEJLECEK-ben nincs benne, ezért a
+     * csv és az xlsx nem látja, egyedül a JSON írja ki.
+     *
+     * @return array<string, string|float|array<int, array<string, mixed>>|null>
+     */
     public static function sor(Document $d): array
     {
         $tipus = $d->doc_type;
 
-        return [
+        // A kulcsonkénti oszlopok a bontásból számolódnak, nem külön tárolt
+        // adatból — így nem tudnak elcsúszni attól, amit a képernyő mutat. A
+        // sorrend itt közömbös: az írók a FEJLECEK kulcsain mennek végig.
+        $vodrok = AfaBontas::vodrok($d->afa_bontas);
+
+        return $vodrok + [
             'tipus' => DokumentumTipus::cimkeje($tipus?->value),
             'szallito' => $d->supplier_name,
             'szallito_adoszam' => $d->supplier_tax_number,
@@ -61,6 +87,7 @@ final class Oszlopok
             'netto' => self::szam($d->net_amount),
             'afa' => self::szam($d->vat_amount),
             'brutto' => self::szam($d->gross_amount),
+            'fizetendo' => self::szam($d->fizetendo),
             'penznem' => $d->currency,
             'fizetesi_mod' => $d->payment_method,
             // A díjbekérő és a rá kiállított számla együtt kétszer vinné be
@@ -71,6 +98,7 @@ final class Oszlopok
             'megjegyzes' => $d->note,
             'beerkezes' => $d->created_at?->format('Y-m-d'),
             'forras' => $d->source === 'email' ? 'e-mail' : 'feltöltés',
+            'afa_bontas' => $d->afa_bontas ?: null,
         ];
     }
 

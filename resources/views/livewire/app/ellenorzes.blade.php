@@ -44,7 +44,12 @@
         <form wire:submit="jovahagyas" class="card card-pad space-y-4">
 
             {{-- A kiemelés a bajt jelöli, nem a rendben lévőt: a jelöletlen mező
-                 nem garancia, csak annyi, hogy nem akadt fenn semmin. --}}
+                 nem garancia, csak annyi, hogy nem akadt fenn semmin.
+
+                 A jelzések a képernyőn lévő értékekre vonatkoznak, nem arra,
+                 amit a modell írt: a mezők `.blur`-re szinkronizálnak, és az
+                 ellenőrzések minden körben újrafutnak. Ezért javítás után
+                 elmúlik a piros — és megjelenik, ha az ember ront el valamit. --}}
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                 <span class="flex items-center gap-1.5">
                     <span class="h-2.5 w-2.5 rounded-sm border-l-4 border-red-500 bg-red-50"></span>
@@ -71,7 +76,7 @@
 
             <div>
                 <label class="flabel" for="doc_type">{{ $cimkek['doc_type'] }}</label>
-                <select id="doc_type" wire:model="mezok.doc_type" class="control {{ $keret('doc_type') }}">
+                <select id="doc_type" wire:model.blur="mezok.doc_type" class="control {{ $keret('doc_type') }}">
                     <option value="">— válassz —</option>
                     @foreach ($tipusok as $ertek => $cimke)
                         <option value="{{ $ertek }}">{{ $cimke }}</option>
@@ -84,7 +89,7 @@
                 @foreach (['supplier_name', 'supplier_tax_number', 'customer_name', 'customer_tax_number'] as $mezo)
                     <div>
                         <label class="flabel" for="{{ $mezo }}">{{ $cimkek[$mezo] }}</label>
-                        <input id="{{ $mezo }}" type="text" wire:model="mezok.{{ $mezo }}"
+                        <input id="{{ $mezo }}" type="text" wire:model.blur="mezok.{{ $mezo }}"
                                class="control {{ $keret($mezo) }}">
                         <x-mezo-jelzes :hiba="$validatorHibak[$mezo] ?? null" :mezo="$mezo"/>
                     </div>
@@ -93,7 +98,7 @@
 
             <div>
                 <label class="flabel" for="doc_number">{{ $cimkek['doc_number'] }}</label>
-                <input id="doc_number" type="text" wire:model="mezok.doc_number" class="control {{ $keret('doc_number') }}">
+                <input id="doc_number" type="text" wire:model.blur="mezok.doc_number" class="control {{ $keret('doc_number') }}">
                 <x-mezo-jelzes :hiba="$validatorHibak['doc_number'] ?? null" mezo="doc_number"/>
             </div>
 
@@ -101,7 +106,7 @@
                 @foreach (['issue_date', 'fulfillment_date', 'due_date'] as $mezo)
                     <div>
                         <label class="flabel" for="{{ $mezo }}">{{ $cimkek[$mezo] }}</label>
-                        <input id="{{ $mezo }}" type="date" wire:model="mezok.{{ $mezo }}"
+                        <input id="{{ $mezo }}" type="date" wire:model.blur="mezok.{{ $mezo }}"
                                class="control {{ $keret($mezo) }}">
                         <x-mezo-jelzes :hiba="$validatorHibak[$mezo] ?? null" :mezo="$mezo"/>
                     </div>
@@ -113,25 +118,28 @@
                     <div>
                         <label class="flabel" for="{{ $mezo }}">{{ $cimkek[$mezo] }}</label>
                         <input id="{{ $mezo }}" type="text" inputmode="decimal"
-                               wire:model="mezok.{{ $mezo }}" class="control text-right {{ $keret($mezo) }}">
+                               wire:model.blur="mezok.{{ $mezo }}" class="control text-right {{ $keret($mezo) }}">
                         <x-mezo-jelzes :hiba="$validatorHibak[$mezo] ?? null" :mezo="$mezo"/>
                     </div>
                 @endforeach
                 <div>
                     <label class="flabel" for="currency">{{ $cimkek['currency'] }}</label>
-                    <input id="currency" type="text" maxlength="3" wire:model="mezok.currency"
+                    <input id="currency" type="text" maxlength="3" wire:model.blur="mezok.currency"
                            class="control uppercase {{ $keret('currency') }}">
                     <x-mezo-jelzes :hiba="$validatorHibak['currency'] ?? null" mezo="currency"/>
                 </div>
             </div>
 
-            @if ($bontas !== [])
-                <div>
-                    <div class="flex items-baseline justify-between gap-3">
-                        <span class="flabel">{{ $cimkek['afa_bontas'] }}</span>
-                        <span class="text-xs text-slate-400">Tájékoztató — itt még nem szerkeszthető</span>
-                    </div>
+            {{-- Az ÁFA-bontás. Szerkeszthető, mert a sorok összege a legerősebb
+                 ellenőrzésünk — és amit az ember nem tud javítani, azzal a
+                 jelzés is csak bosszantás lenne. --}}
+            <div>
+                <div class="flex items-baseline justify-between gap-3">
+                    <span class="flabel">{{ $cimkek['afa_bontas'] }}</span>
+                    <span class="text-xs text-slate-400">A bruttó számolt érték</span>
+                </div>
 
+                @if ($bontas !== [])
                     <table class="mt-1 w-full text-sm tabular-nums">
                         <thead>
                             <tr class="text-xs uppercase tracking-wide text-slate-400">
@@ -140,30 +148,65 @@
                                 <th class="py-1 text-right font-medium">Nettó</th>
                                 <th class="py-1 text-right font-medium">ÁFA</th>
                                 <th class="py-1 text-right font-medium">Bruttó</th>
+                                <th class="w-8"><span class="sr-only">Törlés</span></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach ($bontas as $sor)
-                                <tr>
-                                    <td class="py-1.5">{{ $sor['kulcs'] }}%</td>
-                                    <td class="py-1.5 text-slate-500">
-                                        {{ \App\Enums\AfaKategoria::cimkeje($sor['kategoria']) }}
+                        <tbody>
+                            @foreach ($bontas as $i => $sor)
+                                <tr wire:key="bontas-{{ $i }}" class="align-top">
+                                    <td class="py-1 pr-1">
+                                        <input type="text" inputmode="decimal" aria-label="ÁFA-kulcs"
+                                               wire:model.blur="bontas.{{ $i }}.kulcs"
+                                               class="control px-2 py-1 text-right">
+                                        @error('bontas.'.$i.'.kulcs')<p class="fhiba">{{ $message }}</p>@enderror
                                     </td>
-                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['netto']) }}</td>
-                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['afa']) }}</td>
-                                    <td class="py-1.5 text-right">{{ \App\Support\Osszeg::formaz($sor['brutto']) }}</td>
+                                    <td class="py-1 pr-1">
+                                        <select aria-label="ÁFA-kategória" wire:model.blur="bontas.{{ $i }}.kategoria"
+                                                class="control px-2 py-1">
+                                            <option value="">—</option>
+                                            @foreach ($kategoriak as $ertek => $cimke)
+                                                <option value="{{ $ertek }}">{{ $cimke }}</option>
+                                            @endforeach
+                                        </select>
+                                    </td>
+                                    <td class="py-1 pr-1">
+                                        <input type="text" inputmode="decimal" aria-label="Adóalap"
+                                               wire:model.blur="bontas.{{ $i }}.netto"
+                                               class="control px-2 py-1 text-right">
+                                        @error('bontas.'.$i.'.netto')<p class="fhiba">{{ $message }}</p>@enderror
+                                    </td>
+                                    <td class="py-1 pr-1">
+                                        <input type="text" inputmode="decimal" aria-label="ÁFA összege"
+                                               wire:model.blur="bontas.{{ $i }}.afa"
+                                               class="control px-2 py-1 text-right">
+                                        @error('bontas.'.$i.'.afa')<p class="fhiba">{{ $message }}</p>@enderror
+                                    </td>
+                                    <td class="py-2 text-right text-slate-500">
+                                        {{ \App\Support\Osszeg::formaz(\App\Support\AfaBontas::brutto($sor['netto'] ?? null, $sor['afa'] ?? null)) }}
+                                    </td>
+                                    <td class="py-2 pl-1 text-right">
+                                        <button type="button" wire:click="sorTorol({{ $i }})"
+                                                class="btn btn-ghost btn-sm px-1.5 text-slate-400 hover:text-red-700"
+                                                aria-label="Sor törlése">&times;</button>
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
+                @endif
 
-                    <x-mezo-jelzes :hiba="$validatorHibak['afa_bontas'] ?? null" mezo="afa_bontas"/>
-                </div>
-            @endif
+                <x-mezo-jelzes :hiba="$validatorHibak['afa_bontas'] ?? null" mezo="afa_bontas"/>
+
+                @if (count($bontas) < $maxSor)
+                    <button type="button" wire:click="sorHozzaad" class="btn btn-ghost btn-sm mt-1 px-0 text-blue-700">
+                        + Sor hozzáadása
+                    </button>
+                @endif
+            </div>
 
             <div>
                 <label class="flabel" for="payment_method">{{ $cimkek['payment_method'] }}</label>
-                <input id="payment_method" type="text" wire:model="mezok.payment_method"
+                <input id="payment_method" type="text" wire:model.blur="mezok.payment_method"
                        class="control {{ $keret('payment_method') }}">
             </div>
 

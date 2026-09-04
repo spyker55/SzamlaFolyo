@@ -35,7 +35,24 @@ prompt- vagy modellcsere javított-e a pontosságon.
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
 (adószám ellenőrző számjegye, `nettó + ÁFA = bruttó`, dátumsorrend,
-pénznemkód), és ezek **csak lefelé húzhatnak**: `Konfidencia::osszevon()`.
+pénznemkód, és az ÁFA-bontás soronkénti meg összegzett ellenőrzése), és ezek
+**csak lefelé húzhatnak**: `Konfidencia::osszevon()`.
+
+**A jelzés a képernyőn lévő értékre vonatkozik.** Az ellenőrző képernyő minden
+körben újrafuttatja a validátorokat a *jelenlegi* űrlapállapoton
+(`Ellenorzes::render()`), nem a kiolvasáskor tárolt verdiktet mutatja. Enélkül a
+javított mező pirosan maradna, a frissen elrontott meg tisztán. A tárolt gépi
+verdikt ettől érintetlen marad a `document_extractions` sorban — az az
+audit-nyom, abból derül ki utólag, mit hibázott a modell.
+
+**Az ÁFA-bontás szerkeszthető és exportálható.** A sorok összege a legerősebb
+jelünk: ez fogja meg azt a hibát, amikor a modell egy tételsor összegét írja be
+végösszegnek. Ezért az ember javíthatja is (`Ellenorzes::parseoltBontas()`), és a
+javított bontás eljut az exportba: a táblázatos formátumok kulcsonkénti
+oszlopokat kapnak (27/18/5/0/egyéb — `AfaBontas::vodrok()`), a JSON pedig a
+teljes beágyazott listát, kategóriakóddal együtt. **A 0%-os soron talált ÁFA az
+„egyéb" vödörbe kerül** — nullától nem keletkezik adó, és pénzt csendben elnyelni
+nem szabad.
 
 **Az e-mailes beérkeztetés hitelesítetlen írási út.** Ezért három szabály nem
 opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
@@ -49,6 +66,7 @@ feldolgozás idempotens (`message_id` cégenként egyedi).
 | `app/Support/` | Tiszta függvények: magyar összegformátum, adószám ellenőrző számjegy, dátumértelmezés, bérlő |
 | `app/Services/Extraction/` | Prompt (verziózva), séma, OpenRouter-hívás, validátorok, konfidencia, sorkezelő |
 | `app/Services/Export/` | Oszlopdefiníciók egy helyen + xlsx/csv/json író |
+| `app/Support/AfaBontas.php` | Az ÁFA-bontás számtana: kulcsértelmezés, származtatott bruttó, kulcsonkénti összegzés |
 | `app/Services/Ingest/` | Címzett-token feloldás és IMAP-olvasó |
 | `app/Services/Billing/` | Keretszámolás és Stripe |
 | `app/Livewire/` | A nyolc képernyő |

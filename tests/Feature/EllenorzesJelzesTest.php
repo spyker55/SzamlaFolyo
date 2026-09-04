@@ -45,21 +45,31 @@ final class EllenorzesJelzesTest extends TestCase
     /**
      * A bukott ellenőrzés önmagában pirosít.
      *
-     * Eddig ez a modell magabiztosságán keresztül jutott a képernyőre (a
-     * validátor 0,3-ra húzta le a pontszámot), vagyis a megbízható jel a
-     * megbízhatatlanon keresztül érkezett. Itt a magabiztosság szándékosan
-     * magas, mégis pirosnak kell lennie.
+     * Két dolgot állít egyszerre. Egy: a determinisztikus jel nem a modell
+     * magabiztosságán keresztül érkezik (korábban a 0,3-as plafonon át jutott a
+     * képernyőre, vagyis a megbízható jel a megbízhatatlanon át) — itt a
+     * magabiztosság szándékosan 1,0, mégis pirosnak kell lennie. Kettő: a jelzés
+     * a **képernyőn lévő** értékre vonatkozik, nem a tárolt gépi verdiktre — a
+     * fixtúra adószámának valóban rossz az ellenőrző számjegye, és ezt a
+     * `render()`-ben újrafutó validátor állapítja meg, nem az adatbázis.
      */
     public function test_a_bukott_ellenorzes_akkor_is_pirosit_ha_a_modell_magabiztos(): void
     {
-        $dokumentum = $this->dokumentum(
-            combined: ['supplier_tax_number' => 1.0],
-            validators: ['supplier_tax_number' => 'Az adószám ellenőrző számjegye nem stimmel.'],
-        );
+        $dokumentum = $this->dokumentum(combined: ['supplier_tax_number' => 1.0]);
 
         $komponens = Livewire::test(Ellenorzes::class, ['dokumentum' => $dokumentum]);
 
         $this->assertSame('gyanus', $komponens->instance()->sav('supplier_tax_number'));
+    }
+
+    /** És ha az ember jó adószámra javítja, a piros elmúlik. */
+    public function test_a_javitas_utan_elmulik_a_piros(): void
+    {
+        $komponens = Livewire::test(Ellenorzes::class, ['dokumentum' => $this->dokumentum()]);
+
+        $komponens->set('mezok.supplier_tax_number', '11111111-2-42');
+
+        $this->assertSame('nincs_adat', $komponens->instance()->sav('supplier_tax_number'));
     }
 
     /**
@@ -102,11 +112,8 @@ final class EllenorzesJelzesTest extends TestCase
             ->assertDontSee('bg-emerald-600');
     }
 
-    /**
-     * @param  array<string, float>  $combined
-     * @param  array<string, string>  $validators
-     */
-    private function dokumentum(array $combined = [], array $validators = []): Document
+    /** @param  array<string, float>  $combined */
+    private function dokumentum(array $combined = []): Document
     {
         $dokumentum = Document::factory()->ellenorzesreVar()->create([
             'company_id' => $this->ceg->id,
@@ -120,7 +127,10 @@ final class EllenorzesJelzesTest extends TestCase
             'document_id' => $dokumentum->id,
             'model' => 'teszt/modell',
             'prompt_version' => 'teszt',
-            'confidence' => ['model' => [], 'validators' => $validators, 'combined' => $combined],
+            // A tárolt `validators` a gépi verdikt, és marad is audit-nyomnak —
+            // a képernyő viszont már nem ebből színez, hanem a jelenlegi
+            // értékekből. Ezért itt szándékosan üres.
+            'confidence' => ['model' => [], 'validators' => [], 'combined' => $combined],
         ]);
         $kiolvasas->company_id = $this->ceg->id;
         $kiolvasas->save();
