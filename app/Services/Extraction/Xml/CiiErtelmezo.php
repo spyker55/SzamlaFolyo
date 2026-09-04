@@ -65,6 +65,8 @@ final class CiiErtelmezo extends Ertelmezo
         return $mezok + [
             'afa_bontas' => $bontas,
             'tobb_irat_gyanu' => false,
+            // A strukturált adat nem átírás kérdése: nincs mit félreolvasni.
+            'nehezen_olvashato' => false,
             'confidence' => $this->konfidencia($mezok, $bontas !== []),
         ];
     }

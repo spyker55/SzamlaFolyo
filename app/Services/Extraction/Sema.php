@@ -153,6 +153,10 @@ final class Sema
                     'type' => 'boolean',
                     'description' => 'Igaz, ha a fájlban több különálló bizonylat van.',
                 ],
+                'nehezen_olvashato' => [
+                    'type' => 'boolean',
+                    'description' => 'Igaz, ha a bizonylat lényegi része kézzel írott, elmosódott, ferdén szkennelt vagy levágott — vagyis ha az átírás bizonytalan.',
+                ],
                 'confidence' => [
                     'type' => 'object',
                     'additionalProperties' => false,
@@ -165,7 +169,10 @@ final class Sema
                     'properties' => self::konfidenciaMezok(),
                 ],
             ],
-            'required' => ['tobb_irat_gyanu', 'confidence'],
+            // Kötelező mind a kettő: a hallgatás itt nem lehet válasz. „Nehezen
+            // olvasható-e ez a papír" sokkal könnyebb kérdés, mint „tévedtem-e",
+            // és a modellek éppen ezért tudják megbízhatóbban megválaszolni.
+            'required' => ['tobb_irat_gyanu', 'nehezen_olvashato', 'confidence'],
         ];
     }
 
@@ -194,7 +201,7 @@ final class Sema
      * helyükre kerülnek. Amit nem értünk, azt nem írjuk be — a null itt
      * mindig biztonságosabb, mint a találgatás.
      *
-     * @return array{mezok: array<string, mixed>, bontas: array<int, array<string, mixed>>|null, tobb_irat_gyanu: bool, konfidencia: array<string, float>}
+     * @return array{mezok: array<string, mixed>, bontas: array<int, array<string, mixed>>|null, tobb_irat_gyanu: bool, nehezen_olvashato: bool, konfidencia: array<string, float>}
      */
     public static function tisztit(array $nyers): array
     {
@@ -234,6 +241,7 @@ final class Sema
             'mezok' => $mezok,
             'bontas' => self::tisztitBontas($nyers['afa_bontas'] ?? null),
             'tobb_irat_gyanu' => (bool) ($nyers['tobb_irat_gyanu'] ?? false),
+            'nehezen_olvashato' => (bool) ($nyers['nehezen_olvashato'] ?? false),
             'konfidencia' => $konfidencia,
         ];
     }

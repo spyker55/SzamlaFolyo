@@ -149,6 +149,7 @@ final class Kiolvaso
             // szerkeszti. A gépi érték a kiolvasás sorában marad, érintetlenül.
             $dokumentum->forceFill($mezok + [
                 'tobb_irat_gyanu' => $tiszta['tobb_irat_gyanu'],
+                'nehezen_olvashato' => $tiszta['nehezen_olvashato'],
                 'status' => DokumentumAllapot::EllenorzesreVar->value,
                 'claimed_at' => null,
                 'error' => null,

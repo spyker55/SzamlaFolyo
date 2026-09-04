@@ -54,6 +54,16 @@ teljes beágyazott listát, kategóriakóddal együtt. **A 0%-os soron talált �
 „egyéb" vödörbe kerül** — nullától nem keletkezik adó, és pénzt csendben elnyelni
 nem szabad.
 
+**A kézzel írott bizonylat külön eset.** Egy valódi számlán a modell helyesen
+olvasta ki mindkét adószámot, a számlaszámot, mind a három dátumot és az
+összegeket — a szállító nevét viszont **kitalálta**, és a beírt név semmiben nem
+hasonlított a papíron állóra. A számtan hibátlan maradt (nulla ÁFA-nál nincs mit
+elrontani), mindkét adószám átment az ellenőrző számjegyen, a névre pedig nincs
+és nem is lehet determinisztikus ellenőrzésünk. Ezért kér a séma egy
+`nehezen_olvashato` zászlót: nem a hibát találja meg, hanem kimondja, hogy ezen
+az iraton semmiért nem tudunk jótállni. „Kézzel írott-e ez a papír" ellenőrizhető
+tény — szemben a magabiztossággal, ami háromszor is használhatatlan volt.
+
 **Az e-mailes beérkeztetés hitelesítetlen írási út.** Ezért három szabály nem
 opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
 e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a

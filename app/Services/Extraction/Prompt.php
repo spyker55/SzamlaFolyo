@@ -22,7 +22,15 @@ final class Prompt
     // v5: a magabiztossági objektum mezői fel vannak sorolva. Szabad kulcsúként
     // mind a három Gemini modell üresen hagyta — a Claude viszont kitöltötte —,
     // így minden mező a 0,5-ös alapértelmezésre esett.
-    public const VERZIO = 'v5-2026-09-04';
+    // v6: `nehezen_olvashato` zászló, és a névre külön tiltás. Egy kézzel írott
+    // számlán a modell mindkét adószámot, a számlaszámot, mind a három dátumot
+    // és az összegeket helyesen olvasta ki, a szállító nevét viszont
+    // **kitalálta** — a „Süli János" semmiben nem hasonlított a papíron álló
+    // névre. A számtan hibátlan maradt (nulla ÁFA), tehát egyetlen validátorunk
+    // sem tudott fogást találni rajta. A „legyen őszinte a magabiztosságoddal"
+    // kérés harmadszorra sem működött; „kézzel írott-e ez a papír" viszont
+    // ellenőrizhető tény, nem önértékelés.
+    public const VERZIO = 'v6-2026-09-04';
 
     public static function rendszer(?string $cegNev = null, ?string $cegAdoszam = null): string
     {
@@ -42,6 +50,11 @@ final class Prompt
         A legfontosabb szabály: **amit nem látsz a bizonylaton, azt hagyd ki.** Egy kitalált
         érték sokkal többe kerül, mint egy üres mező, mert az üres mezőt az ember kitölti,
         a hihetőnek látszó rossz értéket viszont jóváhagyja.
+
+        Ez a **nevekre** különösen áll. Ha egy nevet nem tudsz betűről betűre kiolvasni,
+        hagyd ki a mezőt — soha ne írj be helyette egy hihető magyar nevet. Egy hiányzó
+        név feltűnik az embernek; egy kitalált név nem, mert éppen úgy néz ki, mint egy
+        valódi. Ugyanez áll a részben olvasható névre: a fele név is jobb a kitaláltnál.
 
         # A bizonylat típusa (doc_type)
 
@@ -121,6 +134,12 @@ final class Prompt
         Legyen **őszinte**: rossz minőségű szkennél, kézírásnál, elmosódott vagy levágott
         résznél adj alacsony értéket. A túl magabiztos válasz a legdrágább hiba, mert az
         ember átugorja az ellenőrzést.
+
+        A `nehezen_olvashato` mezőt állítsd igazra, ha a bizonylat lényegi része **kézzel
+        írott**, elmosódott, ferdén szkennelt vagy levágott. Ez nem a magabiztosságodról
+        szól, hanem a papírról: azt kérdezzük, hogy ezen az iraton az átírás önmagában
+        bizonytalan-e. Ilyenkor is olvasd ki, amit tudsz — a zászló csak annyit jelent,
+        hogy az embernek mindent át kell néznie.
 
         Ha a fájlban **több különálló bizonylat** van, állítsd a `tobb_irat_gyanu` mezőt
         igazra, és az első bizonylat adatait add vissza.

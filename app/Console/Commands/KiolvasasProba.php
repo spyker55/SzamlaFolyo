@@ -234,6 +234,12 @@ final class KiolvasasProba extends Command
 
         $this->bontas($dokumentum, $konfidencia['afa_bontas'] ?? null);
 
+        if ($dokumentum->nehezen_olvashato) {
+            $this->line('');
+            $this->line('  <fg=yellow>! A modell szerint a bizonylat kézzel írott vagy nehezen olvasható.</>');
+            $this->line('  <fg=yellow>  Ilyenkor minden mezőt össze kell vetni a papírral — a neveket különösen.</>');
+        }
+
         if ($dokumentum->tobb_irat_gyanu) {
             $this->line('');
             $this->line('  <fg=yellow>! A modell szerint több bizonylat van ebben a fájlban.</>');

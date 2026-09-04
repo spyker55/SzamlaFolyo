@@ -12,6 +12,21 @@
         <a href="{{ route('beerkezo') }}" wire:navigate class="btn btn-ghost btn-sm">Vissza a Beérkezőbe</a>
     </div>
 
+    {{-- A bizonylat egészére szóló figyelmeztetés. Nem egy mezőt jelöl meg,
+         mert nem tudjuk, melyik a rossz — azt mondja ki, hogy itt egyikért sem
+         tudunk jótállni. Egy kézzel írott számlán a modell mindent helyesen
+         olvasott ki, egyetlen nevet kivéve, amit kitalált; a számtan hibátlan
+         maradt, tehát egyik ellenőrzésünk sem talált fogást rajta. --}}
+    @if ($dokumentum->nehezen_olvashato)
+        <div class="alert alert-figyelem mb-4">
+            <strong>Kézzel írott vagy nehezen olvasható bizonylat.</strong>
+            Az ilyen iraton a gépi kiolvasás megbízhatatlan, és a hibája nem hagy nyomot,
+            amit ellenőrizni tudnánk — <strong>minden mezőt vess össze a papírral</strong>,
+            a jelöletlen mezőket is. Különösen a neveket: azok az egyetlen adatok,
+            amikhez semmilyen ellenőrzésünk nincs.
+        </div>
+    @endif
+
     @if ($dokumentum->tobb_irat_gyanu)
         <div class="alert alert-figyelem mb-4">
             Úgy tűnik, ebben a fájlban <strong>több különálló bizonylat</strong> van. Az alábbi adatok
