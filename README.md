@@ -299,15 +299,26 @@ alapja, mert a kimenet a költséget és a mezőnkénti magabiztosságot is kií
 <php> artisan kiolvasas:proba ~/szamla.pdf --modell="anthropic/claude-sonnet-5"
 ```
 
-Az alapértelmezett modell a **`google/gemini-3.1-flash-lite`**. Két valódi
-magyar számlán mérve ugyanazokat a mezőket adta, mint a Claude Sonnet 5 — az
-egyetlen eltérésnél (a vevő nevének ékezete) éppen az olcsóbb írta helyesen —,
-miközben 15× olcsóbb és 2,5× gyorsabb volt.
+Az alapértelmezett modell a **`google/gemini-3.8-flash`**.
 
-Amit a mérésből érdemes megjegyezni: **a modell önbevallott magabiztossága
-egyik modellnél sem találta el a valódi hibát.** A Flash Lite 0,5-öt adott egy
-jól kiolvasott mezőre, a Sonnet pedig 0,95-öt az egyetlen tévedésére. A
-megbízható jel a validátoroké — ezért húzhat az összevonás csak lefelé.
+Gépi nyomtatású számlákon a nála négyszer olcsóbb Flash Lite is ugyanazt adta,
+mint a Claude Sonnet 5 — **kézzel írott** bizonylaton viszont megbukott:
+háromszor kiolvasva három különböző, kitalált szállítónevet adott („Süli
+János", „Sién János", végül „Süni Fúró" — ez utóbbit láthatóan a tételsor
+szövegéből, a *Betonfuratok készítése*-ből gyúrta). A Pro drágább és ötször
+lassabb a Sonnetnél, ezért a köztes fok az alapértelmezés.
+
+Amit a mérésekből érdemes megjegyezni: **a modell önbevallott magabiztossága
+egyszer sem találta el a valódi hibát.** A Flash Lite 0,5-öt adott egy jól
+kiolvasott mezőre, a Sonnet 0,95-öt az egyetlen tévedésére, a kézzel írott
+számlán pedig **1,00-t a kitalált névre**. A megbízható jel a validátoroké —
+ezért húzhat az összevonás csak lefelé.
+
+Ugyanezen az iraton derült ki az is, hogy a `nehezen_olvashato` zászlót a modell
+**nem** állította be, miközben a bizonylat tetőtől talpig kézírás. A
+`tobb_irat_gyanu`-t viszont helyesen jelezte. A különbség tanulságos: az utóbbi
+tiszta megszámlálás, az előbbiben ott van, hogy „neked mennyire ment" — és
+amint a kérdés a modell saját teljesítményéről szól, a válasz használhatatlan.
 
 A `--modell` futásidőben ír felül, nem környezeti változóval: élesben a
 konfiguráció gyorsítótárazva van (`config:cache`), ott az `OPENROUTER_MODEL=…`
