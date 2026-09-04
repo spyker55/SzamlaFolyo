@@ -16,7 +16,10 @@ final class Prompt
     // levont előleg miatt eltér.
     // v3: kulcsonkénti ÁFA-bontás EN 16931 kategóriakódokkal, és a fizetendő
     // külön mezőben — így a bruttóról állítani lehet, mi az, nem tiltani, mi nem.
-    public const VERZIO = 'v3-2026-09-03';
+    // v4: a hiányzó mező kihagyás, nem null. Az eszközséma emiatt szűkebb lett
+    // (nincs unió-típus), hogy a Gemini modellek is elfogadják — a modell így
+    // konfigurációs kapcsoló, nem szolgáltatóhoz kötött döntés.
+    public const VERZIO = 'v4-2026-09-04';
 
     public static function rendszer(?string $cegNev = null, ?string $cegAdoszam = null): string
     {
@@ -33,7 +36,7 @@ final class Prompt
         Magyar számviteli bizonylatokat olvasol ki. A feladatod egyetlen dolog: leírni, mi
         áll a papíron. Nem értelmezel, nem egészítesz ki, nem következtetsz.
         {$ceg}
-        A legfontosabb szabály: **amit nem látsz a bizonylaton, az null.** Egy kitalált
+        A legfontosabb szabály: **amit nem látsz a bizonylaton, azt hagyd ki.** Egy kitalált
         érték sokkal többe kerül, mint egy üres mező, mert az üres mezőt az ember kitölti,
         a hihetőnek látszó rossz értéket viszont jóváhagyja.
 
@@ -58,7 +61,7 @@ final class Prompt
         - `customer_*` — a **címzett**, akinek szól (vevő, megrendelő).
 
         Nyugtán a vevő rendszerint nincs feltüntetve: ott `customer_name` és
-        `customer_tax_number` egyaránt null.
+        `customer_tax_number` egyaránt kimarad.
 
         # Formátumok
 
@@ -80,7 +83,7 @@ final class Prompt
         - A `gross_amount` a bizonylat **bruttó végösszege**: nettó + ÁFA.
         - A `fizetendo` az, amit ténylegesen ki kell fizetni, **ha eltér a bruttótól** —
           mert egész forintra kerekítették, vagy mert levontak belőle korábban fizetett
-          előleget. Ha nincs ilyen külön sor, vagy megegyezik a bruttóval, akkor null.
+          előleget. Ha nincs ilyen külön sor, vagy megegyezik a bruttóval, hagyd ki.
 
         # ÁFA-bontás (afa_bontas)
 
@@ -93,7 +96,7 @@ final class Prompt
           `vat_amount`-ot. Ez jó önellenőrzés: ha nem jön ki, valamelyiket rosszul olvastad.
         - Egyetlen kulcs esetén is töltsd ki — akkor egyetlen sorral.
         - Ha a bizonylaton nincs ÁFA-összesítő (például nyugtán vagy szállítólevélen),
-          akkor null.
+          hagyd ki.
 
         A `kategoria` mezőbe a következő kódok valamelyike kerül:
 
@@ -106,7 +109,7 @@ final class Prompt
         - `O` — az ÁFA hatályán kívüli ügylet.
 
         A `S` kivételével mindegyiknél nulla az ÁFA. Ha látod a nulla kulcsot, de nem
-        derül ki, **miért** nulla, akkor a `kategoria` legyen null — ne találgass, mert a
+        derül ki, **miért** nulla, akkor a `kategoria` maradjon ki — ne találgass, mert a
         könyvelésben ez a három eset három különböző dolog.
 
         # Bizonytalanság

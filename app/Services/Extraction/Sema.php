@@ -72,15 +72,30 @@ final class Sema
         'afa_bontas' => 'ÁFA-bontás',
     ];
 
+    /**
+     * A modellnek adott JSON Schema.
+     *
+     * Szándékosan **szűk** szabványos séma: minden mező egyetlen típusú, és az
+     * opcionalitást az fejezi ki, hogy nincs a `required` listán — nem pedig
+     * `['string','null']` alakú unió-típus. Ennek szolgáltatói oka van: a
+     * Gemini függvényhívása nem támogatja az unió-típusokat, és a null-t
+     * tartalmazó enumot sem, tehát az a séma nála elutasított kérés lenne.
+     *
+     * Így a modell szabadon cserélhető konfigurációból, és ez a séma a
+     * Claude-nak is helyes — csak kevesebbet enged meg.
+     *
+     * A hiányzó mező nem gond: a `tisztit()` minden mezőt `?? null`-lal olvas,
+     * tehát akár kihagyja a modell, akár nullt küld, ugyanoda jutunk.
+     */
     public static function toolSema(): array
     {
         $szoveg = static fn (string $leiras): array => [
-            'type' => ['string', 'null'],
+            'type' => 'string',
             'description' => $leiras,
         ];
 
         $szam = static fn (string $leiras): array => [
-            'type' => ['number', 'null'],
+            'type' => 'number',
             'description' => $leiras,
         ];
 
@@ -89,8 +104,8 @@ final class Sema
             'additionalProperties' => false,
             'properties' => [
                 'doc_type' => [
-                    'type' => ['string', 'null'],
-                    'enum' => array_merge(array_column(DokumentumTipus::cases(), 'value'), [null]),
+                    'type' => 'string',
+                    'enum' => array_column(DokumentumTipus::cases(), 'value'),
                     'description' => 'A bizonylat típusa a megadott listából.',
                 ],
                 'supplier_name' => $szoveg('A kiállító (eladó, szolgáltató) neve, ahogy a bizonylaton szerepel.'),
@@ -103,33 +118,35 @@ final class Sema
                 'due_date' => $szoveg('A fizetési határidő, ÉÉÉÉ-HH-NN alakban.'),
                 'payment_method' => $szoveg('Fizetési mód, ahogy a bizonylaton áll (átutalás, készpénz, bankkártya).'),
                 'currency' => [
-                    'type' => ['string', 'null'],
+                    'type' => 'string',
                     'description' => 'Három betűs ISO pénznemkód. A „Ft" HUF.',
                 ],
                 'net_amount' => $szam('Nettó végösszeg tizedesponttal, csoportosítás nélkül.'),
                 'vat_amount' => $szam('ÁFA végösszeg. Fordított adózásnál 0.'),
                 'gross_amount' => $szam('Bruttó végösszeg: nettó + ÁFA.'),
-                'fizetendo' => $szam('A ténylegesen fizetendő összeg, ha eltér a bruttótól (kerekítés vagy levont előleg miatt). Ha nem tér el, null.'),
+                'fizetendo' => $szam('A ténylegesen fizetendő összeg, ha eltér a bruttótól (kerekítés vagy levont előleg miatt). Ha nem tér el, hagyd ki.'),
                 'afa_bontas' => [
-                    'type' => ['array', 'null'],
+                    'type' => 'array',
                     'description' => 'ÁFA-kulcsonként egy sor, a tételsorokat kulcsonként összevonva. Soha nem tételsoronként egy sor.',
                     'items' => [
                         'type' => 'object',
                         'additionalProperties' => false,
                         'properties' => [
                             'kulcs' => [
-                                'type' => ['number', 'null'],
+                                'type' => 'number',
                                 'description' => 'Az ÁFA-kulcs százalékban: 27, 18, 5 vagy 0.',
                             ],
                             'kategoria' => [
-                                'type' => ['string', 'null'],
-                                'enum' => array_merge(array_column(AfaKategoria::cases(), 'value'), [null]),
-                                'description' => 'Az ÁFA-kategória kódja a megadott listából.',
+                                'type' => 'string',
+                                'enum' => array_column(AfaKategoria::cases(), 'value'),
+                                'description' => 'Az ÁFA-kategória kódja a megadott listából. Ha nem derül ki, hagyd ki.',
                             ],
                             'netto' => $szam('Az ehhez a kulcshoz tartozó adóalap (nettó) összesen.'),
                             'afa' => $szam('Az ehhez a kulcshoz tartozó ÁFA összesen.'),
                         ],
-                        'required' => ['kulcs', 'kategoria', 'netto', 'afa'],
+                        // Ugyanaz a két mező, amit a `tisztitBontas()` is megkövetel:
+                        // kulcs és adóalap nélkül a sor semmire nem használható.
+                        'required' => ['kulcs', 'netto'],
                     ],
                 ],
                 'tobb_irat_gyanu' => [
