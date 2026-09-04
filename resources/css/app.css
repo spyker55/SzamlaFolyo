@@ -75,6 +75,14 @@
     background-color: var(--color-vaszon);
     color: var(--color-slate-800);
   }
+
+  /*
+    Amíg az Alpine el nem indul, az `x-show`-val rejtett elem még nyitva
+    volna: a cégváltó menüje egy pillanatra kivillanna minden oldalbetöltéskor.
+  */
+  [x-cloak] {
+    display: none !important;
+  }
 }
 
 @layer components {

@@ -181,19 +181,46 @@ szándékosan maradt: a jelentésük „semleges" és „kiemelt", nem az, hogy 
 A konfidencia három színe (`biztos`, `bizonytalan`, `gyanus`) **nem** követi ezt
 a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
+### Több cég egy fiókban
+
+A könyvelőiroda alapesete: ügyfelenként egy cég, saját beküldési címmel, saját
+kerettel, saját előfizetéssel. A fejléc cégváltójából lehet köztük váltani, és
+onnan nyílik az új cég is.
+
+**A választás a munkamenetben él, de a munkamenet nem hitelesítés.** Az ott álló
+azonosítót minden olvasásnál a tagsághoz mérjük (`App\Support\CegValasztas`);
+egy odaírt idegen azonosító nem cégváltás, hanem semmi. A cégváltó különben pont
+azt a falat bontaná le, amit a `BerloElkulonitesTest` őriz.
+
+**A feloldás a `User::ceg()`-ben van, és ez nem esetleges.** A route model
+binding (`BelongsToCompany::resolveRouteBinding`) a bérlő-middleware **előtt**
+fut, és ugyanezt a metódust kérdezi. Ha a kettő nem ugyanazt a céget adná, a
+felület a második cég listáját mutatná, a megnyitott bizonylatot viszont az
+elsőben keresné. Erre van teszt, és le is ellenőriztük, hogy elbukik nélküle:
+`CegValtasTest::test_a_valtas_utan_a_masik_ceg_irata_nem_nyithato`.
+
+**A váltás teljes újratöltés**, nem Livewire-akció. Cégváltáskor a képernyőn lévő
+minden komponens állapota — szűrők, kijelölések, félig kitöltött ellenőrzés — az
+előző cég adataira vonatkozik; egy részleges frissítés ezek egy részét meghagyná,
+és két cég adatait tenné egy képernyőre. A cél mindig a Beérkező, sosem az előző
+oldal: az lehetett egy bizonylat, ami a másik cégben nem létezik.
+
+**A próbaidő a felhasználóé, nem a cégé.** Ez a váltóval együtt vált fontossá:
+minden új cég egyébként saját 14 napos, 50 dokumentumos próbát kapna
+(`Company::booted()`), a fejlécből pedig bárki nyithat újat — aki kéthetente nyit
+egy céget, örökké ingyen dolgozna. Az első cég kapja a próbát, a további cégek
+`trial_ends_at = null`-lal jönnek létre, és rögtön csomagot kérnek. A
+létrehozó képernyő ezt előre ki is írja, nem az első feltöltésnél derül ki.
+
 ## Hátralék
 
-**Cégváltó a felületen.** A `company_user` tábla szerepekkel támogatja, hogy egy
-felhasználó több céghez tartozzon, és van `CegLetrehozas` képernyő is — de a
-fejlécben nincs váltó, tehát a többcéges működés fele kész. Ez a könyvelőiroda
-alapesete: ügyfelenként egy cég, saját beérkező címmel, saját kerettel.
-
-**Az „idegen bizonylat" ellenőrzés**, amíg a fenti nincs meg. Ha a vevő adószáma
+**Az „idegen bizonylat" ellenőrzés.** A cégváltó megléte feloldotta: ha a vevő adószáma
 ki van töltve és sem a vevő, sem a szállító nem a kiválasztott cég, akkor az
 irat nem oda tartozik: rossz fájl, a szállító saját példánya, vagy másnak szóló
 számla. Ez a legsúlyosabb felismerhető hiba — nem egy mező téved, hanem az egész
 bizonylat —, de csak akkor van értelme, ha a bizonylat *tényleg* a kiválasztott
-céghez tartozna. Cégváltó nélkül ez nem igaz, ezért vár.
+céghez tartozna. Egyetlen cégbe zsúfolt ügyfelek mellett ez nem volt igaz, most
+már az: ügyfelenként külön cég, külön adószámmal. Vissza lehet tenni.
 
 A megírt változat három csapdát kerül ki, érdemes megőrizni: a **kimenő** számlán
 mi vagyunk a szállító (mindkét oldalt nézni kell), a **nyugtán** nincs vevő
@@ -201,10 +228,11 @@ adószáma (csak kitöltött vevő-adószámra szabad szólni), és **hibás ell
 számjegyű** adószámra nem szabad következtetést építeni (kézírásnál a
 félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 
-**Amit a nyitólap ezért nem ígér.** A csomagok között ma **nincs cégszám-alapú
-különbség** — a `User::ceg()` az első céget adja vissza, váltó nélkül —, ezért az
-árlista felhasználószámot ígér (azt betartatjuk), céget nem. Amint a cégváltó
-megvan, a „hány céget kezelhetsz" sor is bekerülhet.
+**Amit a nyitólap ezért nem ígér.** A csomagok között továbbra sincs cégszám-alapú
+különbség, és a mai modellben nem is kell: **minden cég külön fizet**, tehát a
+cégek száma nem korlát, hanem szorzó. Ha valaha lesz irodai csomag (egy
+előfizetés, több cég), akkor kerül az árlistára a „hány céget kezelhetsz" sor —
+addig az árlista felhasználószámot ígér, azt pedig betartatjuk.
 
 ## Felépítés
 

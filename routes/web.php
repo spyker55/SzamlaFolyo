@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\CegValtasController;
 use App\Http\Controllers\DokumentumFajlController;
 use App\Http\Controllers\ExportLetoltesController;
 use App\Http\Controllers\KijelentkezesController;
@@ -42,8 +43,12 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/kijelentkezes', KijelentkezesController::class)->name('kijelentkezes');
 
-    // Cég nélkül csak ez az egy képernyő érhető el.
+    // Cég nélkül csak ez az egy képernyő érhető el; több cég esetén innen
+    // nyílik a következő is.
     Route::get('/ceg-letrehozas', CegLetrehozas::class)->name('ceg.letrehozas');
+
+    // A cégváltás nem igényel aktív bérlőt — épp azt állítja be.
+    Route::post('/ceg-valtas', CegValtasController::class)->name('ceg.valtas');
 
     Route::middleware('ceg')->group(function (): void {
         Route::get('/beerkezo', Beerkezo::class)->name('beerkezo');

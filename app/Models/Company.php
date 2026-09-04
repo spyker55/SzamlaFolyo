@@ -49,7 +49,15 @@ class Company extends Model
     {
         static::creating(function (self $ceg): void {
             $ceg->inbox_token ??= self::ujToken();
-            $ceg->trial_ends_at ??= now()->addDays((int) config('szamlafolyo.trial.days'));
+
+            // A próbaidő alapértelmezés, **de felülírható nullal**. Ezért nem
+            // `??=`: a `null` értelmes válasz — „ez a cég nem kap próbaidőt" —,
+            // és a `??=` épp azt nem tudná megkülönböztetni a „nem mondtam
+            // semmit" esettől. A `CegLetrehozas` erre épít: a próba a
+            // felhasználóé, nem a cégé.
+            if (! array_key_exists('trial_ends_at', $ceg->getAttributes())) {
+                $ceg->trial_ends_at = now()->addDays((int) config('szamlafolyo.trial.days'));
+            }
         });
     }
 
