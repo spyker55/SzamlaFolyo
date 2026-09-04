@@ -255,7 +255,7 @@ mezőkbe megy, a parancs pedig a **Kezelő → „Egyedi parancs"** mezőbe. Ne 
 |---|---|---|
 | Beérkeztetés e-mailből | `*/5 * * * *` | `<php> <projekt>/artisan email:beolvas` |
 | Kiolvasás, elakadt futások | `*/5 * * * *` | `<php> <projekt>/artisan dokumentum:feldolgoz --limit=5` |
-| Lejárt fájlok selejtezése | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
+| Selejtezés (fájlok és régi levelek) | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
 
 A parancsban **nincs `cd` és nincs `&&`**. Az `artisan` a saját helyéből (`__DIR__`)
 oldja fel az útvonalakat, ezért abszolút úttal hívva bármelyik munkakönyvtárból
@@ -337,6 +337,37 @@ feldolgozottakba is: `IMAP_FOLDER=Feldolgozott <php> <projekt>/artisan email:beo
 A besorolatlan levél a `Besorolatlan` mappába kerül (`IMAP_UNMATCHED_FOLDER`), és
 `warning` szinten a naplóba is bekerül a megvizsgált címekkel — a feldolgozottak
 közé keverve pont az veszne el, amit keresni kell.
+
+### Megőrzési idő
+
+Egyetlen postafiókba érkezik minden cég beküldése; a tokent a *címzés* hordozza,
+a szétosztás az alkalmazásban történik. Ebből következik, hogy a fiók magától
+nem ürül — és a benne álló levél a **melléklettel együtt** ugyanannak a
+számlának egy teljes másolata. Enélkül a takarítás nélkül két baj van: betelik a
+tárhely, és hazuggá válik a fájlok törlése is, hiszen a másolat túléli.
+
+Ezért a `fajl:selejtez` (napi egyszer) a fiókot is takarítja:
+
+| Mit | Alap | Beállítás |
+|---|---|---|
+| Eredeti fájlok export után | 0 nap, **legfeljebb 7** | Beállítások képernyő cégenként |
+| `Feldolgozott` mappa | 7 nap | `INBOX_KEEP_DAYS` |
+| `Besorolatlan` mappa | 14 nap | `INBOX_UNMATCHED_KEEP_DAYS` |
+
+Három szabály, amitől ez nem tud kárt okozni:
+
+- **A beérkező mappát soha nem takarítjuk.** Egy elgépelt
+  `IMAP_PROCESSED_FOLDER=INBOX` különben a még fel nem dolgozott leveleket
+  vinné el, némán. (`PostafiokOlvaso::takarithato()`, saját teszttel.)
+- **A `0` nap kikapcsolás**, mindkét mappára külön.
+- A feldolgozottakra a fájlok plafonja is vonatkozik (`Company::MEGORZES_MAX_NAP`,
+  7 nap): ott ugyanaz az irat fekszik, ami már bent van az alkalmazásban, tehát
+  nem élhet tovább nála. A `Besorolatlan` kap hosszabb türelmi időt, mert abból
+  **nem lett** irat — az az egyetlen példány, és emberi ránézést kér.
+
+A megőrzés az `InboundEmail` sorra (feladó, tárgy, `message_id`) nem vonatkozik:
+az néhány száz bájt, és ez az idempotencia alapja — nélküle ugyanaz a levél
+újrakézbesítve második tételt csinálna.
 
 ### Ellenőrzés telepítés után
 

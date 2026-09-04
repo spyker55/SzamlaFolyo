@@ -38,7 +38,7 @@ class Beallitasok extends Component
         $ceg = app(Berlo::class)->kotelezo();
         $this->cegNev = (string) $ceg->name;
         $this->cegAdoszam = (string) $ceg->tax_number;
-        $this->megorzesiNapok = (int) $ceg->file_retention_days;
+        $this->megorzesiNapok = $ceg->megorzesiNapok();
     }
 
     public function cegMentes(): void
@@ -48,7 +48,7 @@ class Beallitasok extends Component
         $adatok = $this->validate([
             'cegNev' => ['required', 'string', 'min:2', 'max:255'],
             'cegAdoszam' => ['nullable', 'string', 'max:30'],
-            'megorzesiNapok' => ['required', 'integer', 'min:0', 'max:365'],
+            'megorzesiNapok' => ['required', 'integer', 'min:0', 'max:'.Company::MEGORZES_MAX_NAP],
         ], attributes: [
             'cegNev' => 'cégnév',
             'cegAdoszam' => 'adószám',

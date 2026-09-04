@@ -117,7 +117,7 @@ final class ExportKeszito
      */
     private function eredetiketTorol(Company $ceg, Collection $dokumentumok): void
     {
-        if ($ceg->file_retention_days > 0) {
+        if ($ceg->megorzesiNapok() > 0) {
             return;   // a fajl:selejtez parancs viszi el, ha letelt az idő
         }
 

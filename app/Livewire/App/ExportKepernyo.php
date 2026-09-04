@@ -75,8 +75,8 @@ class ExportKepernyo extends Component
         session()->flash('siker', sprintf(
             '%d tétel exportálva. %s',
             $export->item_count,
-            $ceg->file_retention_days > 0
-                ? "Az eredeti fájlok {$ceg->file_retention_days} nap múlva törlődnek."
+            $ceg->megorzesiNapok() > 0
+                ? sprintf('Az eredeti fájlok %d nap múlva törlődnek.', $ceg->megorzesiNapok())
                 : 'Az eredeti fájlok törlődtek a szerverről.',
         ));
 

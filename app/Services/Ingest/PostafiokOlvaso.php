@@ -9,6 +9,7 @@ use App\Models\InboundEmail;
 use App\Services\Files\FajlHiba;
 use App\Services\Files\FajlTarolo;
 use App\Support\Berlo;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 use Webklex\PHPIMAP\Client;
 use Webklex\PHPIMAP\ClientManager;
@@ -330,6 +331,107 @@ final class PostafiokOlvaso
         }
 
         return $ki;
+    }
+
+    /**
+     * A megőrzési idejét letöltött levelek törlése a postafiókból.
+     *
+     * Enélkül a beérkeztetés egy örökké növő archívum: a feldolgozott levél a
+     * mellékletével együtt ott marad, betelik a tárhely, és — ami rosszabb —
+     * hazuggá válik a `fajl:selejtez`, mert az eredeti számla egy másolata a
+     * levélben túléli a fájl törlését.
+     *
+     * Naponta fut, nem minden beolvasásnál: a törlés dátum szerinti keresés,
+     * öt percenként fölösleges munka a szerveren.
+     *
+     * @return array<string, int> mappa => törölt levelek száma
+     */
+    public function takarit(): array
+    {
+        $beallitas = (array) config('inbox.imap');
+        $beerkezo = (string) $beallitas['folder'];
+
+        $feladatok = [
+            (string) $beallitas['processed_folder'] => min(
+                (int) $beallitas['keep_days'],
+                Company::MEGORZES_MAX_NAP,
+            ),
+            (string) $beallitas['unmatched_folder'] => (int) $beallitas['unmatched_keep_days'],
+        ];
+
+        $kliens = $this->kliens($beallitas);
+        $kliens->connect();
+
+        $ki = [];
+
+        foreach ($feladatok as $nev => $napok) {
+            if (! self::takarithato($nev, $beerkezo, $napok)) {
+                continue;
+            }
+
+            $ki[$nev] = $this->mappatTakarit($kliens, $nev, $napok);
+        }
+
+        $kliens->disconnect();
+
+        return $ki;
+    }
+
+    /**
+     * Takarítható-e ez a mappa.
+     *
+     * Két dolgot zár ki. A nulla vagy negatív nap a kikapcsolás: aki nem kér
+     * törlést, annál ne töröljünk. A beérkező mappát pedig **soha** —
+     * ott a még fel nem dolgozott levelek ülnek, és egy elgépelt beállítás
+     * (`IMAP_PROCESSED_FOLDER=INBOX`) különben pont azokat vinné el.
+     */
+    public static function takarithato(string $mappa, string $beerkezo, int $napok): bool
+    {
+        if (trim($mappa) === '' || $napok <= 0) {
+            return false;
+        }
+
+        return strcasecmp(trim($mappa), trim($beerkezo)) !== 0;
+    }
+
+    private function mappatTakarit(Client $kliens, string $nev, int $napok): int
+    {
+        $mappa = $kliens->getFolderByPath($nev, soft_fail: true);
+
+        if ($mappa === null) {
+            return 0;
+        }
+
+        // A `BEFORE` a szerver belső dátumára szűr, nem a levél `Date:`
+        // fejlécére — azt a feladó írja, tehát hazudhat is.
+        //
+        // A törzset szándékosan nem kérjük le: a mellékletet letölteni azért,
+        // hogy utána eldobjuk, percekig tartana egy teli mappán.
+        $levelek = $mappa->query()
+            ->whereBefore(CarbonImmutable::now()->subDays($napok))
+            ->setFetchBody(false)
+            ->get();
+
+        $darab = 0;
+
+        foreach ($levelek as $level) {
+            try {
+                $level->delete(expunge: false);
+                $darab++;
+            } catch (\Throwable $e) {
+                Log::warning('A levél nem törölhető', ['mappa' => $nev, 'uzenet' => $e->getMessage()]);
+            }
+        }
+
+        // Egyetlen expunge a végén: a `\Deleted` jelölés magában még nem
+        // szabadít fel helyet, levelenként kiadva viszont fölösleges kör. Az
+        // expunge a **kiválasztott** mappára hat, ezért mondjuk ki, melyikre.
+        if ($darab > 0) {
+            $kliens->openFolder($mappa->path);
+            $kliens->expunge();
+        }
+
+        return $darab;
     }
 
     private function mappaBiztositas(Client $kliens, string $nev): void

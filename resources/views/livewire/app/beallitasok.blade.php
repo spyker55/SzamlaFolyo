@@ -104,10 +104,13 @@
             </div>
             <div>
                 <label class="flabel" for="megorzesiNapok">Eredeti fájlok megőrzése export után (nap)</label>
-                <input id="megorzesiNapok" type="number" min="0" max="365" wire:model="megorzesiNapok" class="control w-32"
+                <input id="megorzesiNapok" type="number" min="0" max="{{ \App\Models\Company::MEGORZES_MAX_NAP }}"
+                       wire:model="megorzesiNapok" class="control w-32"
                        @disabled(! $sajatSzerep?->adminisztralhat())>
                 <p class="mt-1 text-xs text-slate-400">
                     0 = az exporttal egy időben törlődnek. A tárhely véges, ezért ez az alapérték.
+                    Legfeljebb {{ \App\Models\Company::MEGORZES_MAX_NAP }} nap: a kiolvasott adat az
+                    exportban van, az eredeti fájlt utána nincs miért őrizni.
                 </p>
                 @error('megorzesiNapok') <p class="fhiba">{{ $message }}</p> @enderror
             </div>

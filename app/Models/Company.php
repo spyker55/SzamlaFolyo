@@ -19,6 +19,20 @@ class Company extends Model
 
     protected $guarded = ['id'];
 
+    /**
+     * Meddig őrizhetők az eredeti bizonylatok az export után.
+     *
+     * A plafon szándékosan alacsony. Az eredeti fájl a kiolvasás után már nem
+     * kell semmihez — az adat az adatbázisban van, a könyvelő az exportot
+     * kapja —, viszont amíg ott van, addig egy idegen cég számláit tároljuk
+     * egy osztott tárhelyen. Ami nincs meg, azt nem is lehet kiszivárogtatni.
+     *
+     * Ugyanez a plafon vonatkozik a beérkeztető postafiókra is: a levélben
+     * ugyanannak a számlának a másolata ül, és hiába töröljük itt a fájlt, ha
+     * ott megmarad. Lásd `PostafiokOlvaso::takarit()`.
+     */
+    public const MEGORZES_MAX_NAP = 7;
+
     protected function casts(): array
     {
         return [
@@ -48,6 +62,18 @@ class Company extends Model
         } while (self::query()->where('inbox_token', $token)->exists());
 
         return $token;
+    }
+
+    /**
+     * A ténylegesen érvényes megőrzési idő.
+     *
+     * Nem a tárolt értéket adja vissza, hanem a plafonnal levágottat: a
+     * beállítás régebbi, magasabb értékkel is bekerülhetett az adatbázisba,
+     * és egy elfelejtett sor nem tarthat fájlokat a plafonon túl.
+     */
+    public function megorzesiNapok(): int
+    {
+        return max(0, min((int) $this->file_retention_days, self::MEGORZES_MAX_NAP));
     }
 
     public function users(): BelongsToMany
