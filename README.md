@@ -268,8 +268,18 @@ Két modell összemérése ugyanazon a bizonylaton — ez az árazási döntés
 alapja, mert a kimenet a költséget és a mezőnkénti magabiztosságot is kiírja:
 
 ```bash
-<php> artisan kiolvasas:proba ~/szamla.pdf --modell="anthropic/claude-haiku-4.5"
+<php> artisan kiolvasas:proba ~/szamla.pdf --modell="anthropic/claude-sonnet-5"
 ```
+
+Az alapértelmezett modell a **`google/gemini-3.1-flash-lite`**. Két valódi
+magyar számlán mérve ugyanazokat a mezőket adta, mint a Claude Sonnet 5 — az
+egyetlen eltérésnél (a vevő nevének ékezete) éppen az olcsóbb írta helyesen —,
+miközben 15× olcsóbb és 2,5× gyorsabb volt.
+
+Amit a mérésből érdemes megjegyezni: **a modell önbevallott magabiztossága
+egyik modellnél sem találta el a valódi hibát.** A Flash Lite 0,5-öt adott egy
+jól kiolvasott mezőre, a Sonnet pedig 0,95-öt az egyetlen tévedésére. A
+megbízható jel a validátoroké — ezért húzhat az összevonás csak lefelé.
 
 A `--modell` futásidőben ír felül, nem környezeti változóval: élesben a
 konfiguráció gyorsítótárazva van (`config:cache`), ott az `OPENROUTER_MODEL=…`
