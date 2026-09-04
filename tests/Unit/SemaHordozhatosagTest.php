@@ -89,6 +89,32 @@ final class SemaHordozhatosagTest extends TestCase
     }
 
     /**
+     * A magabiztossági objektum nem lehet szabad kulcsú.
+     *
+     * Mérve: szabad kulcsúként (csak `additionalProperties`, `properties`
+     * nélkül) mind a három Gemini modell **némán üresen hagyta**, miközben a
+     * Claude ugyanazon a sémán kitöltötte. Az üres magabiztosság nem hiba,
+     * hanem ennél rosszabb: minden mező a 0,5-ös alapértelmezésre esik, és az
+     * ellenőrző képernyő színkódolása pont ott veszíti el az információt,
+     * amiért van.
+     */
+    public function test_a_magabiztossag_mezoi_fel_vannak_sorolva(): void
+    {
+        $konfidencia = Sema::toolSema()['properties']['confidence'];
+
+        $this->assertFalse(
+            $konfidencia['additionalProperties'],
+            'A szabad kulcsú magabiztosság-objektumot a Gemini üresen hagyja.',
+        );
+
+        // Pontosan azok a mezők, amikre a tisztítás is figyel — se több, se kevesebb.
+        $this->assertSame(
+            [...Sema::MEZOK, 'afa_bontas'],
+            array_keys($konfidencia['properties']),
+        );
+    }
+
+    /**
      * Ezen áll az egész változás: ha a séma nem enged nullt, a modell a nem
      * látott mezőt **kihagyja**. A tisztításnak ugyanoda kell jutnia, mintha
      * nullt kapott volna — különben a hiányzó mező hibává válna.

@@ -19,7 +19,10 @@ final class Prompt
     // v4: a hiányzó mező kihagyás, nem null. Az eszközséma emiatt szűkebb lett
     // (nincs unió-típus), hogy a Gemini modellek is elfogadják — a modell így
     // konfigurációs kapcsoló, nem szolgáltatóhoz kötött döntés.
-    public const VERZIO = 'v4-2026-09-04';
+    // v5: a magabiztossági objektum mezői fel vannak sorolva. Szabad kulcsúként
+    // mind a három Gemini modell üresen hagyta — a Claude viszont kitöltötte —,
+    // így minden mező a 0,5-ös alapértelmezésre esett.
+    public const VERZIO = 'v5-2026-09-04';
 
     public static function rendszer(?string $cegNev = null, ?string $cegAdoszam = null): string
     {

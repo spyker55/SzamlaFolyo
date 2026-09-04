@@ -155,12 +155,38 @@ final class Sema
                 ],
                 'confidence' => [
                     'type' => 'object',
-                    'description' => 'Mezőnkénti magabiztosság 0 és 1 között. Rossz szkennél legyen alacsony.',
-                    'additionalProperties' => ['type' => 'number', 'minimum' => 0, 'maximum' => 1],
+                    'additionalProperties' => false,
+                    'description' => 'Mezőnkénti magabiztosság 0 és 1 között. Rossz szkennél legyen alacsony. Csak a kitöltött mezőkhöz add meg.',
+                    // Szabad kulcsú objektumként (csak `additionalProperties`,
+                    // `properties` nélkül) ezt a Gemini némán üresen hagyta —
+                    // mind a három modellje, miközben a Claude kitöltötte. Az
+                    // explicit felsorolás mindkettőnek jó, és egyben azt is
+                    // kimondja, amit a `tisztit()` amúgy is elfogad.
+                    'properties' => self::konfidenciaMezok(),
                 ],
             ],
             'required' => ['tobb_irat_gyanu', 'confidence'],
         ];
+    }
+
+    /**
+     * A magabiztossági objektum mezői — pontosan azok, amikre a `tisztit()`
+     * figyel. A listát nem másoljuk, hanem a `MEZOK`-ból származtatjuk, hogy
+     * egy új mező felvételekor ne itt csússzon szét.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private static function konfidenciaMezok(): array
+    {
+        $mezok = [];
+
+        // Leírás nélkül: a kulcs neve megegyezik a fenti mezőével, tehát a
+        // magyarázat csak ismételné magát — 16-szor, minden egyes híváson.
+        foreach ([...self::MEZOK, 'afa_bontas'] as $mezo) {
+            $mezok[$mezo] = ['type' => 'number', 'minimum' => 0, 'maximum' => 1];
+        }
+
+        return $mezok;
     }
 
     /**
