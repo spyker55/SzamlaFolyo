@@ -23,11 +23,12 @@ final class Validatorok
     /**
      * @param  array<string, mixed>  $mezok
      * @param  array<int, array<string, mixed>>|null  $bontas
+     * @param  ?string  $cegAdoszam  a saját cég adószáma, ha ismert
      * @return array<string, string> mező => a bukás magyar indoklása
      */
-    public static function bukottak(array $mezok, ?array $bontas = null): array
+    public static function bukottak(array $mezok, ?array $bontas = null, ?string $cegAdoszam = null): array
     {
-        $bukas = [];
+        $bukas = self::idegenBizonylat($mezok, $cegAdoszam);
 
         foreach (['supplier_tax_number' => 'szállító', 'customer_tax_number' => 'vevő'] as $mezo => $ki) {
             if (Adoszam::biztosanRossz(is_string($mezok[$mezo] ?? null) ? $mezok[$mezo] : null)) {
@@ -187,6 +188,64 @@ final class Validatorok
      *
      * @param  array<string, mixed>  $mezok
      */
+    /**
+     * Ez a bizonylat egyáltalán a miénk-e.
+     *
+     * Az egyetlen adat, amit **kívülről** ismerünk: a saját cég adószáma.
+     * Minden más validátor a papírt önmagához méri. Ha a bizonylaton szerepel
+     * vevő adószáma, és az sem a miénk — miközben a szállító sem mi vagyunk —,
+     * akkor ez a papír nem hozzánk tartozik: rossz fájl, a szállító saját
+     * példánya, vagy másnak szóló számla. Ez súlyosabb minden mezőhibánál,
+     * mert nem egy mező téved, hanem az egész bizonylat.
+     *
+     * Három csapdát kerül ki, és mindháromra van teszt:
+     *
+     * - **Kimenő számlán** mi vagyunk a szállító, a vevő adószáma jogosan
+     *   másé. Ezért mindkét oldalt nézzük, nem csak a vevőt.
+     * - **Nyugtán** nincs vevő adószáma, az eladó meg természetesen nem mi
+     *   vagyunk. Ezért csak kitöltött vevő-adószámra szólunk.
+     * - **Hibás ellenőrző számjegyű** adószámra nem építünk következtetést:
+     *   ilyenkor a félreolvasás a valószínűbb, nem az, hogy idegen a papír. A
+     *   rossz számjegyet a saját ellenőrzése amúgy is megjelöli.
+     *
+     * A **törzsszámot** hasonlítjuk, nem a teljes adószámot: az ÁFA-kód és a
+     * megyekód változhat, az adóalanyt az első nyolc jegy azonosítja.
+     *
+     * Ha a cégnek nincs adószáma megadva, ez az ellenőrzés néma. Ez egyben a
+     * kikapcsolója is: aki több ügyfél iratát egyetlen cégben kezeli, annak
+     * üresen kell hagynia az adószámot — különben minden bizonylata piros
+     * lenne. Egy validátor, ami jogos munkamenetre tüzel, rosszabb a semminél:
+     * két hét alatt mindenki átlép a piroson, és viszi magával a többi jelzés
+     * súlyát is.
+     *
+     * @param  array<string, mixed>  $mezok
+     * @return array<string, string>
+     */
+    private static function idegenBizonylat(array $mezok, ?string $cegAdoszam): array
+    {
+        $vevoNyers = is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null;
+        $szallitoNyers = is_string($mezok['supplier_tax_number'] ?? null) ? $mezok['supplier_tax_number'] : null;
+
+        $mienk = Adoszam::torzsszam($cegAdoszam);
+        $vevo = Adoszam::torzsszam($vevoNyers);
+
+        if ($mienk === null || $vevo === null) {
+            return [];
+        }
+
+        if (Adoszam::biztosanRossz($vevoNyers) || Adoszam::biztosanRossz($szallitoNyers)) {
+            return [];
+        }
+
+        if ($vevo === $mienk || Adoszam::torzsszam($szallitoNyers) === $mienk) {
+            return [];
+        }
+
+        $indok = 'Ez a bizonylat nem a te cégednek szól: sem a vevő, sem a szállító adószáma nem a tiéd.';
+
+        return ['customer_tax_number' => $indok, 'supplier_tax_number' => $indok];
+    }
+
     public static function vevoIgazolt(array $mezok, ?string $cegAdoszam): bool
     {
         $vevoNyers = is_string($mezok['customer_tax_number'] ?? null) ? $mezok['customer_tax_number'] : null;

@@ -40,13 +40,13 @@ munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 `document_corrections` táblába kerül. Enélkül nem mérhető, hogy egy
 prompt- vagy modellcsere javított-e a pontosságon.
 
-**A saját cég adószáma csak igazolni tud, vádolni nem.** Ha a vevő adószáma a
-miénk, a vevő neve nem találgatás többé, ezért a kézírás miatti plafon sem
-vonatkozik rá. A fordítottja — „ez a bizonylat nem a te cégednek szól" — **meg
-volt írva, és tudatosan ki lett véve**: egy könyvelőiroda több cég bizonylatát
-dolgozza fel, nála egyik sem a regisztrált cégnek szólna, és minden számla
-pirosat kapna. Egy validátor, ami egy jogos munkafolyamatra tüzel, rosszabb,
-mint ha nem lenne: vele veszne a többi piros súlya is. Lásd a *Hátralék* pontot.
+**A saját cég adószáma az egyetlen tény, amit kívülről tudunk.** Minden más
+ellenőrzés a papírt önmagához méri; ez az egy méri valamihez. Igazol — ha a vevő
+adószáma a miénk, a vevő neve nem találgatás többé —, és vádol is: ha sem a
+vevő, sem a szállító nem mi vagyunk, akkor ez a bizonylat nem ide tartozik. A
+vádoló fele egyszer ki volt véve, mert cégváltó nélkül egy könyvelőiroda minden
+számlájára tüzelt volna; a cégváltóval visszakerült. Lásd *Az idegen bizonylat*
+pontot.
 
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
@@ -212,21 +212,50 @@ egy céget, örökké ingyen dolgozna. Az első cég kapja a próbát, a tovább
 `trial_ends_at = null`-lal jönnek létre, és rögtön csomagot kérnek. A
 létrehozó képernyő ezt előre ki is írja, nem az első feltöltésnél derül ki.
 
+### Az idegen bizonylat
+
+Minden más validátor a papírt **önmagához** méri: a nettó és az ÁFA kiadja-e a
+bruttót, a határidő a kelte után van-e, stimmel-e az ellenőrző számjegy. A saját
+cég adószáma az egyetlen adat, amit a bizonylaton **kívülről** ismerünk. Ha a
+vevő adószáma ki van töltve, és sem a vevő, sem a szállító nem mi vagyunk, akkor
+ez a papír nem hozzánk tartozik: rossz fájl, a szállító saját példánya, vagy
+másnak szóló számla. Ez súlyosabb minden mezőhibánál, mert nem egy adat téved,
+hanem az egész irat.
+
+Három csapdát kerül ki, mindháromra van teszt:
+
+- **Kimenő számla:** mi vagyunk a szállító, a vevő adószáma jogosan másé — ezért
+  mindkét oldalt nézzük, nem csak a vevőt.
+- **Nyugta:** nincs rajta vevő adószáma, az eladó meg természetesen nem mi
+  vagyunk — ezért csak kitöltött vevő-adószámra szólunk.
+- **Hibás ellenőrző számjegy:** ilyenkor a félreolvasás a valószínűbb, nem az,
+  hogy idegen a papír. Nem építünk rá következtetést, se terhelőt, se
+  mentesítőt; a rossz számjegy a saját indoklását kapja.
+
+A **törzsszámot** hasonlítjuk, nem a teljes adószámot: az ÁFA-kód és a megyekód
+változhat, az adóalanyt az első nyolc jegy azonosítja.
+
+Ugyanez a tény visszafelé is működik: ha a vevő adószáma a miénk, a vevő neve
+nem találgatás többé — tudjuk, kinek szól a számla —, ezért rá nem vonatkozik a
+kézírás miatti magabiztosság-plafon (`Konfidencia`).
+
+**Ez az ellenőrzés egyszer már ki volt véve** (`5ea25ab`), és érdemes tudni,
+miért: egy könyvelőiroda, amelyik minden ügyfele iratát egyetlen cégben kezeli,
+minden bizonylatára pirosat kapott volna. Egy validátor, ami jogos munkamenetre
+tüzel, rosszabb a semminél — két hét alatt mindenki átlép a piroson, és viszi
+magával a többi jelzés súlyát is. A cégváltó oldotta fel: ügyfelenként külön
+cég, külön adószámmal. **Aki mégis egyetlen cégben dolgozik, annak üresen kell
+hagynia az adószámot** — akkor az ellenőrzés néma. Ez a Beállítások képernyőn ki
+is van írva, nem kell kitalálni.
+
+A bekötés két ponton él, és **mindkettőre külön teszt** van, mert az egységteszt
+akkor is zöld maradna, ha a cég adószáma sosem jutna el a validátorig: az
+`Ellenorzes` a képernyőn (`EllenorzesJelzesTest`), a `Kiolvaso` pedig a tárolt
+gépi verdiktben (`IdegenBizonylatTest`). A tárolt verdikt azért számít, mert az
+fogja vissza a magabiztosságot is — enélkül a frissen érkezett idegen irat a
+listában ártatlannak látszana, amíg valaki meg nem nyitja.
+
 ## Hátralék
-
-**Az „idegen bizonylat" ellenőrzés.** A cégváltó megléte feloldotta: ha a vevő adószáma
-ki van töltve és sem a vevő, sem a szállító nem a kiválasztott cég, akkor az
-irat nem oda tartozik: rossz fájl, a szállító saját példánya, vagy másnak szóló
-számla. Ez a legsúlyosabb felismerhető hiba — nem egy mező téved, hanem az egész
-bizonylat —, de csak akkor van értelme, ha a bizonylat *tényleg* a kiválasztott
-céghez tartozna. Egyetlen cégbe zsúfolt ügyfelek mellett ez nem volt igaz, most
-már az: ügyfelenként külön cég, külön adószámmal. Vissza lehet tenni.
-
-A megírt változat három csapdát kerül ki, érdemes megőrizni: a **kimenő** számlán
-mi vagyunk a szállító (mindkét oldalt nézni kell), a **nyugtán** nincs vevő
-adószáma (csak kitöltött vevő-adószámra szabad szólni), és **hibás ellenőrző
-számjegyű** adószámra nem szabad következtetést építeni (kézírásnál a
-félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 
 **Amit a nyitólap ezért nem ígér.** A csomagok között továbbra sincs cégszám-alapú
 különbség, és a mai modellben nem is kell: **minden cég külön fizet**, tehát a

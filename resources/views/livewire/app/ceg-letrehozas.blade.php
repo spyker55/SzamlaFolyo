@@ -31,7 +31,8 @@
             <input id="adoszam" type="text" wire:model="adoszam" class="control" placeholder="12345678-2-42">
             @error('adoszam') <p class="fhiba">{{ $message }}</p> @enderror
             <p class="mt-1 text-xs text-slate-400">
-                Ebből tudja a rendszer, hogy egy bizonylaton te vagy a szállító vagy a vevő.
+                Ebből tudja a rendszer, hogy egy bizonylaton te vagy a szállító vagy a vevő — és ebből
+                derül ki, ha egy irat nem ehhez a céghez tartozik. Később is megadható a Beállításokban.
             </p>
         </div>
 

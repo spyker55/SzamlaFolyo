@@ -211,4 +211,101 @@ final class ValidatorokTest extends TestCase
             '11176165-2-10',
         ));
     }
+
+    // — Idegen bizonylat ————————————————————————————————————
+
+    /**
+     * Az egyetlen adat, amit **kívülről** ismerünk: a saját cég adószáma.
+     *
+     * Ha a bizonylaton ki van töltve a vevő adószáma, és az sem a miénk —
+     * miközben a szállító sem mi vagyunk —, akkor ez a papír nem hozzánk
+     * tartozik. Ez sokáig némán átment, pedig súlyosabb minden mezőhibánál:
+     * nem egy adat rossz, hanem az egész irat téved.
+     */
+    public function test_az_idegen_bizonylatot_megjeloli(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '10773381-2-44',
+            'customer_tax_number' => '11176165-2-10',
+        ], null, cegAdoszam: '12038538-2-41');
+
+        $this->assertArrayHasKey('customer_tax_number', $bukas);
+        $this->assertArrayHasKey('supplier_tax_number', $bukas);
+        $this->assertStringContainsString('nem a te cégednek', $bukas['customer_tax_number']);
+    }
+
+    /** A saját vevőnk adószámával nincs baj. */
+    public function test_a_nekunk_szolo_szamlat_nem_jeloli_meg(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '10773381-2-44',
+            'customer_tax_number' => '11176165-2-10',
+        ], null, cegAdoszam: '11176165-2-10');
+
+        $this->assertArrayNotHasKey('customer_tax_number', $bukas);
+    }
+
+    /**
+     * Első csapda: a **kimenő** számlán mi vagyunk a szállító, és a vevő
+     * adószáma jogosan másé. Ha csak a vevő oldalát néznénk, a saját számláink
+     * mind pirosak lennének.
+     */
+    public function test_a_sajat_kimeno_szamlat_nem_jeloli_meg(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '11176165-2-10',
+            'customer_tax_number' => '10773381-2-44',
+        ], null, cegAdoszam: '11176165-2-10');
+
+        $this->assertArrayNotHasKey('customer_tax_number', $bukas);
+    }
+
+    /**
+     * Második csapda: a **nyugtán** nincs vevő adószáma, az eladó meg
+     * természetesen nem mi vagyunk — mégis a mi költségünk. Ezért csak akkor
+     * szólunk, ha a vevő adószáma ki van töltve.
+     */
+    public function test_a_nyugtat_nem_jeloli_meg(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '10773381-2-44',
+        ], null, cegAdoszam: '11176165-2-10');
+
+        $this->assertSame([], $bukas);
+    }
+
+    /**
+     * Harmadik csapda: hibás ellenőrző számjegyű adószámra nem építünk
+     * következtetést. Kézírásnál éppen az a valószínű, hogy félreolvasta a
+     * számjegyet — nem az, hogy a bizonylat idegen. A rossz számjegy a saját
+     * indoklását kapja, nem az idegen bizonylatét.
+     */
+    public function test_a_rossz_adoszamra_nem_epit_kovetkeztetest(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '10773381-2-44',
+            'customer_tax_number' => '12345678-2-42',
+        ], null, cegAdoszam: '11176165-2-10');
+
+        $this->assertArrayHasKey('customer_tax_number', $bukas);
+        $this->assertStringContainsString('ellenőrző számjegye', $bukas['customer_tax_number']);
+        $this->assertArrayNotHasKey('supplier_tax_number', $bukas);
+    }
+
+    /**
+     * Cégadószám nélkül nincs mihez hasonlítani — hallgatunk.
+     *
+     * Ez egyben a kikapcsoló is: aki több ügyfél iratát egyetlen cégben kezeli,
+     * annak üresen kell hagynia az adószámot, különben minden bizonylata piros
+     * lenne. Ez a `Beallitasok` képernyőn ki is van írva.
+     */
+    public function test_ceg_adoszama_nelkul_nem_szolal_meg(): void
+    {
+        $bukas = Validatorok::bukottak([
+            'supplier_tax_number' => '10773381-2-44',
+            'customer_tax_number' => '11176165-2-10',
+        ]);
+
+        $this->assertSame([], $bukas);
+    }
 }
