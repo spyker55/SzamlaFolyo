@@ -40,13 +40,12 @@ munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 `document_corrections` táblába kerül. Enélkül nem mérhető, hogy egy
 prompt- vagy modellcsere javított-e a pontosságon.
 
-**A saját cég adószáma az egyetlen tény, amit kívülről tudunk.** Minden más
-ellenőrzés a papírt önmagához méri; ez az egy méri valamihez. Igazol — ha a vevő
-adószáma a miénk, a vevő neve nem találgatás többé —, és vádol is: ha sem a
-vevő, sem a szállító nem mi vagyunk, akkor ez a bizonylat nem ide tartozik. A
-vádoló fele alapból néma: adószám nélkül nincs mihez hasonlítani, és aki sok
-ügyfél iratát kezeli egy fiókban, épp ezért hagyja üresen. Lásd *Az idegen
-bizonylat* pontot.
+**A saját cég adószáma csak a modellnek szól, következtetést nem építünk rá.**
+Bekerül a promptba, hogy a kiolvasás tudja, melyik oldalon állunk — és ennyi. A
+két lehetséges következtetés (a bizonylat idegen; a vevő neve igazolt) meg volt
+írva, és mindkettő kikerült: az egyik hamis riasztást adott a termék fő
+használójánál, a másik pedig egy alig észrevehető haszonért tartott életben egy
+egész gondolatmenetet. Lásd a *Hátralék* pontot.
 
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
@@ -210,64 +209,33 @@ szándékosan maradt: a jelentésük „semleges" és „kiemelt", nem az, hogy 
 A konfidencia három színe (`biztos`, `bizonytalan`, `gyanus`) **nem** követi ezt
 a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
-### Az idegen bizonylat
-
-Minden más validátor a papírt **önmagához** méri: a nettó és az ÁFA kiadja-e a
-bruttót, a határidő a kelte után van-e, stimmel-e az ellenőrző számjegy. A saját
-cég adószáma az egyetlen adat, amit a bizonylaton **kívülről** ismerünk. Ha a
-vevő adószáma ki van töltve, és sem a vevő, sem a szállító nem mi vagyunk, akkor
-ez a papír nem hozzánk tartozik: rossz fájl, a szállító saját példánya, vagy
-másnak szóló számla. Ez súlyosabb minden mezőhibánál, mert nem egy adat téved,
-hanem az egész irat.
-
-Három csapdát kerül ki, mindháromra van teszt:
-
-- **Kimenő számla:** mi vagyunk a szállító, a vevő adószáma jogosan másé — ezért
-  mindkét oldalt nézzük, nem csak a vevőt.
-- **Nyugta:** nincs rajta vevő adószáma, az eladó meg természetesen nem mi
-  vagyunk — ezért csak kitöltött vevő-adószámra szólunk.
-- **Hibás ellenőrző számjegy:** ilyenkor a félreolvasás a valószínűbb, nem az,
-  hogy idegen a papír. Nem építünk rá következtetést, se terhelőt, se
-  mentesítőt; a rossz számjegy a saját indoklását kapja.
-
-A **törzsszámot** hasonlítjuk, nem a teljes adószámot: az ÁFA-kód és a megyekód
-változhat, az adóalanyt az első nyolc jegy azonosítja.
-
-Ugyanez a tény visszafelé is működik: ha a vevő adószáma a miénk, a vevő neve
-nem találgatás többé — tudjuk, kinek szól a számla —, ezért rá nem vonatkozik a
-kézírás miatti magabiztosság-plafon (`Konfidencia`).
-
-**Ez az ellenőrzés alapból néma, és ez szándékos.** Az adószám nem kötelező mező;
-amíg üres, a validátornak nincs mihez hasonlítania. Egy könyvelőiroda, amelyik
-sok ügyfél iratát kezeli egy fiókban, üresen hagyja — különben minden bizonylata
-piros lenne, és egy validátor, ami jogos munkamenetre tüzel, rosszabb a
-semminél: két hét alatt mindenki átlép a piroson, és viszi magával a többi
-jelzés súlyát is. Ezért volt egyszer már kivéve (`5ea25ab`).
-
-Akkor kapcsol be, ha valaki **a saját cége** bizonylatait kezeli, és megadja az
-adószámát — ott viszont pont az a hiba derül ki belőle, amit semmi más nem fog
-meg. A Beállítások képernyő mindkét irányt kiírja, nem kell kitalálni.
-
-A bekötés két ponton él, és **mindkettőre külön teszt** van, mert az egységteszt
-akkor is zöld maradna, ha a cég adószáma sosem jutna el a validátorig: az
-`Ellenorzes` a képernyőn (`EllenorzesJelzesTest`), a `Kiolvaso` pedig a tárolt
-gépi verdiktben (`IdegenBizonylatTest`). A tárolt verdikt azért számít, mert az
-fogja vissza a magabiztosságot is — enélkül a frissen érkezett idegen irat a
-listában ártatlannak látszana, amíg valaki meg nem nyitja.
-
-
 ## Hátralék
 
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
-könyvelőiroda ezért egyetlen cégben dolgozza fel az összes ügyfelét, és az
-ügyfelenkénti szétválasztást az export vevő-adószám szűrője adja meg. Ez
-működik, és egyszerű — de a bizonylatok egy kupacban állnak a feldolgozásig, és
-az „idegen bizonylat" ellenőrzés ilyenkor nem használható. A cégenkénti
-szétválasztás (több cég egy előfizetés alatt, közös kerettel) meg volt építve
-cégváltóval együtt, és **tudatosan lett visszabontva**: a felhasználónak kellett
-volna cégeket adminisztrálnia ahhoz, hogy szétválassza, amit egy szűrő is
-szétválaszt. A `git log` őrzi (`098310d`, `4f59ab4`), ha egyszer valódi igény
-lesz rá.
+könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az
+ügyfelenkénti szétválasztást pedig az export adószámszűrője adja meg. Ez
+működik, és egyszerű. A cégenkénti szétválasztás (több cég egy előfizetés
+alatt, közös kerettel) meg volt építve cégváltóval együtt, és **tudatosan lett
+visszabontva**: a felhasználónak cégeket kellett volna adminisztrálnia ahhoz,
+hogy szétválassza, amit egy szűrő is szétválaszt. A `git log` őrzi (`098310d`,
+`4f59ab4`), ha egyszer valódi igény lesz rá.
+
+**Az „idegen bizonylat" ellenőrzés kétszer került be és kétszer ki**
+(`5a710fb` → `5ea25ab`, `bb4d6c9` → itt). Mindkétszer ugyanazon bukott el: a
+termék fő használója sok ügyfél iratát dolgozza fel egy helyen, ott pedig
+egyetlen bizonylat sem a saját cégnek szól, tehát a jelzés a *rendes*
+működésre tüzelne. Egy validátor, ami jogos munkamenetre szólal meg, rosszabb
+a semminél — viszi magával a többi piros súlyát is.
+
+Vele ment a mentesítő párja is (a vevő neve „igazolt", ha a vevő adószáma a
+miénk), pedig az sosem adott hamis riasztást. Nem azért, mert rossz volt, hanem
+mert egyedül maradt: egy egész gondolatmenetet — saját adószám, törzsszám,
+igazolt mezők csatornája a `Konfidencia`-ban — tartott volna életben egyetlen
+sárga keret kedvéért. **A termék attól jó, hogy egy könyvelő tanulás nélkül
+használja**, és minden fogalomnak, ami benne marad, meg kell szolgálnia a
+helyét. Akkor lesz értelme visszahozni, ha a rendszer a feldolgozás *előtt*
+köti ügyfélhez a bizonylatot; addig a kiolvasott adószám az exportnál
+válogat, nem az ellenőrzésnél vádol.
 
 ## Felépítés
 

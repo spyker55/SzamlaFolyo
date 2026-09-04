@@ -38,7 +38,6 @@ final class Konfidencia
      * @param  array<string, float>  $modellSzerint
      * @param  array<string, string>  $bukottValidatorok
      * @param  bool  $nehezenOlvashato  kézzel írott vagy rossz minőségű bizonylat
-     * @param  array<int, string>  $igazoltMezok  amit külső adat megerősített
      * @return array{model: array<string, float>, validators: array<string, string>, combined: array<string, float>}
      */
     public static function osszevon(
@@ -46,7 +45,6 @@ final class Konfidencia
         array $bukottValidatorok,
         array $mezok,
         bool $nehezenOlvashato = false,
-        array $igazoltMezok = [],
     ): array {
         $eredmeny = [];
 
@@ -66,7 +64,7 @@ final class Konfidencia
                 $pont = min($pont, self::BUKAS_PLAFON);
             }
 
-            $pont = min($pont, self::kezirasPlafon($mezo, $nehezenOlvashato, $igazoltMezok));
+            $pont = min($pont, self::kezirasPlafon($mezo, $nehezenOlvashato));
 
             $eredmeny[$mezo] = round($pont, 3);
         }
@@ -109,16 +107,9 @@ final class Konfidencia
      * A plafon maga a küszöb: a `sav()` a határértéket a szigorúbb sávba
      * sorolja, tehát ez pontosan sárgát jelent, és követi a konfigurációt.
      */
-    /** @param  array<int, string>  $igazoltMezok */
-    private static function kezirasPlafon(string $mezo, bool $nehezenOlvashato, array $igazoltMezok): float
+    private static function kezirasPlafon(string $mezo, bool $nehezenOlvashato): float
     {
         if (! $nehezenOlvashato || ! in_array($mezo, self::ELLENORIZHETETLEN_MEZOK, true)) {
-            return 1.0;
-        }
-
-        // Amit külső adat megerősített, az már nem ellenőrizhetetlen. A vevő
-        // neve például akkor, ha a vevő adószáma a saját cégünké.
-        if (in_array($mezo, $igazoltMezok, true)) {
             return 1.0;
         }
 

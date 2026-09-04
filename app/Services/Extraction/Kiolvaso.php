@@ -133,19 +133,12 @@ final class Kiolvaso
         $tiszta = Sema::tisztit($nyers);
         $mezok = $this->normalizal($tiszta['mezok']);
         $mezok['afa_bontas'] = $this->normalizalBontas($tiszta['bontas']);
-        $cegAdoszam = $dokumentum->company?->tax_number;
-        $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas'], $cegAdoszam);
-
-        // Ha a vevő adószáma a miénk, a vevő neve nem találgatás többé: tudjuk,
-        // kinek szól a számla. Ezért a kézírás miatti plafon alól kikerül.
-        $igazolt = Validatorok::vevoIgazolt($mezok, $cegAdoszam) ? ['customer_name'] : [];
-
+        $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas']);
         $konfidencia = Konfidencia::osszevon(
             $tiszta['konfidencia'],
             $bukott,
             $mezok,
             $tiszta['nehezen_olvashato'],
-            $igazolt,
         );
 
         DB::transaction(function () use ($dokumentum, $valasz, $mezok, $konfidencia, $tiszta, $idoMs): void {

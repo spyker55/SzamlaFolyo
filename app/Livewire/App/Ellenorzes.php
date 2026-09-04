@@ -363,11 +363,7 @@ class Ellenorzes extends Component
         //
         // A tárolt gépi verdikt ettől érintetlen marad: az az audit-nyom,
         // abból derül ki utólag, mit hibázott a modell.
-        $this->validatorHibak = Validatorok::bukottak(
-            $this->mezok,
-            $this->parseoltBontas()['sorok'],
-            $this->dokumentum->company?->tax_number,
-        );
+        $this->validatorHibak = Validatorok::bukottak($this->mezok, $this->parseoltBontas()['sorok']);
 
         return view('livewire.app.ellenorzes', [
             'cimkek' => Sema::CIMKEK,

@@ -148,11 +148,9 @@
                 <label class="flabel" for="cegAdoszam">Adószám</label>
                 <input id="cegAdoszam" type="text" wire:model="cegAdoszam" class="control"
                        @disabled(! $sajatSzerep?->adminisztralhat())>
-                <p class="mt-1 text-xs text-slate-400">
-                    Ez az egyetlen adat, amit a bizonylaton kívülről ismerünk: ebből tudjuk, hogy te vagy-e a
-                    szállító vagy a vevő, és ebből derül ki, ha egy irat <strong>nem a te cégedhez tartozik</strong>.
-                    Üresen hagyva ez az ellenőrzés nem fut — így tedd, ha több ügyfél iratát kezeled itt.
-                    Ügyfelenkénti szétválasztásra ilyenkor az Export képernyő vevő-adószám szűrője való.
+<p class="mt-1 text-xs text-slate-400">
+                    A kiolvasáskor ebből tudja a modell, hogy egy bizonylaton te vagy a szállító vagy a vevő.
+                    Nem kötelező.
                 </p>
                 @error('cegAdoszam') <p class="fhiba">{{ $message }}</p> @enderror
             </div>

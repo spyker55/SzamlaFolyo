@@ -137,45 +137,4 @@ final class EllenorzesJelzesTest extends TestCase
 
         return $dokumentum;
     }
-
-    /**
-     * Az idegen bizonylat a **képernyőn** is megszólal.
-     *
-     * A validátornak egységtesztje van, de az akkor is zöld maradna, ha az
-     * `Ellenorzes` sosem adná át a cég adószámát — az ellenőrzés némán
-     * kikapcsolva működne tovább. Ez a teszt a bekötést állítja: a cégnek van
-     * adószáma, a bizonylaton két idegen adószám áll, és a képernyőnek ezt
-     * pirosan, indoklással kell mutatnia.
-     */
-    public function test_az_idegen_bizonylat_a_kepernyon_is_megszolal(): void
-    {
-        $this->ceg->update(['tax_number' => '11176165-2-10']);
-
-        $dokumentum = Document::factory()->ellenorzesreVar()->create([
-            'company_id' => $this->ceg->id,
-            'supplier_tax_number' => '10773381-2-44',
-            'customer_tax_number' => '12038538-2-41',
-        ]);
-
-        $komponens = Livewire::test(Ellenorzes::class, ['dokumentum' => $dokumentum]);
-
-        $this->assertSame('gyanus', $komponens->instance()->sav('customer_tax_number'));
-        $this->assertSame('gyanus', $komponens->instance()->sav('supplier_tax_number'));
-        $komponens->assertSee('nem a te cégednek szól');
-    }
-
-    /** A saját cégünknek szóló számla ugyanezen az úton nem szólal meg. */
-    public function test_a_nekunk_szolo_szamla_a_kepernyon_sem_szolal_meg(): void
-    {
-        $this->ceg->update(['tax_number' => '11176165-2-10']);
-
-        $dokumentum = Document::factory()->ellenorzesreVar()->create([
-            'company_id' => $this->ceg->id,
-            'supplier_tax_number' => '10773381-2-44',
-            'customer_tax_number' => '11176165-2-10',
-        ]);
-
-        Livewire::test(Ellenorzes::class, ['dokumentum' => $dokumentum])
-            ->assertDontSee('nem a te cégednek szól');
-    }
 }
