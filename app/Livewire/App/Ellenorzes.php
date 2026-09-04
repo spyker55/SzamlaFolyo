@@ -66,9 +66,17 @@ class Ellenorzes extends Component
         $this->validatorHibak = (array) ($kiolvasas?->confidence['validators'] ?? []);
     }
 
-    /** A mező színe: 'biztos' | 'bizonytalan' | 'gyanus'. */
+    /** A mező állapota: 'nincs_adat' | 'biztos' | 'bizonytalan' | 'gyanus'. */
     public function sav(string $mezo): string
     {
+        // A bukott ellenőrzés önmagában elég a pirosításhoz. Eddig ez a modell
+        // magabiztosságán keresztül jutott ide (a validátor 0,3-ra húzta le),
+        // ami fölösleges kerülőút: a determinisztikus jel a megbízhatóbb a
+        // kettő közül, és nem függhet attól, nyilatkozott-e róla a modell.
+        if (isset($this->validatorHibak[$mezo])) {
+            return 'gyanus';
+        }
+
         return Konfidencia::sav($this->konfidencia[$mezo] ?? null);
     }
 

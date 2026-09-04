@@ -43,15 +43,20 @@
         {{-- Jobb oldal: a kiolvasott mezők --}}
         <form wire:submit="jovahagyas" class="card card-pad space-y-4">
 
-            <div class="flex items-center gap-3 text-xs text-slate-500">
+            {{-- A kiemelés a bajt jelöli, nem a rendben lévőt: a jelöletlen mező
+                 nem garancia, csak annyi, hogy nem akadt fenn semmin. --}}
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                 <span class="flex items-center gap-1.5">
-                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-600"></span> biztos
+                    <span class="h-2.5 w-2.5 rounded-sm border-l-4 border-red-500 bg-red-50"></span>
+                    ellenőrzés bukott
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> ellenőrizd
+                    <span class="h-2.5 w-2.5 rounded-sm border-l-4 border-amber-400 bg-amber-50"></span>
+                    a modell bizonytalan
                 </span>
                 <span class="flex items-center gap-1.5">
-                    <span class="h-2.5 w-2.5 rounded-full bg-red-600"></span> gyanús
+                    <span class="h-2.5 w-2.5 rounded-sm border border-dashed border-slate-400"></span>
+                    nem nyilatkozott róla
                 </span>
             </div>
 
@@ -59,6 +64,7 @@
                 $keret = fn (string $mezo) => match ($this->sav($mezo)) {
                     'gyanus' => 'mezo-gyanus',
                     'bizonytalan' => 'mezo-bizonytalan',
+                    'nincs_adat' => 'mezo-nincs-adat',
                     default => 'mezo-biztos',
                 };
             @endphp

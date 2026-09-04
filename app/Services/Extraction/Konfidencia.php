@@ -65,11 +65,19 @@ final class Konfidencia
         ];
     }
 
-    /** 'biztos' | 'bizonytalan' | 'gyanus' — ez a három szín az ellenőrző képernyőn. */
+    /**
+     * 'nincs_adat' | 'biztos' | 'bizonytalan' | 'gyanus' — ez a négy állapot
+     * az ellenőrző képernyőn.
+     *
+     * A hiányzó magabiztosság **nem** ugyanaz, mint a magas: az egyikért a
+     * modell jótállt, a másikról semmit nem tudunk. Korábban a kettő egyformán
+     * festett, és így egy néma modell ugyanolyan megnyugtatónak látszott, mint
+     * egy magabiztos — épp azt takarva el, amit tudni kellene.
+     */
     public static function sav(?float $pont): string
     {
         if ($pont === null) {
-            return 'biztos';
+            return 'nincs_adat';
         }
 
         if ($pont < (float) config('szamlafolyo.extraction.warn_threshold')) {

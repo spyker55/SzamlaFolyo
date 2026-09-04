@@ -136,12 +136,22 @@
   }
 
   /*
-    A kiolvasott mező három állapota. A keret színe és a bal szegély együtt
-    jelez: színvakság mellett is látszik a különbség, mert a piros mező
-    vastagabb bal szegélyt kap és külön szöveges indoklást.
+    A kiolvasott mező négy állapota. A kiemelés a bajt jelöli, nem a rendben
+    lévőt — ezért a „biztos" szándékosan a szokásos szürke keret: egy képernyő,
+    ahol minden ki van emelve, semmit nem emel ki.
+
+    A keret színe és a bal szegély együtt jelez: színvakság mellett is látszik a
+    különbség, mert a bajos mező vastagabb bal szegélyt kap és külön szöveges
+    indoklást.
+
+    A „nincs adat" szaggatott: nem megnyugtató állapot, csak néma — a modell nem
+    nyilatkozott a mezőről. Ez nem ugyanaz, mint amiért jótállt.
   */
   .mezo-biztos {
     @apply border-slate-300;
+  }
+  .mezo-nincs-adat {
+    @apply border-dashed border-slate-400;
   }
   .mezo-bizonytalan {
     @apply border-amber-400 border-l-4 bg-amber-50/40;
