@@ -132,6 +132,26 @@ final class KonfidenciaTest extends TestCase
         $this->assertSame('biztos', Konfidencia::sav($eredmeny['combined']['gross_amount']));
     }
 
+    /**
+     * Amit külső adat megerősít, az kikerül a plafon alól. A vevő neve akkor,
+     * ha a vevő adószáma a saját cégünké: onnantól nem találgatás, hanem tudjuk,
+     * kinek szól a számla.
+     */
+    public function test_az_igazolt_mezot_a_keziras_sem_huzza_le(): void
+    {
+        $eredmeny = Konfidencia::osszevon(
+            ['customer_name' => 0.99, 'supplier_name' => 0.99],
+            [],
+            ['customer_name' => 'Centervill Kft', 'supplier_name' => 'Kéri László E.V.'],
+            nehezenOlvashato: true,
+            igazoltMezok: ['customer_name'],
+        );
+
+        $this->assertSame('biztos', Konfidencia::sav($eredmeny['combined']['customer_name']));
+        // A szállító neve viszont marad sárga: azt semmi nem igazolta.
+        $this->assertSame('bizonytalan', Konfidencia::sav($eredmeny['combined']['supplier_name']));
+    }
+
     /** A plafon csak lehúz: egy amúgy is alacsony pontszámot nem emel meg. */
     public function test_a_keziras_plafonja_nem_emel(): void
     {

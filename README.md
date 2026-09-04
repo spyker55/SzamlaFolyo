@@ -32,6 +32,19 @@ munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 `document_corrections` táblába kerül. Enélkül nem mérhető, hogy egy
 prompt- vagy modellcsere javított-e a pontosságon.
 
+**A saját cég adószáma külső fogódzó.** Ez az egyetlen adat, amit nem a
+bizonylatról tudunk. Ha a papíron ki van töltve a vevő adószáma, és az sem a
+miénk — miközben a szállító sem mi vagyunk —, akkor ez az irat nem hozzánk
+tartozik: rossz fájl, a szállító saját példánya, vagy másnak szóló számla. Ez a
+legsúlyosabb hiba, amit fel tudunk ismerni, mert nem egy mező téved, hanem az
+egész bizonylat. Három csapdát kerül ki: a **kimenő** számlán mi vagyunk a
+szállító (ezért nézzük mindkét oldalt), a **nyugtán** nincs vevő adószáma (ezért
+csak kitöltött vevő-adószámra szólunk), és a **hibás ellenőrző számjegyű**
+adószámra nem építünk következtetést (kézírásnál a félreolvasás a valószínűbb).
+
+Fordítva ugyanez igazol: ha a vevő adószáma a miénk, a vevő neve nem találgatás
+többé, ezért a kézírás miatti plafon sem vonatkozik rá.
+
 **A bizonytalanságot két jel adja.** A modell önbevallott magabiztossága
 rosszul kalibrált, ezért mellette determinisztikus validátorok futnak
 (adószám ellenőrző számjegye, `nettó + ÁFA = bruttó`, dátumsorrend,
