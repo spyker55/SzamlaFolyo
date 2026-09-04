@@ -75,13 +75,18 @@ return [
 
     'trial' => [
         'days' => 14,
-        // Az ingyen keret valódi pénz: minden darab egy modellhívás. Húsz
-        // bizonylat bőven elég annak eldöntésére, hogy jó-e a termék, és épp
-        // kevés ahhoz, hogy valaki ingyen könyveljen belőle egy hónapot.
+        // Pontosan egy Start-hónap, ingyen. Húsz dokumentum volt itt korábban,
+        // abból viszont egy könyvelőiroda egy óra alatt kifut, és úgy sosem jut
+        // el a termék lényegéhez: a kötegig, az ellenőrzésig, a havi exportig.
+        //
+        // A szűkítés indoka („az ingyen keret AI-költséget generál") ezen a
+        // modellen nem áll: egy kiolvasás nagyságrendileg fillér, nem forint.
+        // A visszaélés ellen sem ez véd, hanem hogy a próba céghez kötött, és
+        // a fájlok hét nap után törlődnek.
         //
         // A kettő **vagy** kapcsolatban van: amelyik előbb elfogy, az zárja le
         // a próbát. Ezt a `Kvota` így is számolja.
-        'documents' => 20,
+        'documents' => 50,
         // Próbaidőben a Flow csomag felhasználószáma jár. A költséget a
         // darabszám fogja meg, nem a fejszám — egy könyvelőiroda pedig ne
         // egyedül kényszerüljön kipróbálni a terméket.
@@ -107,6 +112,23 @@ return [
 
     /*
     |---------------------------------------------------------------------------
+    | Túlhasználat
+    |---------------------------------------------------------------------------
+    | A keret fölötti feldolgozásnak **felső határa** van, forintban. Enélkül
+    | egy véletlenül feltöltött négyezer oldalas archívum harmincezer forintos
+    | meglepetés a következő számlán — és a kapcsoló, ami ezt lehetővé teszi,
+    | nem vállalható ilyen fék nélkül.
+    |
+    | Ez csak a kezdőérték: a bekapcsoláskor kerül a cégre, utána a tulajdonos
+    | átírhatja, vagy kiürítheti (üres = nincs plafon, a saját felelősségére).
+    */
+
+    'tulhasznalat' => [
+        'alap_plafon_ft' => 10000,
+    ],
+
+    /*
+    |---------------------------------------------------------------------------
     | Csomagok
     |---------------------------------------------------------------------------
     | Ez az egyetlen hely, ahol a csomagok számai állnak: a nyitólap árlistája,
@@ -114,21 +136,31 @@ return [
     | szövegbe kézzel beírt szám előbb-utóbb elcsúszik attól, amit a rendszer
     | valóban ad — az pedig az árlistán szerződéses ígéret.
     |
-    | Az éves ár a „12 hónap 10 havi díjért" logika. Az `extra_ft` a keret
-    | fölötti darabár; csak akkor lép életbe, ha a cég **külön engedélyezte** a
-    | túlhasználatot (`companies.overage_enabled`), különben a keret megállít.
+    | **Éves fizetés nincs, és ez szándékos.** A keret a Stripe számlázási
+    | ciklusára szól (`Kvota::idoszak()`), egy éves előfizetésnél viszont ez a
+    | ciklus tizenkét hónap — az éves ár így nem havi keretet adna, hanem évit,
+    | vagyis egytizenketted terméket. Havi keret + éves számlázás csak külön
+    | forgó ablakkal működne; amíg az nincs meg, csak havi árat adunk el.
+    |
+    | Az `extra_ft` a keret fölötti darabár, és **mindig drágább**, mint az
+    | adott csomag saját darabára (ár ÷ darabszám: 39,8 / 24,95 / 19,98) —
+    | különben azt tanítanánk, hogy megéri a kis csomagban maradni. Csak akkor
+    | lép életbe, ha a cég külön engedélyezte a túlhasználatot
+    | (`companies.overage_enabled`), különben a keret megállít.
     */
 
     'plans' => [
         'kicsi' => [
             'nev' => 'Start',
             'documents' => 50,
-            'users' => 1,
+            // Két fő, nem egy. A költségünk oldalarányos, a fejszám nem kerül
+            // semmibe — egy egyszemélyes cégnél viszont majdnem mindig van egy
+            // könyvelő is, aki be akar nézni. Az egyfős keret nem bevételt hoz,
+            // hanem közös jelszót, ami nekünk biztonsági kockázat.
+            'users' => 2,
             'ar_havi' => 1990,
-            'ar_evi' => 19900,
-            'extra_ft' => 39,
+            'extra_ft' => 49,
             'price_id' => env('STRIPE_PRICE_KICSI'),
-            'price_id_evi' => env('STRIPE_PRICE_KICSI_EVI'),
             'price_id_extra' => env('STRIPE_PRICE_KICSI_EXTRA'),
         ],
         'kozepes' => [
@@ -136,21 +168,17 @@ return [
             'documents' => 200,
             'users' => 3,
             'ar_havi' => 4990,
-            'ar_evi' => 49900,
             'extra_ft' => 29,
             'price_id' => env('STRIPE_PRICE_KOZEPES'),
-            'price_id_evi' => env('STRIPE_PRICE_KOZEPES_EVI'),
             'price_id_extra' => env('STRIPE_PRICE_KOZEPES_EXTRA'),
         ],
         'nagy' => [
             'nev' => 'Pro',
-            'documents' => 1000,
+            'documents' => 500,
             'users' => 10,
-            'ar_havi' => 14990,
-            'ar_evi' => 149900,
-            'extra_ft' => 19,
+            'ar_havi' => 9990,
+            'extra_ft' => 24,
             'price_id' => env('STRIPE_PRICE_NAGY'),
-            'price_id_evi' => env('STRIPE_PRICE_NAGY_EVI'),
             'price_id_extra' => env('STRIPE_PRICE_NAGY_EXTRA'),
         ],
     ],

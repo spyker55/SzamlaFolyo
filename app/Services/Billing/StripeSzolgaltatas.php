@@ -7,6 +7,7 @@ namespace App\Services\Billing;
 use App\Models\Company;
 use Illuminate\Support\Carbon;
 use RuntimeException;
+use Stripe\Exception\InvalidRequestException;
 use Stripe\StripeClient;
 
 /**
@@ -14,7 +15,7 @@ use Stripe\StripeClient;
  * Stripe Checkoutban, a kezelés (kártyacsere, lemondás, számlák) a Stripe
  * ügyfélportálján történik. Nekünk elég az előfizetés állapotát tudni.
  */
-final class StripeSzolgaltatas implements SzamlazoKapu
+final class StripeSzolgaltatas implements ArKatalogus, SzamlazoKapu
 {
     private function kliens(): StripeClient
     {
@@ -126,5 +127,23 @@ final class StripeSzolgaltatas implements SzamlazoKapu
         ]);
 
         return (string) $tetel->id;
+    }
+
+    public function ar(string $priceId): ?Ar
+    {
+        try {
+            $ar = $this->kliens()->prices->retrieve($priceId, []);
+        } catch (InvalidRequestException) {
+            // Nem létező árazonosító. Ez az egyik hiba, amit keresünk, tehát
+            // nem kivétel, hanem eredmény: „a számlázó nem ismeri".
+            return null;
+        }
+
+        return new Ar(
+            egysegar: (int) $ar->unit_amount,
+            penznem: strtolower((string) $ar->currency),
+            ismetlodo: $ar->type === 'recurring',
+            aktiv: (bool) $ar->active,
+        );
     }
 }

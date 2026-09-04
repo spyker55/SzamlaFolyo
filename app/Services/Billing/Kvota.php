@@ -6,6 +6,7 @@ namespace App\Services\Billing;
 
 use App\Models\Company;
 use App\Models\DocumentExtraction;
+use App\Support\Osszeg;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -90,16 +91,44 @@ final class Kvota
      * A keret fölött csak akkor, ha a tulajdonos **külön engedélyezte** a
      * darabonként számlázott túlhasználatot. Alapból nem: váratlan számlát
      * senki ne kapjon attól, hogy egy hónapban többet dolgozott.
+     *
+     * És az engedély sem nyitott végű: a plafonig tart. Egy elgépelt tömeges
+     * feltöltés különben tetszőleges összeget tudna a következő számlára
+     * tenni, és arról a felhasználó a számlán értesülne először.
      */
     public function vanMegKeret(): bool
     {
-        return $this->maradek() > 0 || $this->ceg->tulhasznalatEngedve();
+        if ($this->maradek() > 0) {
+            return true;
+        }
+
+        if (! $this->ceg->tulhasznalatEngedve()) {
+            return false;
+        }
+
+        $plafon = $this->ceg->tulhasznalatPlafon();
+
+        return $plafon === null || $this->tullepesFt() < $plafon;
     }
 
     /** A keret fölötti, tehát darabonként számlázandó kreditek száma. */
     public function tullepes(): int
     {
         return max(0, $this->felhasznalt() - $this->keret());
+    }
+
+    /**
+     * A túllépés forintban — ezt méri a plafon, és ezt látja a felhasználó.
+     *
+     * Kreditben mérni félrevezető lenne: a darabár csomagonként más, tehát
+     * ugyanaz a kredit más-más összeget jelent. A plafont pedig forintban
+     * adja meg az, aki beállítja.
+     */
+    public function tullepesFt(): int
+    {
+        $darabAr = $this->ceg->csomag()['extra_ft'] ?? null;
+
+        return is_numeric($darabAr) ? $this->tullepes() * (int) $darabAr : 0;
     }
 
     /** Miért nem mehet tovább — ezt írjuk ki a felületen, szó szerint. */
@@ -117,6 +146,15 @@ final class Kvota
             return sprintf(
                 'Elfogyott a próbaidős kereted (%d dokumentum). A folytatáshoz válassz csomagot a Beállításokban.',
                 $this->keret(),
+            );
+        }
+
+        if ($this->ceg->tulhasznalatEngedve()) {
+            return sprintf(
+                'Elérted a kereten felüli feldolgozásra beállított %s Ft-os határt (eddig %s Ft). '
+                .'A Beállításokban emelheted a határt, vagy válthatsz nagyobb csomagra.',
+                Osszeg::formaz((int) $this->ceg->tulhasznalatPlafon()),
+                Osszeg::formaz($this->tullepesFt()),
             );
         }
 
@@ -142,6 +180,12 @@ final class Kvota
     /** @return array{0: Carbon, 1: Carbon} */
     public function idoszak(): array
     {
+        // A keret a Stripe számlázási ciklusára szól, nem naptári hónapra: az
+        // előfizetés napjától a következő fordulóig. Ez **csak addig helyes,
+        // amíg kizárólag havi árat adunk el** — egy éves előfizetésnél ez a
+        // ciklus tizenkét hónap volna, vagyis évi ötven dokumentum. Ezért nincs
+        // éves ár a `config/szamlafolyo.php`-ban, és ezért nem szabad felvenni
+        // egyet anélkül, hogy ez az ablak külön forgó hónapra váltana.
         if ($this->ceg->elofizetettE() && $this->ceg->current_period_start && $this->ceg->current_period_end) {
             return [$this->ceg->current_period_start, $this->ceg->current_period_end];
         }

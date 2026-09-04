@@ -13,6 +13,7 @@ use App\Services\Billing\Kvota;
 use App\Services\Billing\StripeSzolgaltatas;
 use App\Support\Adoszam;
 use App\Support\Berlo;
+use App\Support\Osszeg;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -29,8 +30,13 @@ class Beallitasok extends Component
 
     public int $megorzesiNapok = 0;
 
-    /** Éves vagy havi árat mutassunk-e a csomagoknál. */
-    public bool $evesFizetes = false;
+    /**
+     * A kereten felüli költés felső határa forintban, üresen hagyva nincs.
+     *
+     * Sztring, mert a beviteli mező üresen is maradhat, és az üres mező nem
+     * nulla: a nulla azonnali megállást jelentene, az üres azt, hogy nincs fék.
+     */
+    public string $tulhasznalatPlafon = '';
 
     public string $ujTagEmail = '';
 
@@ -42,6 +48,7 @@ class Beallitasok extends Component
         $this->cegNev = (string) $ceg->name;
         $this->cegAdoszam = (string) $ceg->tax_number;
         $this->megorzesiNapok = $ceg->megorzesiNapok();
+        $this->tulhasznalatPlafon = (string) ($ceg->tulhasznalatPlafon() ?? '');
     }
 
     public function cegMentes(): void
@@ -153,14 +160,11 @@ class Beallitasok extends Component
     {
         $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
 
-        $mezo = $this->evesFizetes ? 'price_id_evi' : 'price_id';
-        $priceId = config("szamlafolyo.plans.{$csomag}.{$mezo}");
+        $priceId = config("szamlafolyo.plans.{$csomag}.price_id");
         $stripe = app(StripeSzolgaltatas::class);
 
         if (! $stripe->beallitva() || ! is_string($priceId) || $priceId === '') {
-            $this->addError('elofizetes', $this->evesFizetes
-                ? 'Az éves díjszabás még nincs beállítva ezen a példányon.'
-                : 'A fizetés még nincs beállítva ezen a példányon.');
+            $this->addError('elofizetes', 'A fizetés még nincs beállítva ezen a példányon.');
 
             return;
         }
@@ -209,13 +213,50 @@ class Beallitasok extends Component
         $ceg = app(Berlo::class)->kotelezo();
         $uj = ! $ceg->overage_enabled;
 
-        $ceg->update(['overage_enabled' => $uj]);
+        $valtozas = ['overage_enabled' => $uj];
+
+        // Bekapcsoláskor a cég kap egy alapértelmezett plafont, ha még nincs.
+        // A kapcsoló enélkül nyitott végű volna, és a felhasználó a felső
+        // határról a számlán értesülne először.
+        if ($uj && $ceg->overage_limit_ft === null) {
+            $valtozas['overage_limit_ft'] = (int) config('szamlafolyo.tulhasznalat.alap_plafon_ft');
+        }
+
+        $ceg->update($valtozas);
+        $this->tulhasznalatPlafon = (string) ($ceg->fresh()?->tulhasznalatPlafon() ?? '');
 
         ActivityLog::rogzit('tulhasznalat.'.($uj ? 'engedve' : 'tiltva'));
 
         $this->uzenet($uj
-            ? 'A keret fölötti dokumentumokat mostantól feldolgozzuk, és darabonként számlázzuk.'
+            ? 'A keret fölötti dokumentumokat mostantól feldolgozzuk, és darabonként számlázzuk — '
+                .'legfeljebb a beállított határig.'
             : 'A keret fölötti feldolgozás kikapcsolva — a keret elfogyásakor a feldolgozás megáll.');
+    }
+
+    /**
+     * A plafon mentése.
+     *
+     * Külön művelet, mert pénzügyi következménye van, és külön naplóbejegyzést
+     * érdemel: ha valaki később vitatja a számlát, ebből derül ki, ki emelte
+     * meg a határt és mikor.
+     */
+    public function plafonMentes(): void
+    {
+        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+
+        $this->validate([
+            'tulhasznalatPlafon' => ['nullable', 'integer', 'min:0', 'max:10000000'],
+        ], attributes: ['tulhasznalatPlafon' => 'határ']);
+
+        $ertek = trim($this->tulhasznalatPlafon) === '' ? null : (int) $this->tulhasznalatPlafon;
+
+        app(Berlo::class)->kotelezo()->update(['overage_limit_ft' => $ertek]);
+
+        ActivityLog::rogzit('tulhasznalat.plafon', null, $ertek === null ? 'nincs' : $ertek.' Ft');
+
+        $this->uzenet($ertek === null
+            ? 'A kereten felüli feldolgozásnak mostantól nincs felső határa.'
+            : 'A kereten felüli feldolgozás felső határa '.Osszeg::formaz($ertek).' Ft.');
     }
 
     private function kellSzerep(callable $feltetel): void
@@ -238,6 +279,7 @@ class Beallitasok extends Component
             'keret' => $kvota->keret(),
             'felhasznalt' => $kvota->felhasznalt(),
             'tullepes' => $kvota->tullepes(),
+            'tullepesFt' => $kvota->tullepesFt(),
             'csomagok' => (array) config('szamlafolyo.plans'),
             'felhasznaloKeret' => $ceg->felhasznaloKeret(),
             // Túlhasználatot csak akkor kínálunk, ha van mögötte darabár —

@@ -66,17 +66,12 @@
         @error('elofizetes') <div class="alert alert-hiba mb-3">{{ $message }}</div> @enderror
 
         @if ($sajatSzerep?->adminisztralhat())
-            <label class="mb-3 flex items-center gap-2 text-sm text-slate-600">
-                <input type="checkbox" wire:model.live="evesFizetes" class="rounded border-slate-300">
-                Éves fizetés <span class="badge badge-kesz">12 hónap 10 havi díjért</span>
-            </label>
-
             <div class="flex flex-wrap gap-2">
                 @foreach ($csomagok as $kulcs => $csomag)
-                    @php($aktiv = in_array($ceg->stripe_price_id, [$csomag['price_id'] ?? null, $csomag['price_id_evi'] ?? null], true))
+                    @php($aktiv = ($csomag['price_id'] ?? null) !== null && $ceg->stripe_price_id === $csomag['price_id'])
                     <button wire:click="elofizetes('{{ $kulcs }}')" class="btn {{ $aktiv ? 'btn-primary' : 'btn-secondary' }}">
                         {{ $csomag['nev'] }} —
-                        {{ \App\Support\Osszeg::formaz($evesFizetes ? $csomag['ar_evi'] : $csomag['ar_havi']) }} Ft/{{ $evesFizetes ? 'év' : 'hó' }}
+                        {{ \App\Support\Osszeg::formaz($csomag['ar_havi']) }} Ft/hó
                         <span class="text-xs opacity-70">· {{ $csomag['documents'] }} db/hó · {{ $csomag['users'] }} fő</span>
                     </button>
                 @endforeach
@@ -103,7 +98,12 @@
 
             @if ($ceg->overage_enabled)
                 <div class="alert alert-figyelem mb-3">
-                    Bekapcsolva. Ebben az időszakban eddig <strong>{{ $tullepes }}</strong> darab esett a kereten felül.
+                    Bekapcsolva. Ebben az időszakban eddig <strong>{{ $tullepes }}</strong> darab esett a kereten felül,
+                    <strong>{{ \App\Support\Osszeg::formaz($tullepesFt) }} Ft</strong> értékben.
+                    @if ($ceg->tulhasznalatPlafon() !== null)
+                        A beállított határ {{ \App\Support\Osszeg::formaz($ceg->tulhasznalatPlafon()) }} Ft —
+                        elérésekor a feldolgozás megáll.
+                    @endif
                 </div>
             @endif
 
@@ -111,6 +111,23 @@
                 <button wire:click="tulhasznalatValt" class="btn {{ $ceg->overage_enabled ? 'btn-secondary' : 'btn-primary' }}">
                     {{ $ceg->overage_enabled ? 'Kikapcsolom' : 'Bekapcsolom' }}
                 </button>
+
+                @if ($ceg->overage_enabled)
+                    <form wire:submit="plafonMentes" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-200 pt-4">
+                        <div>
+                            <label class="flabel" for="tulhasznalatPlafon">Felső határ egy időszakban (Ft)</label>
+                            <input id="tulhasznalatPlafon" type="number" min="0" step="1000"
+                                   wire:model="tulhasznalatPlafon" class="control w-40" placeholder="nincs">
+                            @error('tulhasznalatPlafon') <p class="fhiba">{{ $message }}</p> @enderror
+                        </div>
+                        <button type="submit" class="btn btn-secondary">Mentés</button>
+                        <p class="w-full text-xs text-slate-400">
+                            Ennyinél többet egy időszakban nem terhelünk rád: a határ elérésekor a feldolgozás
+                            ugyanúgy megáll, mintha a keret fogyott volna el. Üresen hagyva nincs felső határ —
+                            ezt csak akkor tedd, ha tudod, mennyi irat érkezhet.
+                        </p>
+                    </form>
+                @endif
             @else
                 <p class="text-xs text-slate-400">Ezt a cég tulajdonosa tudja állítani.</p>
             @endif

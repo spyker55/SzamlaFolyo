@@ -97,15 +97,91 @@ final class ArazasTest extends TestCase
         $this->assertLessThan(PHP_INT_MAX, $keret);
     }
 
-    public function test_az_eves_ar_ugyanazt_a_csomagot_jelenti(): void
+    /**
+     * **Éves ár nem létezhet, amíg a keret a számlázási ciklusra szól.**
+     *
+     * Ez a teszt nem működést véd, hanem egy döntést: a `Kvota::idoszak()` a
+     * Stripe-ciklust adja vissza, egy éves előfizetésnél tehát évi ötven
+     * dokumentum járna a havi ötven helyett — tizenketted termék, tizenhat
+     * százalék kedvezményért. Ha valaki felvesz egy éves árat anélkül, hogy az
+     * ablakot külön forgó hónapra váltaná, itt fog megbukni, és itt olvassa el,
+     * miért.
+     */
+    public function test_nincs_eves_arazonosito_a_csomagokban(): void
     {
-        config(['szamlafolyo.plans.kozepes.price_id_evi' => 'price_kozepes_evi']);
+        foreach ((array) config('szamlafolyo.plans') as $kulcs => $csomag) {
+            $this->assertArrayNotHasKey('price_id_evi', $csomag, "A(z) {$kulcs} csomagban éves árazonosító van.");
+            $this->assertArrayNotHasKey('ar_evi', $csomag, "A(z) {$kulcs} csomagban éves ár van.");
+        }
+    }
 
-        $ceg = $this->elofizetett('price_kozepes_evi');
+    /** A keret az előfizetési ciklusra szól: az azelőtti fogyás nem terheli. */
+    public function test_a_keret_a_szamlazasi_ciklusra_szol(): void
+    {
+        config(['szamlafolyo.plans.kicsi.price_id' => 'price_kicsi']);
+        $ceg = $this->elofizetett('price_kicsi');
 
-        $this->assertSame(200, (new Kvota($ceg))->keret());
-        $this->assertStringContainsString('Flow', $ceg->csomagNeve());
-        $this->assertStringContainsString('éves', $ceg->csomagNeve());
+        $this->kiolvasas($ceg, 10);
+        DocumentExtraction::query()->withoutGlobalScopes()
+            ->update(['created_at' => now()->subDays(10)]);
+
+        $this->kiolvasas($ceg, 4);
+
+        $kvota = new Kvota($ceg);
+
+        $this->assertSame(4, $kvota->felhasznalt(), 'A ciklus előtti kiolvasás is beleszámított.');
+        $this->assertSame(
+            $ceg->current_period_start->timestamp,
+            $kvota->idoszak()[0]->timestamp,
+        );
+    }
+
+    // — 4. A túlhasználatnak felső határa van ————————————————
+
+    /**
+     * A kapcsoló nem nyitott végű. A plafon nélkül egyetlen elgépelt tömeges
+     * feltöltés tetszőleges összeget tudna a következő számlára tenni, és a
+     * felhasználó erről a számlán értesülne először.
+     */
+    public function test_a_plafon_megallitja_a_tulhasznalatot(): void
+    {
+        config([
+            'szamlafolyo.plans.kicsi.price_id' => 'price_kicsi',
+            'szamlafolyo.plans.kicsi.documents' => 50,
+            'szamlafolyo.plans.kicsi.extra_ft' => 49,
+        ]);
+
+        $ceg = $this->elofizetett('price_kicsi');
+        $ceg->update(['overage_enabled' => true, 'overage_limit_ft' => 1000]);
+
+        // 50 a kereten belül, 20 fölötte: 20 × 49 = 980 Ft, még a plafon alatt.
+        $this->kiolvasas($ceg, 70);
+        $kvota = new Kvota($ceg);
+
+        $this->assertSame(20, $kvota->tullepes());
+        $this->assertSame(980, $kvota->tullepesFt());
+        $this->assertTrue($kvota->vanMegKeret(), 'A plafon alatt még mehetne tovább.');
+
+        // Még egy kredit: 21 × 49 = 1 029 Ft, ez már fölötte van.
+        $this->kiolvasas($ceg, 1);
+        $kvota = new Kvota($ceg->fresh());
+
+        $this->assertSame(1029, $kvota->tullepesFt());
+        $this->assertFalse($kvota->vanMegKeret(), 'A plafon fölött is tovább engedte.');
+        $this->assertStringContainsString('1 000 Ft', (string) $kvota->akadaly());
+    }
+
+    /** Üres plafon = nincs fék. Ez csak tudatos döntéssel állítható elő. */
+    public function test_plafon_nelkul_nincs_felso_hatar(): void
+    {
+        config(['szamlafolyo.plans.kicsi.price_id' => 'price_kicsi']);
+
+        $ceg = $this->elofizetett('price_kicsi');
+        $ceg->update(['overage_enabled' => true, 'overage_limit_ft' => null]);
+
+        $this->kiolvasas($ceg, 5000);
+
+        $this->assertTrue((new Kvota($ceg))->vanMegKeret());
     }
 
     // — 3. A keret fölött alapból megállunk ——————————————————

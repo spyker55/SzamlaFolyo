@@ -95,13 +95,44 @@ szerződéses ígéret.
 
 |  | Start | Flow | Pro |
 |---|---:|---:|---:|
-| Havi nettó | 1 990 Ft | 4 990 Ft | 14 990 Ft |
-| Éves nettó | 19 900 Ft | 49 900 Ft | 149 900 Ft |
-| Dokumentum / hó | 50 | 200 | 1 000 |
-| Felhasználó | 1 | 3 | 10 |
-| Extra dokumentum | 39 Ft | 29 Ft | 19 Ft |
+| Havi nettó | 1 990 Ft | 4 990 Ft | 9 990 Ft |
+| Dokumentum / hó | 50 | 200 | 500 |
+| Felhasználó | 2 | 3 | 10 |
+| Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
+| Extra dokumentum | 49 Ft | 29 Ft | 24 Ft |
 
-Próba: **14 nap vagy 20 dokumentum, amelyik előbb elfogy**, bankkártya nélkül.
+Próba: **14 nap vagy 50 dokumentum, amelyik előbb elfogy**, bankkártya nélkül —
+pontosan egy Start-hónap. Húsz dokumentum volt itt korábban, abból viszont egy
+könyvelőiroda egy óra alatt kifut, és úgy sosem jut el a termék lényegéig: a
+kötegig, az ellenőrzésig, a havi exportig. A szűkítés indoka („az ingyen keret
+AI-költséget generál") ezen a modellen nem áll — egy kiolvasás nagyságrendileg
+fillér —, és a visszaélés ellen sem az véd, hanem hogy a próba céghez kötött és a
+fájlok hét nap után törlődnek.
+
+**Az árlépcsőnek két invariánsa van**, mindkettőt élesben rontottuk el egyszer, és
+mindkettőt teszt őrzi (`tests/Unit/ArlepcsoTest.php`):
+
+1. Az extra darabár **mindig drágább** a csomag saját darabáránál. Különben azt
+   tanítjuk, hogy megéri a kis csomagban maradni és túllépni.
+2. A saját darabár **csomagról csomagra csökken**. Enélkül a felfelé lépésnek
+   nincs értelme. Ezen bukott meg a „Pro maradjon 14 990 Ft, csak 500 dokumentum"
+   ötlet: az 29,98 Ft/darab lett volna, drágább a Flow-nál.
+
+Egyik szám sem látszik a képernyőn, csak abban, hogy senki nem vált csomagot.
+
+**Éves fizetés szándékosan nincs.** A keret a Stripe számlázási ciklusára szól
+(`Kvota::idoszak()`), egy éves előfizetésnél tehát tizenkét hónapos ablakot
+kapna: évi ötven dokumentum a havi ötven helyett, tizenhat százalék
+kedvezményért. Havi keret + éves számlázás csak külön forgó ablakkal működne;
+amíg az nincs meg, csak havi árat adunk el. Ha valaki mégis felvenne egy éves
+árat, az `ArazasTest::test_nincs_eves_arazonosito_a_csomagokban` bukik el, és ott
+olvassa el, miért.
+
+**A kiírt ár és a terhelt ár nincs egymáshoz kötve.** A képernyőkön a config
+számai állnak, a pénzt a Stripe árai mozgatják — ha elcsúsznak, minden teszt zöld
+marad, minden képernyő helyesnek látszik, és az eltérésről a vevő a számláján
+értesül. Az `arak:ellenoriz` parancs veti össze a kettőt (összeg, pénznem,
+egyszeri/ismétlődő, archivált-e); **telepítés után futtatni kell.**
 
 **A keret kreditben fogy, nem sorban.** A vevő dokumentumot vásárol, a
 költségünk viszont oldalarányos: egy nyolcvan oldalas köteg nem egy nyugta. Az
@@ -122,6 +153,14 @@ keretét kapja, és `warning` szinten a naplóba kerül.
 bekapcsolhatja a darabonként számlázott feldolgozást; addig a beküldött iratok
 megvárják a következő időszakot. Váratlan számlát senki ne kapjon attól, hogy egy
 hónapban többet dolgozott — a kapcsolás ezért külön naplóbejegyzést is kap.
+
+**És az engedély sem nyitott végű: van forintban mért plafon**
+(`companies.overage_limit_ft`). Enélkül egy elgépelt tömeges feltöltés
+tetszőleges összeget tudna a következő számlára tenni. A plafon nem opcionális
+kényelmi mező: a bekapcsolás magától beírja a
+`szamlafolyo.tulhasznalat.alap_plafon_ft` értékét, mert aki nem tud a mezőről,
+azt is védenie kell. Kiüríteni lehet — az `null`, vagyis nincs felső határ —, de
+csak tudatosan, és az is a naplóba kerül.
 
 A terhelést a napi `tulhasznalat:elszamol` viszi fel a következő Stripe-számlára,
 **nem** a feldolgozás közben: egy hálózati hiba miatt nem maradhat feldolgozatlan
@@ -306,6 +345,10 @@ bejelentkező oldal betöltődik.
 3. `./deploy.sh` — megkeresi a PHP-t, telepít, ellenőrzi a környezetet, migrál,
    gyorsítótáraz, és a végén **kiírja a három cron sort a helyes elérési úttal**.
 4. A kiírt három időzített feladat felvétele (lásd lentebb).
+5. `<php> artisan arak:ellenoriz` — összeveti a kiírt árakat a Stripe-ban
+   beállítottakkal. Ez az egyetlen hely, ahol a config számai és a valóban
+   terhelt összegek összeérnek; amíg eltérnek, a felület mást ígér, mint amit
+   levonunk.
 
 ### Időzített feladatok
 

@@ -41,6 +41,7 @@ class Company extends Model
             'current_period_end' => 'datetime',
             'file_retention_days' => 'integer',
             'overage_enabled' => 'boolean',
+            'overage_limit_ft' => 'integer',
         ];
     }
 
@@ -127,7 +128,7 @@ class Company extends Model
     }
 
     /**
-     * A cég csomagja az árazonosító alapján — havi és éves ár ugyanaz a csomag.
+     * A cég csomagja az árazonosító alapján.
      *
      * `null`, ha az előfizetés olyan árra szól, amit a konfiguráció nem ismer.
      * Ez nem elméleti eset: egy Stripe-ban létrehozott, de az `.env`-be be nem
@@ -142,10 +143,8 @@ class Company extends Model
         }
 
         foreach ((array) config('szamlafolyo.plans') as $kulcs => $csomag) {
-            foreach (['price_id', 'price_id_evi'] as $mezo) {
-                if (($csomag[$mezo] ?? null) !== null && $csomag[$mezo] === $this->stripe_price_id) {
-                    return $csomag + ['kulcs' => $kulcs];
-                }
+            if (($csomag['price_id'] ?? null) !== null && $csomag['price_id'] === $this->stripe_price_id) {
+                return $csomag + ['kulcs' => $kulcs];
             }
         }
 
@@ -157,8 +156,7 @@ class Company extends Model
         $csomag = $this->csomag();
 
         if ($csomag !== null) {
-            return (string) $csomag['nev']
-                .(($csomag['price_id_evi'] ?? null) === $this->stripe_price_id ? ' (éves)' : '');
+            return (string) $csomag['nev'];
         }
 
         if ($this->elofizetettE()) {
@@ -190,6 +188,17 @@ class Company extends Model
     public function tulhasznalatEngedve(): bool
     {
         return (bool) $this->overage_enabled && $this->csomag() !== null && $this->elofizetettE();
+    }
+
+    /**
+     * Mennyit költhet a cég egy időszakban a kereten felül, forintban.
+     *
+     * `null` = nincs plafon. Ezt csak az tudja előállítani, aki a mezőt
+     * tudatosan kiürítette: bekapcsoláskor a konfiguráció alapértéke kerül ide.
+     */
+    public function tulhasznalatPlafon(): ?int
+    {
+        return $this->overage_limit_ft === null ? null : max(0, (int) $this->overage_limit_ft);
     }
 
     public function nevRovid(): string

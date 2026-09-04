@@ -53,7 +53,7 @@ final class NyitolapTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('250 dokumentum', escape: false)
-            ->assertSee('1 000 dokumentum', escape: false);
+            ->assertSee('500 dokumentum', escape: false);
     }
 
     /**
@@ -65,7 +65,6 @@ final class NyitolapTest extends TestCase
     {
         config([
             'szamlafolyo.plans.kozepes.ar_havi' => 5990,
-            'szamlafolyo.plans.kozepes.ar_evi' => 59900,
             'szamlafolyo.plans.kozepes.users' => 4,
             'szamlafolyo.plans.kozepes.extra_ft' => 33,
         ]);
@@ -73,22 +72,32 @@ final class NyitolapTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('5 990')
-            ->assertSee('59 900')
             ->assertSee('4 felhasználó', escape: false)
             ->assertSee('Extra dokumentum: 33 Ft');
     }
 
     /**
-     * A kapcsoló a havi nézeten indul, és mindkét ár benne van a kimenetben:
-     * ha a szkript nem fut le, a havi ár marad a helyén — üres ár sosem
-     * látszik.
+     * Éves fizetés nincs, és az árlista sem kínálhatja.
+     *
+     * A keret a Stripe számlázási ciklusára szól, egy éves előfizetés tehát
+     * évi keretet adna a havi helyett. Amíg ez így van, az oldalon nem
+     * jelenhet meg éves ár — az ígéret volna, amit a rendszer nem tart be.
      */
-    public function test_a_havi_ar_az_alapertelmezett(): void
+    public function test_az_arlista_nem_kinal_eves_fizetest(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('aria-pressed="false"', escape: false)
-            ->assertSee('<span data-ar="evi" hidden>', escape: false);
+            ->assertSee('Ft / hó')
+            ->assertDontSee('Éves fizetés')
+            ->assertDontSee('12 hónap 10 havi díjért');
+    }
+
+    /** A kereten felüli feldolgozás felső határa is előre kimondott ígéret. */
+    public function test_az_arlista_kimondja_a_tulhasznalat_hatarat(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('az általad megadott forintos határig', escape: false);
     }
 
     /** A két szabály, amit a doksi szerint előre ki kell mondani. */

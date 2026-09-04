@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Middleware\SetCompany;
+use App\Services\Billing\ArKatalogus;
 use App\Services\Billing\StripeSzolgaltatas;
 use App\Services\Billing\SzamlazoKapu;
 use App\Support\Berlo;
@@ -24,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         // A túlhasznalat-elszámolás csak a `SzamlazoKapu`-t ismeri; élesben ezt
         // a Stripe szolgáltatja.
         $this->app->bind(SzamlazoKapu::class, StripeSzolgaltatas::class);
+        $this->app->bind(ArKatalogus::class, StripeSzolgaltatas::class);
     }
 
     public function boot(): void
