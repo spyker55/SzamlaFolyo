@@ -2,6 +2,37 @@
     <x-uzenet :uzenet="$uzenet" :tipus="$uzenetTipus ?? 'siker'"/>
     <h1 class="text-xl font-semibold text-slate-900">Beállítások</h1>
 
+    {{-- Beküldés e-mailben --}}
+    <div class="card card-pad">
+        <h2 class="mb-1 font-medium text-slate-900">Beküldés e-mailben</h2>
+        <p class="mb-3 text-sm text-slate-500">
+            Erre a címre továbbítva a számlát a melléklet magától bekerül a Beérkezőbe.
+            A cím a cégedhez tartozik — aki ismeri, tud iratot beküldeni, ezért ne tedd közzé.
+        </p>
+
+        @if ($bekuldesiCim === '')
+            <div class="alert alert-figyelem">
+                A beküldési cím nincs beállítva ezen a kiszolgálón.
+            </div>
+        @else
+            <input type="text" readonly value="{{ $bekuldesiCim }}"
+                   onclick="this.select()"
+                   class="control bg-slate-50 font-mono text-sm">
+
+            @unless ($bekuldesAktiv)
+                {{-- Ez a legfontosabb mondat ezen a kártyán: enélkül a cím
+                     működőnek látszik, a rá küldött levél viszont sehova nem
+                     érkezik meg, és a feladó sem kap hibát. --}}
+                <div class="alert alert-figyelem mt-3">
+                    <strong>A beérkeztetés még nincs bekapcsolva.</strong>
+                    Az erre a címre küldött levelek jelenleg <strong>nem érkeznek meg</strong> —
+                    a postafiók beállítása hiányzik a kiszolgálón. Addig töltsd fel az iratokat
+                    a Beérkezőben.
+                </div>
+            @endunless
+        @endif
+    </div>
+
     {{-- Előfizetés --}}
     <div class="card card-pad">
         <h2 class="mb-1 font-medium text-slate-900">Csomag és keret</h2>

@@ -195,7 +195,33 @@ class Beallitasok extends Component
             'csomagok' => (array) config('szamlafolyo.plans'),
             'sajatSzerep' => auth()->user()?->szerepe($ceg),
             'tarhelyBajt' => $this->tarhelyFoglalas($ceg),
+            'bekuldesiCim' => $this->bekuldesiCim($ceg),
+            // A cím önmagában félrevezető: ha a postafiók nincs beállítva a
+            // kiszolgálón, az arra küldött levél sehova nem érkezik meg, és
+            // ezt semmi nem mondja meg — se a feladónak, se a felhasználónak.
+            'bekuldesAktiv' => (string) config('inbox.imap.host') !== ''
+                && (string) config('inbox.imap.username') !== '',
         ]);
+    }
+
+    /**
+     * A cég beküldési e-mail címe.
+     *
+     * A tokent a `Company` hozza létre, és eddig **sehol nem jelent meg a
+     * felületen** — vagyis a beérkeztetés a háttérben kész volt, de nem lehetett
+     * megtudni, hova kell küldeni a számlát.
+     */
+    private function bekuldesiCim(Company $ceg): string
+    {
+        if ((string) config('inbox.mode') === 'plus') {
+            $plusz = (string) config('inbox.plus_address');
+
+            return $plusz === ''
+                ? ''
+                : (string) str_replace('@', '+'.$ceg->inbox_token.'@', $plusz);
+        }
+
+        return $ceg->inbox_token.'@'.config('inbox.domain');
     }
 
     /** Mennyit foglal a cég a tárhelyből — 1,5 GB-on ez nem elméleti kérdés. */

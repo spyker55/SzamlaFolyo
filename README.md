@@ -273,6 +273,22 @@ cd /tmp && <php> <projekt>/artisan dokumentum:feldolgoz --limit=1
 A `cd /tmp` szándékos: pont azt bizonyítja, hogy a parancs a munkakönyvtártól
 függetlenül működik.
 
+### Az e-mailes beérkeztetés bekapcsolása
+
+Négy dolog kell hozzá, és mind a négy nélkül a cím **működőnek látszik, de a
+levél sehova nem érkezik meg** — a feladó sem kap hibát. A Beállítások képernyő
+ezért ki is írja, ha a postafiók még nincs beállítva.
+
+1. **MX-rekord** az `INBOX_DOMAIN` aldoménre, a szolgáltató levelezőszervereire.
+2. **Catch-all postafiók** arra az aldoménre (`*@bekuldes.<domain>` → egy fiók).
+3. **A fiók adatai a `.env`-ben**: `IMAP_HOST`, `IMAP_USERNAME`, `IMAP_PASSWORD`.
+   Enélkül a `email:beolvas` minden futáskor azzal áll meg, hogy nincs beállítva.
+4. **A `Feldolgozott` és a `Besorolatlan` mappa** a fiókban, és a `email:beolvas`
+   felvéve az időzített feladatok közé.
+
+A cégek beküldési címe a Beállítások képernyőn látszik, és a
+`email:beolvas --proba` is kiírja mindet.
+
 ### Ha nem érkezik meg az e-mailben küldött számla
 
 A bejelentés öt különböző dolgot jelenthet, és a felületen egyik sem látszik.
