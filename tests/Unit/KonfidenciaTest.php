@@ -38,6 +38,21 @@ final class KonfidenciaTest extends TestCase
         $this->assertSame('biztos', Konfidencia::sav(0.9));
     }
 
+    /**
+     * A határérték az óvatosabb sávba esik.
+     *
+     * A modellek kerek számokat mondanak, és a 0,85 az egyik kedvencük — egy
+     * kézzel írott számlán a 3.8 Flash pontosan ennyit adott a szállító nevére,
+     * ami a lap legalacsonyabb értéke és az egyetlen rossz mező volt. Szigorú
+     * `<` mellett ez jelöletlenül ment volna át.
+     */
+    public function test_a_hataron_allo_ertek_a_szigorubb_savba_esik(): void
+    {
+        $this->assertSame('bizonytalan', Konfidencia::sav(0.85));
+        $this->assertSame('biztos', Konfidencia::sav(0.851));
+        $this->assertSame('gyanus', Konfidencia::sav(0.5));
+    }
+
     /** A bukott validátor a magabiztos mezőt is a piros sávba húzza. */
     public function test_a_validator_csak_lefele_huzhat(): void
     {

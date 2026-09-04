@@ -20,9 +20,15 @@ return [
      * A Pro drága és lassú (a mérésben ötször lassabb a Sonnetnél, drágább
      * is), ezért a köztes fok az alapértelmezés.
      *
-     * Amit mindegyik modellről tudni kell: a magabiztosságát nem érdemes
-     * komolyan venni. Öt mérésből ötször tévedett — hol lefelé egy jó mezőn,
-     * hol 1,00-t adva egy kitalált névre. A megbízható jel a validátoroké.
+     * A magabiztosság **modellfüggő**, és ezt korábban elnéztük. A Flash
+     * Lite-é használhatatlan: 0,5 egy jól kiolvasott mezőre, majd 1,00 három
+     * különböző kitalált névre. A 3.8 Flash ugyanezen az iraton 0,70-et adott
+     * a szállító nevére — a lap legalacsonyabb értékét, pontosan az egyetlen
+     * rossz mezőre —, a többire 0,95–0,99-et. Ugyanez a modell a
+     * `nehezen_olvashato` zászlót is helyesen beállította, amit a Lite nem.
+     *
+     * Ettől még a validátor a megbízhatóbb jel, és az összevonás csak lefelé
+     * húzhat: egy mérés nem kalibráció.
      */
     'model' => env('OPENROUTER_MODEL', 'google/gemini-3.8-flash'),
 

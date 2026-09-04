@@ -50,8 +50,12 @@ return [
     |---------------------------------------------------------------------------
     | Kiolvasás
     |---------------------------------------------------------------------------
-    | A `review_threshold` fölött zöld a mező, a `warn_threshold` alatt piros,
-    | a kettő között sárga. A bukott validátor mindig a piros sávba húz.
+    | A `review_threshold` **fölött** a mező jelöletlen marad (a kiemelés a
+    | bajt jelöli, nem a rendben lévőt), a `warn_threshold`-ig piros, a kettő
+    | között sárga. A bukott validátor mindig a piros sávba húz.
+    |
+    | Maga a határérték az óvatosabb sávba esik: a modellek kerek számokat
+    | mondanak, és a határra eső 0,85 nem jótállás.
     */
 
     'extraction' => [

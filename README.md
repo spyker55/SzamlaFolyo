@@ -308,17 +308,22 @@ János", „Sién János", végül „Süni Fúró" — ez utóbbit láthatóan 
 szövegéből, a *Betonfuratok készítése*-ből gyúrta). A Pro drágább és ötször
 lassabb a Sonnetnél, ezért a köztes fok az alapértelmezés.
 
-Amit a mérésekből érdemes megjegyezni: **a modell önbevallott magabiztossága
-egyszer sem találta el a valódi hibát.** A Flash Lite 0,5-öt adott egy jól
-kiolvasott mezőre, a Sonnet 0,95-öt az egyetlen tévedésére, a kézzel írott
-számlán pedig **1,00-t a kitalált névre**. A megbízható jel a validátoroké —
-ezért húzhat az összevonás csak lefelé.
+**A magabiztosság modellfüggő**, és ezt sokáig elnéztük. A Flash Lite-é
+használhatatlan: 0,5 egy jól kiolvasott mezőre, majd 1,00 három különböző
+kitalált névre — a legmagabiztosabb állítása volt a leghamisabb. A Sonnet 0,95-öt
+adott az egyetlen tévedésére.
 
-Ugyanezen az iraton derült ki az is, hogy a `nehezen_olvashato` zászlót a modell
-**nem** állította be, miközben a bizonylat tetőtől talpig kézírás. A
-`tobb_irat_gyanu`-t viszont helyesen jelezte. A különbség tanulságos: az utóbbi
-tiszta megszámlálás, az előbbiben ott van, hogy „neked mennyire ment" — és
-amint a kérdés a modell saját teljesítményéről szól, a válasz használhatatlan.
+A 3.8 Flash viszont ugyanezen a kézzel írott számlán, **két futásból kétszer a
+szállító nevére adta a lap legalacsonyabb értékét** (0,70 és 0,85) — pontosan az
+egyetlen rossz mezőre —, a többire 0,90–0,99-et. És mindkétszer beállította a
+`nehezen_olvashato` zászlót, amit a Lite egyszer sem tett meg. A név a második
+futásra „Siéri László" lett: a keresztnév már helyes, a vezetéknév első betűje
+nem — vagyis félreolvasás, nem kitalálás.
+
+Ebből tehát nem az következik, hogy a modelltől nem lehet a saját munkájáról
+kérdezni — hanem hogy **a gyenge modelltől nem lehet**. Egy mérés viszont nem
+kalibráció: a determinisztikus validátor marad a megbízhatóbb jel, és az
+összevonás továbbra is **csak lefelé húzhat**.
 
 A `--modell` futásidőben ír felül, nem környezeti változóval: élesben a
 konfiguráció gyorsítótárazva van (`config:cache`), ott az `OPENROUTER_MODEL=…`

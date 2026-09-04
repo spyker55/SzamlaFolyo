@@ -80,11 +80,18 @@ final class Konfidencia
             return 'nincs_adat';
         }
 
-        if ($pont < (float) config('szamlafolyo.extraction.warn_threshold')) {
+        // A határérték a **óvatosabb** sávba esik, ezért `<=` és nem `<`.
+        //
+        // Nem elméleti finomság: a modellek kerek számokat mondanak, és a 0,85
+        // az egyik kedvencük. Egy kézzel írott számlán a 3.8 Flash pontosan
+        // 0,85-öt adott a szállító nevére — a lap legalacsonyabb értékét, és az
+        // egyetlen rossz mezőt —, ami szigorú `<`-nál jelöletlen maradt volna.
+        // Egy 85%-os állítás nem jótállás: hetente egyszer téved.
+        if ($pont <= (float) config('szamlafolyo.extraction.warn_threshold')) {
             return 'gyanus';
         }
 
-        if ($pont < (float) config('szamlafolyo.extraction.review_threshold')) {
+        if ($pont <= (float) config('szamlafolyo.extraction.review_threshold')) {
             return 'bizonytalan';
         }
 
