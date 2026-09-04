@@ -13,6 +13,7 @@ use App\Services\Files\FajlTarolo;
 use App\Support\Adoszam;
 use App\Support\AfaBontas;
 use App\Support\Ido;
+use App\Support\Kredit;
 use App\Support\Osszeg;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -275,12 +276,23 @@ final class Kiolvaso
             'output_tokens' => $valasz['output_tokens'] ?? null,
             'cost' => $valasz['cost'] ?? null,
             'duration_ms' => $idoMs,
+            // A keret oldalarányosan fogy. Az oldalszámot a felderítés írta a
+            // dokumentum naplójába, még a kiolvasás előtt — innen olvassuk,
+            // hogy mindkét út (XML és modell) ugyanazt a számot kapja.
+            'credits' => Kredit::oldalakbol($this->oldalszam($dokumentum)),
             'error' => $hiba,
         ]);
         $kiolvasas->company_id = $dokumentum->company_id;
         $kiolvasas->save();
 
         return $kiolvasas;
+    }
+
+    private function oldalszam(Document $dokumentum): ?int
+    {
+        $oldalak = ((array) $dokumentum->forras_naplo)['oldalszam'] ?? null;
+
+        return is_numeric($oldalak) ? (int) $oldalak : null;
     }
 
     /**

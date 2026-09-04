@@ -53,15 +53,35 @@ final class Felderito
 
         $xml = $this->beagyazottXml($doc);
 
+        $oldalak = $this->oldalszam($doc);
+
         if ($xml !== null) {
-            return new Eredmeny(Jelleg::BeagyazottXml, xml: $xml, szovegHossz: $this->szovegHossz($doc));
+            return new Eredmeny(Jelleg::BeagyazottXml, xml: $xml, szovegHossz: $this->szovegHossz($doc), oldalszam: $oldalak);
         }
 
         $hossz = $this->szovegHossz($doc);
 
         return $hossz >= self::SZOVEG_KUSZOB
-            ? new Eredmeny(Jelleg::Szovegreteg, szoveg: $this->szoveg($doc), szovegHossz: $hossz)
-            : new Eredmeny(Jelleg::Kep, szovegHossz: $hossz);
+            ? new Eredmeny(Jelleg::Szovegreteg, szoveg: $this->szoveg($doc), szovegHossz: $hossz, oldalszam: $oldalak)
+            : new Eredmeny(Jelleg::Kep, szovegHossz: $hossz, oldalszam: $oldalak);
+    }
+
+    /**
+     * Hány oldalas a PDF.
+     *
+     * Ez a keret miatt kell, nem a kiolvasáshoz — ezért egy hiba itt sosem
+     * állíthatja meg a feldolgozást: `null`-t adunk, és a `Kredit` abból egy
+     * kreditet számol. Bizonytalanságból nem számlázunk többet.
+     */
+    private function oldalszam(object $doc): ?int
+    {
+        try {
+            $oldalak = count($doc->getPages());
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $oldalak > 0 ? $oldalak : null;
     }
 
     /**

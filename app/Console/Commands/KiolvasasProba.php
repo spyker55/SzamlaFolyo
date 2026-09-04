@@ -378,7 +378,7 @@ final class KiolvasasProba extends Command
         $maradek = (new Kvota($ceg))->maradek();
 
         $this->line('  <fg=gray>A próbatétel törölve — nem fogyasztotta a keretet.'
-            .($maradek === PHP_INT_MAX ? '' : " Hátralévő keret: {$maradek} dokumentum.")
+            ." Hátralévő keret: {$maradek} dokumentum."
             .' A --megtart kapcsolóval bent marad.</>');
         $this->line('');
     }

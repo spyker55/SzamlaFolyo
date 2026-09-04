@@ -29,6 +29,9 @@ class Beallitasok extends Component
 
     public int $megorzesiNapok = 0;
 
+    /** Éves vagy havi árat mutassunk-e a csomagoknál. */
+    public bool $evesFizetes = false;
+
     public string $ujTagEmail = '';
 
     public string $ujTagSzerep = 'szerkeszto';
@@ -87,18 +90,34 @@ class Beallitasok extends Component
         $ceg = app(Berlo::class)->kotelezo();
         $user = User::query()->where('email', $adatok['ujTagEmail'])->first();
 
+        if ($user !== null && $ceg->users()->where('users.id', $user->id)->exists()) {
+            $this->addError('ujTagEmail', 'Ez a felhasználó már tagja a cégnek.');
+
+            return;
+        }
+
+        // A csomag felhasználószáma. Két dolog múlik a sorrenden. Egy: a
+        // korlátot a **műveletben** kell megfogni, nem a képernyőn elrejtett
+        // gombbal — egy Livewire-akció közvetlenül is meghívható. Kettő: az
+        // ellenőrzés a fiók létrehozása **előtt** áll, különben egy elutasított
+        // meghívás is hagyna maga után egy árva, véletlen jelszavú fiókot.
+        $keret = $ceg->felhasznaloKeret();
+
+        if ($ceg->users()->count() >= $keret) {
+            $this->addError('ujTagEmail', sprintf(
+                'A csomagodban %d felhasználó szerepelhet. Nagyobb csomaggal többen is dolgozhattok.',
+                $keret,
+            ));
+
+            return;
+        }
+
         if ($user === null) {
             $user = User::create([
                 'name' => Str::before($adatok['ujTagEmail'], '@'),
                 'email' => $adatok['ujTagEmail'],
                 'password' => Str::random(40),
             ]);
-        }
-
-        if ($ceg->users()->where('users.id', $user->id)->exists()) {
-            $this->addError('ujTagEmail', 'Ez a felhasználó már tagja a cégnek.');
-
-            return;
         }
 
         $ceg->users()->attach($user->id, [
@@ -134,11 +153,14 @@ class Beallitasok extends Component
     {
         $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
 
-        $priceId = config("szamlafolyo.plans.{$csomag}.price_id");
+        $mezo = $this->evesFizetes ? 'price_id_evi' : 'price_id';
+        $priceId = config("szamlafolyo.plans.{$csomag}.{$mezo}");
         $stripe = app(StripeSzolgaltatas::class);
 
         if (! $stripe->beallitva() || ! is_string($priceId) || $priceId === '') {
-            $this->addError('elofizetes', 'A fizetés még nincs beállítva ezen a példányon.');
+            $this->addError('elofizetes', $this->evesFizetes
+                ? 'Az éves díjszabás még nincs beállítva ezen a példányon.'
+                : 'A fizetés még nincs beállítva ezen a példányon.');
 
             return;
         }
@@ -173,6 +195,29 @@ class Beallitasok extends Component
         ));
     }
 
+    /**
+     * A keret fölötti, darabonként számlázott feldolgozás ki/be kapcsolása.
+     *
+     * Külön művelet, külön naplóbejegyzéssel: ez az a kapcsoló, amitől a
+     * felhasználónak pénzébe kerülhet egy forgalmas hónap. Ha később vitatja,
+     * a naplóból derül ki, ki és mikor kapcsolta be.
+     */
+    public function tulhasznalatValt(): void
+    {
+        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+
+        $ceg = app(Berlo::class)->kotelezo();
+        $uj = ! $ceg->overage_enabled;
+
+        $ceg->update(['overage_enabled' => $uj]);
+
+        ActivityLog::rogzit('tulhasznalat.'.($uj ? 'engedve' : 'tiltva'));
+
+        $this->uzenet($uj
+            ? 'A keret fölötti dokumentumokat mostantól feldolgozzuk, és darabonként számlázzuk.'
+            : 'A keret fölötti feldolgozás kikapcsolva — a keret elfogyásakor a feldolgozás megáll.');
+    }
+
     private function kellSzerep(callable $feltetel): void
     {
         $ceg = app(Berlo::class)->kotelezo();
@@ -192,7 +237,14 @@ class Beallitasok extends Component
             'szerepek' => Szerep::opciok(),
             'keret' => $kvota->keret(),
             'felhasznalt' => $kvota->felhasznalt(),
+            'tullepes' => $kvota->tullepes(),
             'csomagok' => (array) config('szamlafolyo.plans'),
+            'felhasznaloKeret' => $ceg->felhasznaloKeret(),
+            // Túlhasználatot csak akkor kínálunk, ha van mögötte darabár —
+            // egy kapcsoló, ami után nem történik számlázás, hazugság.
+            'vanExtraAr' => is_string($ceg->csomag()['price_id_extra'] ?? null)
+                && ($ceg->csomag()['price_id_extra'] ?? '') !== '',
+            'extraFt' => $ceg->csomag()['extra_ft'] ?? null,
             'sajatSzerep' => auth()->user()?->szerepe($ceg),
             'tarhelyBajt' => $this->tarhelyFoglalas($ceg),
             'bekuldesiCim' => $this->bekuldesiCim($ceg),

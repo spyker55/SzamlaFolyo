@@ -56,6 +56,50 @@ final class NyitolapTest extends TestCase
             ->assertSee('1 000 dokumentum', escape: false);
     }
 
+    /**
+     * Az árlista minden száma a konfigurációból jön: ár, darabszám,
+     * felhasználószám, darabár. Az árlistán álló szám szerződéses ígéret —
+     * kézzel beírva előbb-utóbb elcsúszik attól, amit a rendszer valóban ad.
+     */
+    public function test_az_arlista_a_konfiguraciobol_jon(): void
+    {
+        config([
+            'szamlafolyo.plans.kozepes.ar_havi' => 5990,
+            'szamlafolyo.plans.kozepes.ar_evi' => 59900,
+            'szamlafolyo.plans.kozepes.users' => 4,
+            'szamlafolyo.plans.kozepes.extra_ft' => 33,
+        ]);
+
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('5 990')
+            ->assertSee('59 900')
+            ->assertSee('4 felhasználó', escape: false)
+            ->assertSee('Extra dokumentum: 33 Ft');
+    }
+
+    /**
+     * A kapcsoló a havi nézeten indul, és mindkét ár benne van a kimenetben:
+     * ha a szkript nem fut le, a havi ár marad a helyén — üres ár sosem
+     * látszik.
+     */
+    public function test_a_havi_ar_az_alapertelmezett(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('aria-pressed="false"', escape: false)
+            ->assertSee('<span data-ar="evi" hidden>', escape: false);
+    }
+
+    /** A két szabály, amit a doksi szerint előre ki kell mondani. */
+    public function test_a_ket_szabaly_ki_van_mondva(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('alapból megáll')
+            ->assertSee('Az első 5 oldal egy dokumentum');
+    }
+
     public function test_a_gombok_a_regisztraciora_visznek(): void
     {
         $this->get('/')

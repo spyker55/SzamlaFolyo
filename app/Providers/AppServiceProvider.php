@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Middleware\SetCompany;
+use App\Services\Billing\StripeSzolgaltatas;
+use App\Services\Billing\SzamlazoKapu;
 use App\Support\Berlo;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +20,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(Berlo::class);
+
+        // A túlhasznalat-elszámolás csak a `SzamlazoKapu`-t ismeri; élesben ezt
+        // a Stripe szolgáltatja.
+        $this->app->bind(SzamlazoKapu::class, StripeSzolgaltatas::class);
     }
 
     public function boot(): void

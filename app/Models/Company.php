@@ -40,6 +40,7 @@ class Company extends Model
             'current_period_start' => 'datetime',
             'current_period_end' => 'datetime',
             'file_retention_days' => 'integer',
+            'overage_enabled' => 'boolean',
         ];
     }
 
@@ -125,15 +126,70 @@ class Company extends Model
         return in_array($this->stripe_status, ['active', 'trialing'], true);
     }
 
-    public function csomagNeve(): string
+    /**
+     * A cég csomagja az árazonosító alapján — havi és éves ár ugyanaz a csomag.
+     *
+     * `null`, ha az előfizetés olyan árra szól, amit a konfiguráció nem ismer.
+     * Ez nem elméleti eset: egy Stripe-ban létrehozott, de az `.env`-be be nem
+     * írt ár pontosan ide vezet.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function csomag(): ?array
     {
-        foreach ((array) config('szamlafolyo.plans') as $csomag) {
-            if (($csomag['price_id'] ?? null) !== null && $csomag['price_id'] === $this->stripe_price_id) {
-                return (string) $csomag['nev'];
+        if ($this->stripe_price_id === null) {
+            return null;
+        }
+
+        foreach ((array) config('szamlafolyo.plans') as $kulcs => $csomag) {
+            foreach (['price_id', 'price_id_evi'] as $mezo) {
+                if (($csomag[$mezo] ?? null) !== null && $csomag[$mezo] === $this->stripe_price_id) {
+                    return $csomag + ['kulcs' => $kulcs];
+                }
             }
         }
 
+        return null;
+    }
+
+    public function csomagNeve(): string
+    {
+        $csomag = $this->csomag();
+
+        if ($csomag !== null) {
+            return (string) $csomag['nev']
+                .(($csomag['price_id_evi'] ?? null) === $this->stripe_price_id ? ' (éves)' : '');
+        }
+
+        if ($this->elofizetettE()) {
+            return 'Ismeretlen csomag';
+        }
+
         return $this->probaidosE() ? 'Próbaidő' : 'Nincs csomag';
+    }
+
+    /**
+     * Hány felhasználó tartozhat a céghez. Próbaidőben a konfigurációban
+     * megadott szám; ismeretlen csomagnál a legkisebb — felfelé sosem
+     * tévedünk egy olyan állításban, ami nincs kifizetve.
+     */
+    public function felhasznaloKeret(): int
+    {
+        $csomag = $this->csomag();
+
+        if ($csomag !== null) {
+            return (int) $csomag['users'];
+        }
+
+        return $this->probaidosE()
+            ? (int) config('szamlafolyo.trial.users')
+            : (int) config('szamlafolyo.plans.kicsi.users');
+    }
+
+    /** Engedélyezte-e a tulajdonos a keret fölötti, darabonként számlázott munkát. */
+    public function tulhasznalatEngedve(): bool
+    {
+        return (bool) $this->overage_enabled && $this->csomag() !== null && $this->elofizetettE();
     }
 
     public function nevRovid(): string

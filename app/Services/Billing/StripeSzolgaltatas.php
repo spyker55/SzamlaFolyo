@@ -14,7 +14,7 @@ use Stripe\StripeClient;
  * Stripe Checkoutban, a kezelés (kártyacsere, lemondás, számlák) a Stripe
  * ügyfélportálján történik. Nekünk elég az előfizetés állapotát tudni.
  */
-final class StripeSzolgaltatas
+final class StripeSzolgaltatas implements SzamlazoKapu
 {
     private function kliens(): StripeClient
     {
@@ -105,5 +105,26 @@ final class StripeSzolgaltatas
     public function elofizetes(string $id): object
     {
         return $this->kliens()->subscriptions->retrieve($id, []);
+    }
+
+    /**
+     * A keret fölötti darabok felvitele a következő számlára.
+     *
+     * Nem külön fizetés: a Stripe a függő tételt magától ráteszi az
+     * előfizetés soron következő számlájára. Így a felhasználó egy számlát
+     * kap, és a tétel ott áll rajta, nem egy váratlan külön terhelésként.
+     *
+     * @return string a létrejött tétel Stripe-azonosítója
+     */
+    public function extraTetel(Company $ceg, string $email, string $priceId, int $darab): string
+    {
+        $tetel = $this->kliens()->invoiceItems->create([
+            'customer' => $this->ugyfel($ceg, $email),
+            'price' => $priceId,
+            'quantity' => $darab,
+            'metadata' => ['company_id' => (string) $ceg->id],
+        ]);
+
+        return (string) $tetel->id;
     }
 }

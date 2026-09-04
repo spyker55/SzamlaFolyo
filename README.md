@@ -85,6 +85,50 @@ opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
 e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a
 feldolgozás idempotens (`message_id` cégenként egyedi).
 
+### Árazás
+
+A csomagok minden száma a `config/szamlafolyo.php`-ban áll — ár, darabkeret,
+felhasználószám, darabár —, és a nyitólap árlistája, a Beállítások képernyő és a
+keretszámolás mind onnan olvas. Marketingszövegbe kézzel beírt szám előbb-utóbb
+elcsúszik attól, amit a rendszer valóban ad; az árlistán álló szám viszont
+szerződéses ígéret.
+
+|  | Start | Flow | Pro |
+|---|---:|---:|---:|
+| Havi nettó | 1 990 Ft | 4 990 Ft | 14 990 Ft |
+| Éves nettó | 19 900 Ft | 49 900 Ft | 149 900 Ft |
+| Dokumentum / hó | 50 | 200 | 1 000 |
+| Felhasználó | 1 | 3 | 10 |
+| Extra dokumentum | 39 Ft | 29 Ft | 19 Ft |
+
+Próba: **14 nap vagy 20 dokumentum, amelyik előbb elfogy**, bankkártya nélkül.
+
+**A keret kreditben fogy, nem sorban.** A vevő dokumentumot vásárol, a
+költségünk viszont oldalarányos: egy nyolcvan oldalas köteg nem egy nyugta. Az
+első öt oldal egy dokumentum, e fölött minden megkezdett öt oldal még egy
+(`App\Support\Kredit`, `szamlafolyo.kredit.oldal_per_kredit`). A szabály
+szándékosan egyszerű, mert **ki van írva** — a nyitólapon és a Beállításokban is.
+Egy normál számla (1–3 oldal) így biztosan egy marad: a fair-use szabály nem
+érintheti a hétköznapi használatot, különben nem fair-use, hanem rejtett
+áremelés.
+
+**Korlátlan csomag nincs**, és korábban véletlenül volt: aktív előfizetés
+ismeretlen árazonosítóval `PHP_INT_MAX` keretet kapott. Egy Stripe-ban
+létrehozott, de az `.env`-be be nem írt ár így csendben korlátlan AI-használatot
+nyitott — épp a legdrágább oldalon. Ismeretlen ár mostantól a legkisebb csomag
+keretét kapja, és `warning` szinten a naplóba kerül.
+
+**A keret fölött alapból megállunk.** A tulajdonos a Beállításokban külön
+bekapcsolhatja a darabonként számlázott feldolgozást; addig a beküldött iratok
+megvárják a következő időszakot. Váratlan számlát senki ne kapjon attól, hogy egy
+hónapban többet dolgozott — a kapcsolás ezért külön naplóbejegyzést is kap.
+
+A terhelést a napi `tulhasznalat:elszamol` viszi fel a következő Stripe-számlára,
+**nem** a feldolgozás közben: egy hálózati hiba miatt nem maradhat feldolgozatlan
+egy bizonylat. A parancs mindig a ténylegesen túllépett és a már kiszámlázott
+kreditek különbségét terheli (`overage_charges` tábla), ezért egy megszakadt vagy
+megismételt futás nem terhel kétszer.
+
 ### A paletta
 
 A felület meleg, földszínű: krémszín papír, terrakotta kiemelés, DM Sans. A
@@ -119,12 +163,9 @@ számjegyű** adószámra nem szabad következtetést építeni (kézírásnál 
 félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 
 **Amit a nyitólap ezért nem ígér.** A csomagok között ma **nincs cégszám-alapú
-különbség** — a `User::ceg()` az első céget adja vissza, váltó nélkül —, ezért a
-„1 cég / 3 cég / korlátlan cég" sor kimaradt az árlistából. Ugyanígy kimaradt a
-**túlhasználati díj** (a `Kvota` nem számláz darabonként, hanem megállít) és az
-**éves fizetés** (csomagonként egyetlen Stripe árazonosító van, éves ár nincs).
-Mindhárom visszakerülhet, de csak a megvalósításukkal együtt: az árlistán álló
-állítás szerződéses ígéret.
+különbség** — a `User::ceg()` az első céget adja vissza, váltó nélkül —, ezért az
+árlista felhasználószámot ígér (azt betartatjuk), céget nem. Amint a cégváltó
+megvan, a „hány céget kezelhetsz" sor is bekerülhet.
 
 ## Felépítés
 
@@ -278,6 +319,7 @@ mezőkbe megy, a parancs pedig a **Kezelő → „Egyedi parancs"** mezőbe. Ne 
 | Beérkeztetés e-mailből | `*/5 * * * *` | `<php> <projekt>/artisan email:beolvas` |
 | Kiolvasás, elakadt futások | `*/5 * * * *` | `<php> <projekt>/artisan dokumentum:feldolgoz --limit=5` |
 | Selejtezés (fájlok és régi levelek) | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
+| Túlhasználat elszámolása | `41 4 * * *` | `<php> <projekt>/artisan tulhasznalat:elszamol` |
 
 A parancsban **nincs `cd` és nincs `&&`**. Az `artisan` a saját helyéből (`__DIR__`)
 oldja fel az útvonalakat, ezért abszolút úttal hívva bármelyik munkakönyvtárból

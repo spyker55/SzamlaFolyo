@@ -311,14 +311,32 @@
             </p>
         </div>
 
+        {{--
+            Az éves/havi váltás CSS-osztályokkal, nem szövegcserével: mindkét ár
+            benne van a kimenetben, a kapcsoló csak azt dönti el, melyik látszik.
+            Így a szkript kiesése nem üres árat hagy a helyén, hanem a havi árat.
+        --}}
+        <div class="mb-12 flex items-center justify-center gap-4" data-arak>
+            <span class="text-sm font-semibold" data-cimke="havi">Havi fizetés</span>
+            <button type="button" data-kapcsolo aria-pressed="false"
+                    class="relative inline-flex h-7 w-14 shrink-0 cursor-pointer rounded-full bg-tinta-lagy transition-colors">
+                <span class="sr-only">Váltás éves fizetésre</span>
+                <span data-gomb class="pointer-events-none inline-block h-6 w-6 translate-x-0 transform rounded-full bg-vaszon shadow transition"></span>
+            </button>
+            <span class="flex items-center gap-2 text-sm font-semibold text-vaszon/60" data-cimke="evi">
+                Éves fizetés
+                <span class="rounded-md bg-zsalya/20 px-2 py-1 text-xs font-bold text-zsalya ring-1 ring-zsalya/30 ring-inset">12 hónap 10 havi díjért</span>
+            </span>
+        </div>
+
         <div class="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-3">
 
             @foreach ([
-                ['kicsi',   'Start', '1 990',  'Kisebb vállalkozásoknak, kockázatmentes próbára.', false],
-                ['kozepes', 'Flow',  '4 990',  'A legtöbb KKV-nak. Pörgesd fel az adminisztrációt.', true],
-                ['nagy',    'Pro',   '14 990', 'Könyvelőirodáknak, nagy forgalmú cégeknek.', false],
-            ] as [$kulcs, $nev, $ar, $leiras, $ajanlott])
-                @php($darab = (int) ($csomagok[$kulcs]['documents'] ?? 0))
+                ['kicsi',   'Kisebb vállalkozásoknak, kockázatmentes próbára.', false],
+                ['kozepes', 'A legtöbb KKV-nak. Pörgesd fel az adminisztrációt.', true],
+                ['nagy',    'Könyvelőirodáknak, nagy forgalmú cégeknek.', false],
+            ] as [$kulcs, $leiras, $ajanlott])
+                @php($cs = $csomagok[$kulcs])
                 <div @class([
                     'flex h-full flex-col rounded-2xl p-8',
                     'border border-tinta-lagy bg-tinta-lagy' => ! $ajanlott,
@@ -330,17 +348,23 @@
                         </div>
                     @endif
 
-                    <h3 @class(['mb-2 font-extrabold', 'text-2xl text-white' => $ajanlott, 'text-xl text-vaszon' => ! $ajanlott])>{{ $nev }}</h3>
+                    <h3 @class(['mb-2 font-extrabold', 'text-2xl text-white' => $ajanlott, 'text-xl text-vaszon' => ! $ajanlott])>{{ $cs['nev'] }}</h3>
                     <p @class(['mb-6 text-sm', 'text-white/80' => $ajanlott, 'text-vaszon/70' => ! $ajanlott])>{{ $leiras }}</p>
 
                     <div class="mb-6">
-                        <span @class(['font-extrabold', 'text-5xl text-white' => $ajanlott, 'text-4xl' => ! $ajanlott])>{{ $ar }}</span>
-                        <span @class(['font-medium', 'text-white/80' => $ajanlott, 'text-vaszon/70' => ! $ajanlott])>Ft / hó</span>
+                        <span @class(['font-extrabold', 'text-5xl text-white' => $ajanlott, 'text-4xl' => ! $ajanlott])>
+                            <span data-ar="havi">{{ \App\Support\Osszeg::formaz($cs['ar_havi']) }}</span><span data-ar="evi" hidden>{{ \App\Support\Osszeg::formaz($cs['ar_evi']) }}</span>
+                        </span>
+                        <span @class(['font-medium', 'text-white/80' => $ajanlott, 'text-vaszon/70' => ! $ajanlott])>
+                            Ft / <span data-ar="havi">hó</span><span data-ar="evi" hidden>év</span>
+                        </span>
                     </div>
 
                     <ul @class(['mb-8 flex-1 space-y-4 text-sm', 'text-white/90' => $ajanlott, 'text-vaszon/90' => ! $ajanlott])>
                         @foreach ([
-                            '<strong>'.number_format($darab, 0, ',', ' ').' dokumentum</strong> / hó',
+                            '<strong>'.number_format((int) $cs['documents'], 0, ',', ' ').' dokumentum</strong> / hó',
+                            '<strong>'.$cs['users'].' felhasználó</strong>',
+                            'Extra dokumentum: '.$cs['extra_ft'].' Ft',
                             'Feltöltés + saját beküldési e-mail cím',
                             'Számla, nyugta, külföldi bizonylat',
                             'E-számla XML modellhívás nélkül',
@@ -367,14 +391,22 @@
         </div>
 
         {{--
-            A keret kifutásának szabálya. Azért van kiírva, mert a felület is
-            ezt mondja, amikor elfogy: nincs túlhasználati díj, nincs néma
-            továbbszámlázás — a bizonylat megvárja a következő időszakot.
+            A két szabály, amit előre ki kell mondani. Az egyik, hogy a keret
+            elfogyása nem jelent automatikus továbbszámlázást; a másik, hogy a
+            belső mérés oldalalapú — egy nyolcvan oldalas köteg nem egy nyugta.
+            Amit az árlista elhallgat, azt a felhasználó a számlán tudja meg.
         --}}
-        <p class="mx-auto mt-10 max-w-2xl text-center text-sm text-vaszon/60">
-            Ha elfogy a havi keret, nem számlázunk tovább darabonként: a beküldött iratok
-            megvárják a következő időszakot, vagy bármikor válthatsz nagyobb csomagra.
-        </p>
+        <div class="mx-auto mt-12 max-w-3xl space-y-3 text-center text-sm text-vaszon/60">
+            <p>
+                A feltüntetett árak nettó árak. Ha elfogy a havi keret, a feldolgozás
+                <strong class="text-vaszon/80">alapból megáll</strong> — a beküldött iratok megvárják a következő
+                időszakot. Darabonkénti továbbszámlázás csak akkor van, ha külön bekapcsolod.
+            </p>
+            <p>
+                Egy dokumentum a fair-use szabály szerint: {{ \App\Support\Kredit::szabaly() }}
+                Egy számla vagy nyugta így egy dokumentum marad; egy vastag, összefűzött köteg többnek számít.
+            </p>
+        </div>
     </div>
 </section>
 
@@ -406,6 +438,47 @@
         </div>
     </div>
 </footer>
+
+<script>
+    // Az éves/havi váltás. A kimenet **mindkét** árat tartalmazza, a szkript
+    // csak láthatóságot kapcsol — ha nem fut le, a havi ár marad a helyén,
+    // ami az alapértelmezett nézet. Üres ár sosem látszik.
+    (function () {
+        const doboz = document.querySelector('[data-arak]');
+        if (!doboz) return;
+
+        const kapcsolo = doboz.querySelector('[data-kapcsolo]');
+        const gomb = doboz.querySelector('[data-gomb]');
+        const cimkek = {
+            havi: doboz.querySelector('[data-cimke="havi"]'),
+            evi: doboz.querySelector('[data-cimke="evi"]'),
+        };
+
+        let eves = false;
+
+        function rajzol() {
+            document.querySelectorAll('[data-ar]').forEach(function (elem) {
+                elem.hidden = (elem.dataset.ar === 'evi') !== eves;
+            });
+
+            kapcsolo.setAttribute('aria-pressed', eves ? 'true' : 'false');
+            kapcsolo.classList.toggle('bg-blue-500', eves);
+            kapcsolo.classList.toggle('bg-tinta-lagy', !eves);
+            gomb.classList.toggle('translate-x-7', eves);
+            gomb.classList.toggle('translate-x-0', !eves);
+
+            cimkek.havi.classList.toggle('text-vaszon/60', eves);
+            cimkek.evi.classList.toggle('text-vaszon/60', !eves);
+        }
+
+        kapcsolo.addEventListener('click', function () {
+            eves = !eves;
+            rajzol();
+        });
+
+        rajzol();
+    })();
+</script>
 
 <x-fejlesztes-alatt/>
 </body>

@@ -47,35 +47,75 @@
             @endif
         </p>
 
-        @php($korlatlan = $keret === PHP_INT_MAX)
         <div class="mb-4 rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
-            Felhasználva: <strong>{{ $felhasznalt }}</strong>
-            @unless ($korlatlan) / {{ $keret }} dokumentum @endunless
-            @if (! $korlatlan && $keret > 0)
+            Felhasználva: <strong>{{ $felhasznalt }}</strong> / {{ $keret }} dokumentum
+            @if ($keret > 0)
                 <div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div class="h-full bg-blue-600" style="width: {{ min(100, (int) round($felhasznalt / $keret * 100)) }}%"></div>
+                    <div @class(['h-full', 'bg-blue-600' => $felhasznalt <= $keret, 'bg-bizonytalan' => $felhasznalt > $keret])
+                         style="width: {{ min(100, (int) round($felhasznalt / $keret * 100)) }}%"></div>
                 </div>
             @endif
+            @if ($tullepes > 0)
+                <p class="mt-2 text-xs text-slate-500">
+                    Ebből <strong>{{ $tullepes }}</strong> a kereten felül — ezeket darabonként számlázzuk.
+                </p>
+            @endif
+            <p class="mt-2 text-xs text-slate-400">{{ \App\Support\Kredit::szabaly() }}</p>
         </div>
 
         @error('elofizetes') <div class="alert alert-hiba mb-3">{{ $message }}</div> @enderror
 
         @if ($sajatSzerep?->adminisztralhat())
+            <label class="mb-3 flex items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" wire:model.live="evesFizetes" class="rounded border-slate-300">
+                Éves fizetés <span class="badge badge-kesz">12 hónap 10 havi díjért</span>
+            </label>
+
             <div class="flex flex-wrap gap-2">
                 @foreach ($csomagok as $kulcs => $csomag)
-                    <button wire:click="elofizetes('{{ $kulcs }}')"
-                            class="btn {{ $ceg->stripe_price_id === ($csomag['price_id'] ?? null) ? 'btn-primary' : 'btn-secondary' }}">
-                        {{ $csomag['nev'] }} — {{ $csomag['documents'] }} db/hó
+                    @php($aktiv = in_array($ceg->stripe_price_id, [$csomag['price_id'] ?? null, $csomag['price_id_evi'] ?? null], true))
+                    <button wire:click="elofizetes('{{ $kulcs }}')" class="btn {{ $aktiv ? 'btn-primary' : 'btn-secondary' }}">
+                        {{ $csomag['nev'] }} —
+                        {{ \App\Support\Osszeg::formaz($evesFizetes ? $csomag['ar_evi'] : $csomag['ar_havi']) }} Ft/{{ $evesFizetes ? 'év' : 'hó' }}
+                        <span class="text-xs opacity-70">· {{ $csomag['documents'] }} db/hó · {{ $csomag['users'] }} fő</span>
                     </button>
                 @endforeach
                 @if ($ceg->stripe_customer_id)
                     <button wire:click="portal" class="btn btn-ghost">Számlázás kezelése</button>
                 @endif
             </div>
+            <p class="mt-2 text-xs text-slate-400">A feltüntetett árak nettó árak.</p>
         @else
             <p class="text-xs text-slate-400">A csomagot a cég tulajdonosa tudja módosítani.</p>
         @endif
     </div>
+
+    {{-- Túlhasználat --}}
+    @if ($vanExtraAr)
+        <div class="card card-pad">
+            <h2 class="mb-1 font-medium text-slate-900">Feldolgozás a kereten felül</h2>
+            <p class="mb-3 text-sm text-slate-500">
+                Alapból kikapcsolva: ha elfogy a havi keret, a feldolgozás megáll, és a beküldött
+                iratok megvárják a következő időszakot. Bekapcsolva a munka folytatódik, és a keret
+                fölötti dokumentumokat <strong>{{ $extraFt }} Ft / darab</strong> áron rátesszük a
+                következő számládra.
+            </p>
+
+            @if ($ceg->overage_enabled)
+                <div class="alert alert-figyelem mb-3">
+                    Bekapcsolva. Ebben az időszakban eddig <strong>{{ $tullepes }}</strong> darab esett a kereten felül.
+                </div>
+            @endif
+
+            @if ($sajatSzerep?->adminisztralhat())
+                <button wire:click="tulhasznalatValt" class="btn {{ $ceg->overage_enabled ? 'btn-secondary' : 'btn-primary' }}">
+                    {{ $ceg->overage_enabled ? 'Kikapcsolom' : 'Bekapcsolom' }}
+                </button>
+            @else
+                <p class="text-xs text-slate-400">Ezt a cég tulajdonosa tudja állítani.</p>
+            @endif
+        </div>
+    @endif
 
     {{-- Cégadatok --}}
     <div class="card card-pad">
@@ -113,7 +153,10 @@
 
     {{-- Tagok --}}
     <div class="card card-pad">
-        <h2 class="mb-3 font-medium text-slate-900">Felhasználók</h2>
+        <h2 class="mb-1 font-medium text-slate-900">Felhasználók</h2>
+        <p class="mb-3 text-sm text-slate-500">
+            {{ $tagok->count() }} / {{ $felhasznaloKeret }} felhasználó a jelenlegi csomagban.
+        </p>
 
         <table class="tbl mb-4">
             <tbody>

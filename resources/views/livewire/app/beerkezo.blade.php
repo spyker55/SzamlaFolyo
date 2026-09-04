@@ -18,9 +18,12 @@
             {{ $akadaly }}
             <a href="{{ route('beallitasok') }}" wire:navigate class="font-medium underline">Csomagok</a>
         </div>
-    @elseif ($maradek < PHP_INT_MAX)
+    @else
         <p class="mb-4 text-xs text-slate-500">
             A keretedből még <strong>{{ $maradek }}</strong> dokumentum van hátra.
+            @if ($ceg->tulhasznalatEngedve() && $maradek === 0)
+                A keret fölötti darabokat külön számlázzuk.
+            @endif
         </p>
     @endif
 
