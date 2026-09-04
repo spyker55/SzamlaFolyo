@@ -46,12 +46,19 @@ final class BejaratTest extends TestCase
         $this->get($utvonal)->assertRedirect(route('bejelentkezes'));
     }
 
-    public function test_a_fooldal_vegul_a_bejelentkezesre_visz(): void
+    /**
+     * A főoldal vendégnek a nyilvános oldalt adja, nem átirányítást.
+     *
+     * Korábban `/` mindenkit a Beérkezőre küldött, onnan a bejelentkezésre —
+     * a látogató tehát egy bejelentkező űrlapon kötött ki, anélkül hogy
+     * megtudta volna, mit csinál az oldal. A részleteket a NyitolapTest
+     * állítja; itt csak az számít, hogy nem irányít el és nem hibázik.
+     */
+    public function test_a_fooldal_vendegnek_a_nyitolapot_adja(): void
     {
-        $this->followingRedirects()
-            ->get('/')
+        $this->get('/')
             ->assertOk()
-            ->assertSee('Bejelentkezés');
+            ->assertSee('könyvelésre kész adat');
     }
 
     public function test_a_bejelentkezo_oldal_vendegkent_megnyilik(): void

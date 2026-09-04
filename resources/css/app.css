@@ -14,14 +14,57 @@
 */
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
-  --color-vaszon: #f1f5f9;
-  --color-jelzo: #1d4ed8;
+  /*
+    A paletta.
+
+    A képernyők száz helyen hivatkoznak `slate-` és `blue-` osztályokra. Ezért
+    nem azokat írjuk át egyesével — az a fajta változtatás mindig hagy maga
+    után egy elfelejtett kék gombot valahol —, hanem **magát a két skálát**
+    definiáljuk újra. Egy hely, és a felület minden pontja követi.
+
+    A `slate` innentől meleg szürke (a papír és a tinta színe), a `blue` pedig
+    terrakotta. A nevük szándékosan marad: a jelentésük „semleges" és
+    „kiemelt", nem az, hogy szürke és kék.
+  */
+  --color-slate-50: #fbf8f4;
+  --color-slate-100: #f6ede4;
+  --color-slate-200: #e9ded1;
+  --color-slate-300: #d5c7b7;
+  --color-slate-400: #9c9186;
+  --color-slate-500: #787066;
+  --color-slate-600: #635c53;
+  --color-slate-700: #4d473f;
+  --color-slate-800: #3b3b36;
+  --color-slate-900: #2a2a26;
+
+  --color-blue-50: #fbf0ea;
+  --color-blue-100: #f5dcd0;
+  --color-blue-200: #ebc3b0;
+  --color-blue-300: #dea184;
+  --color-blue-400: #d4855f;
+  --color-blue-500: #c66c47;
+  --color-blue-600: #b25d3a;
+  --color-blue-700: #9e5537;
+  --color-blue-800: #85462d;
+  --color-blue-900: #6b3824;
+
+  --color-vaszon: #f6ede4;
+  --color-jelzo: #c66c47;
+
+  /* A nyilvános oldal két kísérőszíne. A felületen nem visznek jelentést,
+     ezért nincs `slate`/`blue` nevük — dísz, nem jelzés. */
+  --color-zsalya: #8c9c86;
+  --color-mustar: #dfb671;
+  --color-tinta: #2a2a26;
+  --color-tinta-lagy: #42423d;
 
   /* A konfidencia három sávja. Ez a termék egyetlen valódi színkódja,
-     ezért nem szórjuk szét a komponensekbe. */
+     ezért nem szórjuk szét a komponensekbe — és ezért **nem** követi a
+     fenti hangolást sem: a figyelmeztetés akkor ér valamit, ha kilóg a
+     környezetéből. */
   --color-biztos: #15803d;
   --color-bizonytalan: #a16207;
   --color-gyanus: #b91c1c;

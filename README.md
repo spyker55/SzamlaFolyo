@@ -85,6 +85,19 @@ opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
 e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a
 feldolgozás idempotens (`message_id` cégenként egyedi).
 
+### A paletta
+
+A felület meleg, földszínű: krémszín papír, terrakotta kiemelés, DM Sans. A
+képernyők viszont száz helyen hivatkoznak `slate-` és `blue-` osztályokra,
+ezért nem azokat írtuk át egyesével — az a fajta változtatás mindig hagy maga
+után egy elfelejtett kék gombot valahol —, hanem **magát a két Tailwind-skálát**
+definiáltuk újra a `resources/css/app.css` `@theme` blokkjában. A nevük
+szándékosan maradt: a jelentésük „semleges" és „kiemelt", nem az, hogy szürke
+és kék.
+
+A konfidencia három színe (`biztos`, `bizonytalan`, `gyanus`) **nem** követi ezt
+a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
+
 ## Hátralék
 
 **Cégváltó a felületen.** A `company_user` tábla szerepekkel támogatja, hogy egy
@@ -105,6 +118,14 @@ adószáma (csak kitöltött vevő-adószámra szabad szólni), és **hibás ell
 számjegyű** adószámra nem szabad következtetést építeni (kézírásnál a
 félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 
+**Amit a nyitólap ezért nem ígér.** A csomagok között ma **nincs cégszám-alapú
+különbség** — a `User::ceg()` az első céget adja vissza, váltó nélkül —, ezért a
+„1 cég / 3 cég / korlátlan cég" sor kimaradt az árlistából. Ugyanígy kimaradt a
+**túlhasználati díj** (a `Kvota` nem számláz darabonként, hanem megállít) és az
+**éves fizetés** (csomagonként egyetlen Stripe árazonosító van, éves ár nincs).
+Mindhárom visszakerülhet, de csak a megvalósításukkal együtt: az árlistán álló
+állítás szerződéses ígéret.
+
 ## Felépítés
 
 | Hol | Mi |
@@ -116,6 +137,7 @@ félreolvasás a valószínűbb). A `git log` őrzi: `5a710fb`.
 | `app/Services/Ingest/` | Címzett-token feloldás és IMAP-olvasó |
 | `app/Services/Billing/` | Keretszámolás és Stripe |
 | `app/Livewire/` | A nyolc képernyő |
+| `resources/views/nyitolap.blade.php` | A nyilvános oldal (`/`), a próbaidő és a csomagok számait a konfigurációból véve |
 | `resources/css/app.css` | A dizájnrendszer — minden ismétlődő elem itt van definiálva egyszer |
 
 ## Fejlesztés

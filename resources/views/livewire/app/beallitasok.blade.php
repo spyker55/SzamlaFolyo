@@ -30,6 +30,10 @@
                     a Beérkezőben.
                 </div>
             @endunless
+
+            <p class="mt-3 text-xs text-slate-400">
+                E-mailből érkező irat soha nem kerül automatikusan jóváhagyásra — ellenőrzésre vár, mint minden más.
+            </p>
         @endif
     </div>
 
@@ -71,19 +75,6 @@
         @else
             <p class="text-xs text-slate-400">A csomagot a cég tulajdonosa tudja módosítani.</p>
         @endif
-    </div>
-
-    {{-- Beküldési cím --}}
-    <div class="card card-pad">
-        <h2 class="mb-1 font-medium text-slate-900">Beküldés e-mailben</h2>
-        <p class="mb-3 text-sm text-slate-500">
-            Erre a címre küldött levelek mellékletei automatikusan bekerülnek a Beérkezőbe.
-            A cím kitalálhatatlan — csak azzal oszd meg, akitől bizonylatot vársz.
-        </p>
-        <code class="inline-block rounded bg-slate-100 px-3 py-2 text-sm text-slate-800">{{ $ceg->beerkezteoCim() }}</code>
-        <p class="mt-3 text-xs text-slate-400">
-            E-mailből érkező irat soha nem kerül automatikusan jóváhagyásra — ellenőrzésre vár, mint minden más.
-        </p>
     </div>
 
     {{-- Cégadatok --}}

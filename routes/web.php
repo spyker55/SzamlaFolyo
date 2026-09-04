@@ -19,7 +19,18 @@ use App\Livewire\Auth\JelszoBeallitas;
 use App\Livewire\Auth\Regisztracio;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/beerkezo')->name('kezdolap');
+/*
+ * A főoldal. Vendégnek a nyilvános oldal, belépett felhasználónak a Beérkező —
+ * aki már dolgozik, annak nincs dolga a marketinggel, és a régi viselkedés
+ * (mindenkit átirányítani) azt jelentette, hogy a be nem lépett látogató
+ * egyenesen a bejelentkező űrlapon kötött ki, anélkül hogy megtudta volna,
+ * mit csinál az oldal.
+ */
+Route::get('/', function () {
+    return auth()->check()
+        ? redirect()->route('beerkezo')
+        : view('nyitolap');
+})->name('kezdolap');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/bejelentkezes', Bejelentkezes::class)->name('bejelentkezes');
