@@ -19,12 +19,33 @@ final class Konfidencia
     public const BUKAS_PLAFON = 0.3;
 
     /**
+     * Amit semmilyen determinisztikus ellenőrzés nem érint.
+     *
+     * A többi mezőnek van független fogása: az adószámnak ellenőrző számjegye,
+     * az összegeknek a `nettó + ÁFA = bruttó` és a bontás összegzése, a
+     * dátumoknak a sorrend és a tartomány, a pénznemnek és a típusnak a kötött
+     * szótár. Ezeknek nincs — ha a modell félreolvassa őket, azt semmi nem
+     * veszi észre utánunk.
+     */
+    public const ELLENORIZHETETLEN_MEZOK = [
+        'supplier_name',
+        'customer_name',
+        'doc_number',
+        'payment_method',
+    ];
+
+    /**
      * @param  array<string, float>  $modellSzerint
      * @param  array<string, string>  $bukottValidatorok
+     * @param  bool  $nehezenOlvashato  kézzel írott vagy rossz minőségű bizonylat
      * @return array{model: array<string, float>, validators: array<string, string>, combined: array<string, float>}
      */
-    public static function osszevon(array $modellSzerint, array $bukottValidatorok, array $mezok): array
-    {
+    public static function osszevon(
+        array $modellSzerint,
+        array $bukottValidatorok,
+        array $mezok,
+        bool $nehezenOlvashato = false,
+    ): array {
         $eredmeny = [];
 
         foreach (Sema::MEZOK as $mezo) {
@@ -42,6 +63,8 @@ final class Konfidencia
             if (isset($bukottValidatorok[$mezo])) {
                 $pont = min($pont, self::BUKAS_PLAFON);
             }
+
+            $pont = min($pont, self::kezirasPlafon($mezo, $nehezenOlvashato));
 
             $eredmeny[$mezo] = round($pont, 3);
         }
@@ -63,6 +86,34 @@ final class Konfidencia
             'validators' => $bukottValidatorok,
             'combined' => $eredmeny,
         ];
+    }
+
+    /**
+     * Kézzel írott bizonylaton az ellenőrizhetetlen mező nem látszhat
+     * biztosnak.
+     *
+     * Ezt korábban azzal utasítottam el, hogy egy csupa sárga képernyő semmit
+     * nem emel ki. A mérés mást mondott: ugyanazt a kézzel írott számlát
+     * hatszor kiolvasva **hatféle szállítónév** jött ki, egyik sem helyes,
+     * miközben az adószámok, az összegek és a dátumok mind a hatszor
+     * ugyanazok és helyesek voltak. A modell magabiztossága ezen a mezőn
+     * 0,70-et, 0,85-öt, majd 0,85 fölöttit adott — vagyis harmadszorra
+     * jelöletlenül engedte át a hibát.
+     *
+     * A plafon ezért nem minden mezőre megy, csak arra a néhányra, aminek
+     * nincs független fogása. Ez nem „minden sárga", hanem: az ellenőrizhetetlen
+     * mező az ellenőrizhetetlen papíron.
+     *
+     * A plafon maga a küszöb: a `sav()` a határértéket a szigorúbb sávba
+     * sorolja, tehát ez pontosan sárgát jelent, és követi a konfigurációt.
+     */
+    private static function kezirasPlafon(string $mezo, bool $nehezenOlvashato): float
+    {
+        if (! $nehezenOlvashato || ! in_array($mezo, self::ELLENORIZHETETLEN_MEZOK, true)) {
+            return 1.0;
+        }
+
+        return (float) config('szamlafolyo.extraction.review_threshold');
     }
 
     /**

@@ -93,6 +93,66 @@ final class KonfidenciaTest extends TestCase
         $this->assertSame(0.5, $eredmeny['combined']['doc_number']);
     }
 
+    /**
+     * Kézzel írott bizonylaton az ellenőrizhetetlen mező nem látszhat biztosnak.
+     *
+     * A mérés, amiből ez a szabály lett: ugyanazt a kézzel írott számlát hatszor
+     * kiolvasva **hatféle szállítónév** jött ki, egyik sem helyes — miközben az
+     * adószámok, az összegek és a dátumok mind a hatszor ugyanazok és helyesek
+     * voltak. A modell magabiztossága erre a mezőre 0,70-et, 0,85-öt, majd 0,85
+     * fölöttit adott, tehát harmadszorra jelöletlenül engedte át a hibát.
+     */
+    public function test_a_kezirasos_iraton_a_nev_nem_lehet_biztos(): void
+    {
+        $eredmeny = Konfidencia::osszevon(
+            ['supplier_name' => 0.99],
+            [],
+            ['supplier_name' => 'Siklósi László E.V.'],
+            nehezenOlvashato: true,
+        );
+
+        $this->assertSame('bizonytalan', Konfidencia::sav($eredmeny['combined']['supplier_name']));
+    }
+
+    /**
+     * De nem minden mező: ez nem „csupa sárga képernyő". Aminek van független
+     * fogása — az adószámnak ellenőrző számjegye, az összegeknek a
+     * `nettó + ÁFA = bruttó` — az a kézíráson is maradhat jelöletlen.
+     */
+    public function test_a_kezirasos_iraton_az_ellenorizheto_mezo_erintetlen(): void
+    {
+        $eredmeny = Konfidencia::osszevon(
+            ['supplier_tax_number' => 0.98, 'gross_amount' => 0.99],
+            [],
+            ['supplier_tax_number' => '66242422-1-36', 'gross_amount' => '145000.00'],
+            nehezenOlvashato: true,
+        );
+
+        $this->assertSame('biztos', Konfidencia::sav($eredmeny['combined']['supplier_tax_number']));
+        $this->assertSame('biztos', Konfidencia::sav($eredmeny['combined']['gross_amount']));
+    }
+
+    /** A plafon csak lehúz: egy amúgy is alacsony pontszámot nem emel meg. */
+    public function test_a_keziras_plafonja_nem_emel(): void
+    {
+        $eredmeny = Konfidencia::osszevon(
+            ['doc_number' => 0.2],
+            [],
+            ['doc_number' => 'SEASA7371803'],
+            nehezenOlvashato: true,
+        );
+
+        $this->assertSame(0.2, $eredmeny['combined']['doc_number']);
+    }
+
+    /** Jól olvasható iraton semmi nem változik. */
+    public function test_a_jol_olvashato_iraton_nincs_plafon(): void
+    {
+        $eredmeny = Konfidencia::osszevon(['supplier_name' => 0.99], [], ['supplier_name' => 'Példa Kft.']);
+
+        $this->assertSame('biztos', Konfidencia::sav($eredmeny['combined']['supplier_name']));
+    }
+
     /** Az ÁFA-bontás nem skalár, ezért külön kerül be — de ugyanúgy bekerül. */
     public function test_az_afa_bontas_is_kap_pontszamot(): void
     {

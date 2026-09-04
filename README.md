@@ -320,10 +320,25 @@ egyetlen rossz mezőre —, a többire 0,90–0,99-et. És mindkétszer beállí
 futásra „Siéri László" lett: a keresztnév már helyes, a vezetéknév első betűje
 nem — vagyis félreolvasás, nem kitalálás.
 
-Ebből tehát nem az következik, hogy a modelltől nem lehet a saját munkájáról
-kérdezni — hanem hogy **a gyenge modelltől nem lehet**. Egy mérés viszont nem
-kalibráció: a determinisztikus validátor marad a megbízhatóbb jel, és az
-összevonás továbbra is **csak lefelé húzhat**.
+Harmadszorra viszont ugyanez a 3.8 Flash **0,85 fölé** tette ugyanezt a mezőt,
+és közben harmadik változatban írta le a nevet. Hat kiolvasás, **hat különböző
+szállítónév, egyik sem helyes** — miközben az adószámok, az összegek és a
+dátumok mind a hatszor ugyanazok és helyesek voltak.
+
+Ebből tehát nem az következik, hogy a jobb modell megoldotta: a mezőnkénti
+magabiztosság kétszer eltalálta a rossz mezőt, harmadszorra nem. Kettő a
+háromból nem védelem.
+
+Amit viszont a 3.8 Flash **mind a háromszor** helyesen jelzett, az a
+`nehezen_olvashato` zászló. Ez a megbízható jel ezen a papíron — dokumentum-,
+nem mezőszinten. Ezért ha a zászló áll, az **ellenőrizhetetlen mezők** (nevek,
+bizonylatszám, fizetési mód) nem látszhatnak biztosnak: `Konfidencia`
+lehúzza őket a sárga sávba. Nem az összeset — aminek van független fogása
+(adószám ellenőrző számjegye, `nettó + ÁFA = bruttó`), az a kézíráson is
+maradhat jelöletlen.
+
+A determinisztikus validátor marad a megbízhatóbb jel, és az összevonás
+továbbra is **csak lefelé húzhat**.
 
 A `--modell` futásidőben ír felül, nem környezeti változóval: élesben a
 konfiguráció gyorsítótárazva van (`config:cache`), ott az `OPENROUTER_MODEL=…`

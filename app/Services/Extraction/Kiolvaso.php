@@ -133,7 +133,7 @@ final class Kiolvaso
         $mezok = $this->normalizal($tiszta['mezok']);
         $mezok['afa_bontas'] = $this->normalizalBontas($tiszta['bontas']);
         $bukott = Validatorok::bukottak($mezok, $mezok['afa_bontas']);
-        $konfidencia = Konfidencia::osszevon($tiszta['konfidencia'], $bukott, $mezok);
+        $konfidencia = Konfidencia::osszevon($tiszta['konfidencia'], $bukott, $mezok, $tiszta['nehezen_olvashato']);
 
         DB::transaction(function () use ($dokumentum, $valasz, $mezok, $konfidencia, $tiszta, $idoMs): void {
             $kiolvasas = $this->kiolvasasRogzites(
