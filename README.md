@@ -106,6 +106,30 @@ ezért az összes ügyfelét egy fiókban dolgozza fel, és az ügyfelenkénti
 szétválasztást az export vevő-adószám szűrője adja meg — nem cégek
 adminisztrálása. Ez tudatos csere: kevesebb fogalom a felhasználónak.
 
+### Ügyfelenkénti export
+
+Ez az a képesség, ami miatt egy könyvelőiroda **egyetlen** fiókban tudja
+feldolgozni az összes ügyfelét. Az Export képernyő ügyfélszűrője
+**adószám alapján** válogat, nem név szerint: a „Példa Kft.", „Példa Kft" és
+„PÉLDA KFT" ugyanaz a cég, három sztring. Az illesztés a **törzsszámra** megy
+(első nyolc jegy), mert ugyanaz a cég szerepelhet `11176165-2-10` és
+`HU11176165` alakban is ugyanabban a hónapban — az ÁFA-kód és a megyekód
+változhat, az adóalanyt a törzsszám azonosítja.
+
+A **választható lista** a vevő oldalról áll össze: a könyvelő ügyfelei ott
+állnak ismétlődően, a szállítók listája viszont minden beszállítót
+tartalmazna, és nem az ügyfeleket mutatná. A **szűrés** viszont mindkét oldalt
+nézi: a könyvelő ügyfele a bejövő számlán a vevő, a kimenőn a szállító, és aki
+az ügyfelét választja, mindkettőt várja, nem a felét.
+
+A szűrés a lekérdezés után, PHP-ben történik. A tárolt adószám formátuma
+bizonylatonként más lehet, a törzsszámot csak normalizálás után lehet
+összevetni — az időszak sorai pedig amúgy is a memóriában vannak, mert az
+összesítés és az export ugyanazt a halmazt kapja.
+
+Az elkészült export megőrzi, kire szűrtünk (`exports.filters`): utólag ez a
+bizonyíték arra, mi került bele.
+
 Próba: **14 nap vagy 50 dokumentum, amelyik előbb elfogy**, bankkártya nélkül —
 pontosan egy Start-hónap. Húsz dokumentum volt itt korábban, abból viszont egy
 könyvelőiroda egy óra alatt kifut, és úgy sosem jut el a termék lényegéig: a

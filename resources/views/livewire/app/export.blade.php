@@ -26,6 +26,24 @@
             </div>
         </div>
 
+        {{-- Ügyfelenkénti export. Aki több cégnek könyvel, itt választja szét,
+             amit egyébként cégenkénti fiókokkal kellene — adószám alapján,
+             mert a cégnév írásmódja bizonylatonként változik. --}}
+        <div>
+            <label class="flabel" for="ugyfel">Ügyfél</label>
+            <select id="ugyfel" wire:model.live="ugyfel" class="control">
+                <option value="">Mind</option>
+                @foreach ($ugyfelek as $torzsszam => $cimke)
+                    <option value="{{ $torzsszam }}">{{ $cimke }}</option>
+                @endforeach
+            </select>
+            <p class="mt-1 text-xs text-slate-400">
+                Adószám alapján, a törzsszám (első nyolc jegy) szerint — így az sem gond, ha ugyanaz a cég
+                más alakban szerepel a bizonylatokon. A kiválasztott ügyfél <strong>bejövő és kimenő</strong>
+                bizonylatai is bekerülnek.
+            </p>
+        </div>
+
         <div class="rounded-lg bg-slate-50 px-4 py-3">
             <div class="text-sm font-medium text-slate-800">{{ $darab }} tétel kerül exportba</div>
             @foreach ($osszesites as $penznem => $ossz)

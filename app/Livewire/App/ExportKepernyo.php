@@ -8,6 +8,7 @@ use App\Enums\DokumentumTipus;
 use App\Models\Document;
 use App\Services\Export\ExportKeszito;
 use App\Services\Export\Oszlopok;
+use App\Support\Adoszam;
 use App\Support\Berlo;
 use App\Support\Ido;
 use Illuminate\Database\Eloquent\Collection;
@@ -31,6 +32,17 @@ class ExportKepernyo extends Component
     public string $igDatum = '';
 
     public string $tipus = '';
+
+    /**
+     * Az ügyfél törzsszáma, akire szűkítünk — üresen mind.
+     *
+     * **Törzsszám, nem teljes adószám.** Ugyanaz a cég szerepelhet
+     * „12345678-2-41" és „HU12345678" alakban is ugyanabban a hónapban; az
+     * adóalanyt az első nyolc jegy azonosítja, az ÁFA-kód és a megyekód
+     * változhat. Névre szűrni még rosszabb volna: a „Példa Kft.",
+     * „Példa Kft" és „PÉLDA KFT" ugyanaz a cég, három sztring.
+     */
+    public string $ugyfel = '';
 
     public bool $eredetikLetoltve = false;
 
@@ -70,6 +82,7 @@ class ExportKepernyo extends Component
             'tol' => $this->tolDatum,
             'ig' => $this->igDatum,
             'tipus' => $this->tipus ?: null,
+            'ugyfel' => $this->ugyfel ?: null,
         ]);
 
         session()->flash('siker', sprintf(
@@ -88,6 +101,18 @@ class ExportKepernyo extends Component
     /** @return Collection<int, Document> */
     private function dokumentumok()
     {
+        $sorok = $this->idoszakSorai();
+
+        if ($this->ugyfel === '') {
+            return $sorok;
+        }
+
+        return $sorok->filter(fn (Document $d): bool => self::ugyfele($d, $this->ugyfel))->values();
+    }
+
+    /** A szűrés előtti halmaz: ebből áll össze az ügyféllista is. */
+    private function idoszakSorai(): Collection
+    {
         return Document::query()
             ->exportalhato()
             ->when($this->tipus !== '', fn ($q) => $q->where('doc_type', $this->tipus))
@@ -98,6 +123,57 @@ class ExportKepernyo extends Component
             ->get();
     }
 
+    /**
+     * Ehhez az ügyfélhez tartozik-e a bizonylat.
+     *
+     * **Mindkét oldalt nézzük.** A könyvelő ügyfele a bejövő számlán a vevő, a
+     * kimenőn viszont a szállító — ugyanannak az ügyfélnek a papírjai. Aki az
+     * ügyfelét választja ki, mindkettőt várja, nem a felét.
+     *
+     * A szűrés a lekérdezés **után**, PHP-ben történik: a tárolt adószám
+     * formátuma bizonylatonként más lehet, a törzsszámot pedig csak
+     * normalizálás után lehet összevetni. Az időszak sorai amúgy is a memóriába
+     * kerülnek (az összesítés és az export is ugyanezt a halmazt kapja), tehát
+     * ez nem plusz lekérdezés.
+     */
+    private static function ugyfele(Document $dokumentum, string $torzsszam): bool
+    {
+        return Adoszam::torzsszam($dokumentum->customer_tax_number) === $torzsszam
+            || Adoszam::torzsszam($dokumentum->supplier_tax_number) === $torzsszam;
+    }
+
+    /**
+     * A választható ügyfelek: a **vevő** oldal törzsszámai az időszakban.
+     *
+     * Csak a vevő oldaláról gyűjtünk, mert a könyvelő ügyfelei ott állnak
+     * ismétlődően; a szállítók listája minden beszállítót tartalmazna, és
+     * használhatatlanul hosszú lenne. A kiválasztott ügyfél kimenő számlái
+     * ettől még bejönnek — azt az `ugyfele()` intézi.
+     *
+     * @return array<string, string> törzsszám => „Név (adószám)"
+     */
+    private function ugyfelek(): array
+    {
+        $ki = [];
+
+        foreach ($this->idoszakSorai() as $dokumentum) {
+            $torzsszam = Adoszam::torzsszam($dokumentum->customer_tax_number);
+
+            if ($torzsszam === null || isset($ki[$torzsszam])) {
+                continue;
+            }
+
+            $nev = trim((string) $dokumentum->customer_name);
+            $ki[$torzsszam] = $nev === ''
+                ? (string) $dokumentum->customer_tax_number
+                : sprintf('%s (%s)', $nev, $dokumentum->customer_tax_number);
+        }
+
+        asort($ki);
+
+        return $ki;
+    }
+
     public function render()
     {
         $dokumentumok = $this->dokumentumok();
@@ -106,6 +182,7 @@ class ExportKepernyo extends Component
             'darab' => $dokumentumok->count(),
             'osszesites' => Oszlopok::osszesites($dokumentumok),
             'tipusok' => DokumentumTipus::opciok(),
+            'ugyfelek' => $this->ugyfelek(),
             'ceg' => app(Berlo::class)->kotelezo(),
         ]);
     }
