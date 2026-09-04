@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\CsendesCron;
 use App\Enums\DokumentumAllapot;
 use App\Models\Company;
 use App\Models\Document;
@@ -25,6 +26,8 @@ use Illuminate\Console\Command;
  */
 final class FajlSelejtez extends Command
 {
+    use CsendesCron;
+
     protected $signature = 'fajl:selejtez';
 
     protected $description = 'Törli az exportált iratok eredeti fájljait és a régi leveleket a megőrzési idő letelte után.';
@@ -51,7 +54,7 @@ final class FajlSelejtez extends Command
             }
         }
 
-        $this->info("Törölve: {$osszes} eredeti fájl.");
+        $this->osszegzes("Törölve: {$osszes} eredeti fájl.");
 
         $this->postafiokot($olvaso);
 
@@ -65,6 +68,14 @@ final class FajlSelejtez extends Command
      */
     private function postafiokot(PostafiokOlvaso $olvaso): void
     {
+        // Ha nincs beérkeztető postafiók, nincs mit takarítani — ez beállítás,
+        // nem hiba, tehát cronban nem szólal meg.
+        if (! PostafiokOlvaso::beallitva()) {
+            $this->megjegyzes('  <fg=gray>Nincs beérkeztető postafiók, nincs mit takarítani.</>');
+
+            return;
+        }
+
         try {
             $eredmeny = $olvaso->takarit();
         } catch (\Throwable $e) {
@@ -74,13 +85,13 @@ final class FajlSelejtez extends Command
         }
 
         if ($eredmeny === []) {
-            $this->line('  <fg=gray>A postafiók takarítása ki van kapcsolva.</>');
+            $this->megjegyzes('  <fg=gray>A postafiók takarítása ki van kapcsolva.</>');
 
             return;
         }
 
         foreach ($eredmeny as $mappa => $darab) {
-            $this->info(sprintf('Törölve: %d levél a(z) „%s" mappából.', $darab, $mappa));
+            $this->osszegzes(sprintf('Törölve: %d levél a(z) „%s" mappából.', $darab, $mappa));
         }
     }
 }

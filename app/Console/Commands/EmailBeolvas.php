@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\CsendesCron;
 use App\Models\Company;
 use App\Services\Ingest\PostafiokOlvaso;
 use Illuminate\Console\Command;
 
 final class EmailBeolvas extends Command
 {
+    use CsendesCron;
+
     protected $signature = 'email:beolvas
         {--limit=25 : Legfeljebb ennyi levél egy futásban}
         {--proba : Csak megmutatja, mit lát a postafiókban — nem dolgoz fel és nem mozgat semmit}';
@@ -33,7 +36,7 @@ final class EmailBeolvas extends Command
             return self::FAILURE;
         }
 
-        $this->info(sprintf(
+        $this->osszegzes(sprintf(
             '%d levél · %d irat · %d átugorva.',
             $eredmeny['levelek'],
             $eredmeny['iratok'],

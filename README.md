@@ -395,6 +395,21 @@ mezőkbe megy, a parancs pedig a **Kezelő → „Egyedi parancs"** mezőbe. Ne 
 | Selejtezés (fájlok és régi levelek) | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
 | Túlhasználat elszámolása | `41 4 * * *` | `<php> <projekt>/artisan tulhasznalat:elszamol` |
 
+**Átirányítás (`> /dev/null`) ne legyen bennük, és értesítési címet érdemes
+megadni a vezérlőpultban.** A tárhely időzítője minden kimenetet e-mailben küld
+el, az öt percenként futó parancsok pedig napi 288 levelet jelentenének — két hét
+alatt mindenki szűrőt tesz rájuk, és utána a valódi hibáról szóló levél is a
+szűrőbe esik. A kézenfekvő `> /dev/null` viszont **rosszabb**: a Laravel a
+hibaüzenetet is a standard kimenetre írja (a `$this->error()` és a lefutó kivétel
+is), tehát az átirányítás épp a bajt nyelné el, és a cron némán romlana el.
+
+Ezért a parancsok maguk hallgatnak, ha nincs mondanivalójuk
+(`App\Console\Commands\Concerns\CsendesCron`): terminálból futtatva kiírják az
+összegzést, cronból nem, hibát viszont mindig. Így az értesítési címre **csak
+akkor érkezik levél, ha tényleg baj van**. Ugyanezért nem hiba a hiányzó
+beérkeztető postafiók sem: az beállítás, nem üzemzavar, tehát a napi takarítás
+nem szól érte (`PostafiokOlvaso::beallitva()`).
+
 A parancsban **nincs `cd` és nincs `&&`**. Az `artisan` a saját helyéből (`__DIR__`)
 oldja fel az útvonalakat, ezért abszolút úttal hívva bármelyik munkakönyvtárból
 ugyanúgy fut — a shell-operátorokat viszont egyes vezérlőpultok nem értelmezik, és

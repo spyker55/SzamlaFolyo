@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\CsendesCron;
 use App\Enums\DokumentumAllapot;
 use App\Models\Company;
 use App\Models\Document;
@@ -17,6 +18,8 @@ use Illuminate\Console\Command;
  */
 final class DokumentumFeldolgoz extends Command
 {
+    use CsendesCron;
+
     protected $signature = 'dokumentum:feldolgoz {--limit=5 : Legfeljebb ennyi dokumentum egy futásban}';
 
     protected $description = 'Kiolvassa a feldolgozásra váró dokumentumokat.';
@@ -46,7 +49,7 @@ final class DokumentumFeldolgoz extends Command
             $osszes += $sorkezelo->tobbet($ceg, $keret - $osszes);
         }
 
-        $this->info("Feldolgozva: {$osszes} dokumentum.");
+        $this->osszegzes("Feldolgozva: {$osszes} dokumentum.");
 
         return self::SUCCESS;
     }

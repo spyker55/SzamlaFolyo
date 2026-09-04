@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\CsendesCron;
 use App\Services\Billing\Tulhasznalat;
 use Illuminate\Console\Command;
 
@@ -17,6 +18,8 @@ use Illuminate\Console\Command;
  */
 final class TulhasznalatElszamol extends Command
 {
+    use CsendesCron;
+
     protected $signature = 'tulhasznalat:elszamol';
 
     protected $description = 'A keret fölötti dokumentumokat felviszi a következő Stripe-számlára.';
@@ -25,7 +28,7 @@ final class TulhasznalatElszamol extends Command
     {
         $eredmeny = $tulhasznalat->elszamol();
 
-        $this->info(sprintf(
+        $this->osszegzes(sprintf(
             '%d cég · %d kredit számlázva · %d hiba.',
             $eredmeny['cegek'],
             $eredmeny['kreditek'],

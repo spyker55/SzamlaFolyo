@@ -11,6 +11,7 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Billing\Kvota;
 use App\Services\Billing\StripeSzolgaltatas;
+use App\Services\Ingest\PostafiokOlvaso;
 use App\Support\Adoszam;
 use App\Support\Berlo;
 use App\Support\Osszeg;
@@ -294,8 +295,7 @@ class Beallitasok extends Component
             // A cím önmagában félrevezető: ha a postafiók nincs beállítva a
             // kiszolgálón, az arra küldött levél sehova nem érkezik meg, és
             // ezt semmi nem mondja meg — se a feladónak, se a felhasználónak.
-            'bekuldesAktiv' => (string) config('inbox.imap.host') !== ''
-                && (string) config('inbox.imap.username') !== '',
+            'bekuldesAktiv' => PostafiokOlvaso::beallitva(),
         ]);
     }
 

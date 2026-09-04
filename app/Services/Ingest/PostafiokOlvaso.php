@@ -35,6 +35,21 @@ final class PostafiokOlvaso
         private readonly Berlo $berlo,
     ) {}
 
+    /**
+     * Be van-e egyáltalán állítva a beérkeztető postafiók.
+     *
+     * Külön kérdés, mert a **hiánya nem hiba**: egy példány működhet e-mailes
+     * beküldés nélkül is. A `kliens()` ilyenkor is dob kivételt (az a végső
+     * védelem), de a hívónak előbb meg kell tudnia kérdezni — különben a napi
+     * takarítás minden éjjel „postafiók nem takarítható" hibát jelentene egy
+     * tudatos beállítás miatt, és a cron értesítései használhatatlanná válnának.
+     */
+    public static function beallitva(): bool
+    {
+        return (string) config('inbox.imap.host') !== ''
+            && (string) config('inbox.imap.username') !== '';
+    }
+
     /** @param  array<string, mixed>  $beallitas */
     private function kliens(array $beallitas): Client
     {

@@ -175,6 +175,11 @@ Az időzítés és a parancs külön mezőbe megy:
   4) Túlhasználat elszámolása        időzítés:  41 4 * * *
      $PHP $PROJEKT/artisan tulhasznalat:elszamol
 
+Átirányítás (\`> /dev/null\`) NE legyen bennük: a parancsok maguk hallgatnak, ha
+nincs mondanivalójuk, hibát viszont mindig kiírnak — az átirányítás épp a hibát
+nyelné el. Érdemes a vezérlőpultban értesítési címet is megadni: így csak akkor
+kapsz levelet, ha tényleg baj van.
+
 A parancsban nincs se \`cd\`, se \`&&\`: az artisan a saját helyéből oldja fel az
 útvonalakat, ezért bármelyik munkakönyvtárból ugyanúgy fut. Nyers crontabba írva
 a két rész egyszerűen egymás után kerül.
