@@ -255,6 +255,50 @@ gépi verdiktben (`IdegenBizonylatTest`). A tárolt verdikt azért számít, mer
 fogja vissza a magabiztosságot is — enélkül a frissen érkezett idegen irat a
 listában ártatlannak látszana, amíg valaki meg nem nyitja.
 
+#### „Akkor hova tartozik?"
+
+A jelzés önmagában zsákutca: látszik, hogy baj van, de nem derül ki, mit kezdjen
+vele az ember. Amióta egy fiók több céget kezel, a válasz gyakran ott van a saját
+cégei között — ezt a kérdést korábban nem is lehetett feltenni. Ha a bizonylat
+adószáma a felhasználó **másik cégére** mutat, az ellenőrző képernyő felajánlja,
+és egy kattintással átviszi (`CegAjanlas`, `DokumentumAthelyezes`).
+
+Az ajánlás a **képernyőn lévő** értékekből dolgozik, nem a tárolt sorból: ha az
+ember javítja az adószámot, az ajánlás követi. Különben a piros jelzés és az
+ajánlás ellentmondhatna egymásnak ugyanazon a képernyőn. Hibás ellenőrző
+számjegyre itt sem építünk: egy félreolvasott számjegy nem irányíthat át egy
+bizonylatot egy másik céghez.
+
+**Ez az egyetlen művelet a rendszerben, ami átlép a bérlőhatáron**, ezért a
+feltételei szigorúak, és a tesztek fele nem arról szól, hogy működik, hanem hogy
+mikor tagadja meg:
+
+- **Mindkét cégben szerkesztési jog kell.** Elvinni onnan, ahol van, és letenni
+  oda, ahova megy. A célcégbeli tagság ellenőrzése nélkül ez a művelet pont a
+  bérlőhatárt bontaná le. A célcéget a képernyő újraszámolja, nem a kérésből
+  veszi: hamisított paraméter nem hozhat be idegen cégazonosítót.
+- **Csak ellenőrzés előtt álló irat.** A jóváhagyott vagy exportált már a
+  forráscég könyvelése; utólag, észrevétlenül megváltoztatni rosszabb, mint nem
+  engedni.
+- **Duplikátum nem megy.** Az eredeti és a másolatai ugyanarra a fájlra
+  mutatnak; az egyik elvitele a másik útvonalát a semmibe irányítaná.
+- **Ha a célcégnél már bent van ugyanaz a fájl**, nem csinálunk belőle kettőt.
+
+Ami átmegy: a dokumentum, a kiolvasás és a javítás sorai, és **a fájl is** — az
+útvonal a cég azonosítója alatt van (`iratok/{cég}/{irat}/…`), a forráscég
+tárhelyszámlálója nem viheti tovább a másik cég iratát. A fájl átnevezése a
+tranzakción **belül** történik: ha elbukik, nem marad olyan sor, ami nem létező
+fájlra mutat.
+
+A keret ezzel együtt mozog: a kiolvasás sorai viszik a `credits` értéküket, tehát
+a forráscég felhasználása csökken, a célcégé nő. Ez a helyes irány — a
+modellhívás a célcég iratáért történt. Ami **nem** megy át: az
+`inbound_email_id`. A levél tényleg a forráscég beküldési címére érkezett, ez
+történelmi tény róla; a hivatkozás megmarad, a célcég egyszerűen nem látja.
+
+Mindkét cég naplójában nyoma marad (`dokumentum.elvitte`, `dokumentum.erkezett`):
+az egyikből eltűnt egy irat, a másikban megjelent.
+
 ## Hátralék
 
 **Amit a nyitólap ezért nem ígér.** A csomagok között továbbra sincs cégszám-alapú

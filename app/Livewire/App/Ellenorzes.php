@@ -7,8 +7,12 @@ namespace App\Livewire\App;
 use App\Enums\AfaKategoria;
 use App\Enums\DokumentumAllapot;
 use App\Enums\DokumentumTipus;
+use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentCorrection;
+use App\Services\Documents\AthelyezesHiba;
+use App\Services\Documents\CegAjanlas;
+use App\Services\Documents\DokumentumAthelyezes;
 use App\Services\Extraction\Konfidencia;
 use App\Services\Extraction\Sema;
 use App\Services\Extraction\Validatorok;
@@ -370,6 +374,7 @@ class Ellenorzes extends Component
         );
 
         return view('livewire.app.ellenorzes', [
+            'ajanlottCeg' => $this->ajanlottCeg(),
             'cimkek' => Sema::CIMKEK,
             'tipusok' => DokumentumTipus::opciok(),
             'kategoriak' => AfaKategoria::opciok(),
@@ -378,5 +383,68 @@ class Ellenorzes extends Component
                 ->where('status', DokumentumAllapot::EllenorzesreVar->value)
                 ->count(),
         ]);
+    }
+
+    /**
+     * Melyik másik cégéhez tartozik ez az irat.
+     *
+     * Csak akkor kérdezzük meg, ha az „idegen bizonylat" jelzés **tényleg**
+     * megszólalt: a hibás ellenőrző számjegy nem ok arra, hogy másik céget
+     * ajánljunk, és egy helyén lévő iratnál a felajánlott áthelyezés maga
+     * volna a hiba.
+     */
+    private function ajanlottCeg(): ?Company
+    {
+        $felhasznalo = auth()->user();
+        $cegAdoszam = $this->dokumentum->company?->tax_number;
+
+        if ($felhasznalo === null || ! Validatorok::idegenE($this->mezok, $cegAdoszam)) {
+            return null;
+        }
+
+        return CegAjanlas::talal(
+            vevoAdoszam: is_string($this->mezok['customer_tax_number'] ?? null) ? $this->mezok['customer_tax_number'] : null,
+            szallitoAdoszam: is_string($this->mezok['supplier_tax_number'] ?? null) ? $this->mezok['supplier_tax_number'] : null,
+            felhasznalo: $felhasznalo,
+            kizartCegId: (int) $this->dokumentum->company_id,
+        );
+    }
+
+    /**
+     * Az irat átvitele a felismert cégbe.
+     *
+     * A célcéget **újraszámoljuk**, nem a kérésből vesszük: egy hamisított
+     * paraméter különben tetszőleges cég azonosítóját hozhatná. A jogokat és
+     * a többi feltételt a szolgáltatás őrzi, de a bemenetet sem adjuk a
+     * böngésző kezébe.
+     */
+    public function athelyez(): void
+    {
+        $cel = $this->ajanlottCeg();
+        $felhasznalo = auth()->user();
+
+        if ($cel === null || $felhasznalo === null) {
+            $this->addError('athelyezes', 'Ez az irat nem tartozik egyik másik cégedhez sem.');
+
+            return;
+        }
+
+        try {
+            app(DokumentumAthelyezes::class)->athelyez($this->dokumentum, $cel, $felhasznalo);
+        } catch (AthelyezesHiba $hiba) {
+            $this->addError('athelyezes', $hiba->getMessage());
+
+            return;
+        }
+
+        // Az irat innentől a másik cégé: ezen a képernyőn a bérlőszűrő már nem
+        // is engedné megnyitni. A Beérkezőbe megyünk, nem a másik céghez —
+        // a cégváltás külön, tudatos lépés maradjon.
+        session()->flash('siker', sprintf(
+            'Az iratot átvittük a(z) „%s” céghez. A fejlécből tudsz átváltani rá.',
+            $cel->name,
+        ));
+
+        $this->redirect(route('beerkezo', absolute: false), navigate: true);
     }
 }
