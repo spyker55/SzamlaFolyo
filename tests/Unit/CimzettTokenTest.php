@@ -104,4 +104,32 @@ final class CimzettTokenTest extends TestCase
             self::DOMAIN,
         ));
     }
+
+    /**
+     * Plusz-címzésnél a token után is jöhet megjegyzés — a beküldő szokta
+     * odaírni, melyik hónapról van szó. A catch-all ág eddig is levágta, a
+     * plusz ág nem, és ott az egész cím felismerhetetlenné vált.
+     */
+    public function test_plusz_cimzesnel_a_token_utani_megjegyzes_nem_zavar(): void
+    {
+        $token = str_repeat('a', 16);
+
+        $this->assertSame($token, CimzettToken::kereses(
+            ['to' => "bekuldes+{$token}+marcius@szamlafolyo.hu"],
+            'plus',
+            '',
+            'bekuldes@szamlafolyo.hu',
+        ));
+    }
+
+    /** A puszta plusz-cím token nélkül nem tartozik senkihez. */
+    public function test_a_token_nelkuli_plusz_cim_nem_talalat(): void
+    {
+        $this->assertNull(CimzettToken::kereses(
+            ['to' => 'bekuldes+teszt@szamlafolyo.hu'],
+            'plus',
+            '',
+            'bekuldes@szamlafolyo.hu',
+        ));
+    }
 }

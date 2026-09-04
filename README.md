@@ -279,12 +279,31 @@ Négy dolog kell hozzá, és mind a négy nélkül a cím **működőnek látszi
 levél sehova nem érkezik meg** — a feladó sem kap hibát. A Beállítások képernyő
 ezért ki is írja, ha a postafiók még nincs beállítva.
 
-1. **MX-rekord** az `INBOX_DOMAIN` aldoménre, a szolgáltató levelezőszervereire.
-2. **Catch-all postafiók** arra az aldoménre (`*@bekuldes.<domain>` → egy fiók).
-3. **A fiók adatai a `.env`-ben**: `IMAP_HOST`, `IMAP_USERNAME`, `IMAP_PASSWORD`.
-   Enélkül a `email:beolvas` minden futáskor azzal áll meg, hogy nincs beállítva.
-4. **A `Feldolgozott` és a `Besorolatlan` mappa** a fiókban, és a `email:beolvas`
-   felvéve az időzített feladatok közé.
+**A rövidebb út a plusz-címzés**, mert ehhez DNS-t sem kell módosítani: a fődomén
+MX-e már megvan. Egy sima postafiók kell (`bekuldes@<domain>`), és:
+
+```
+INBOX_MODE=plus
+INBOX_PLUS_ADDRESS=bekuldes@<domain>
+IMAP_HOST=…  IMAP_USERNAME=…  IMAP_PASSWORD=…
+```
+
+A cím így `bekuldes+<token>@<domain>` lesz. Két perc alatt kipróbálható: küldj
+levelet a `bekuldes+teszt@<domain>` címre, és nézd meg, megjön-e a fiókba. (A
+nethelynél működik.)
+
+**A catch-all aldomén a másik út**, szebb címekkel (`<token>@bekuldes.<domain>`),
+de három dolgon múlik egyszerre:
+
+1. **MX-rekord** az aldoménre — **az MX nem öröklődik**, a fődoméné nem
+   vonatkozik rá. Ha van `*` A rekord, az aldomén feloldódik a webszerverre, és a
+   levél oda próbál kézbesíteni, majd visszapattan: néma hiba.
+2. **Catch-all postafiók** az aldoménre (`*@bekuldes.<domain>` → egy fiók).
+3. `INBOX_MODE=catchall` és `INBOX_DOMAIN=bekuldes.<domain>`.
+
+Mindkét úthoz kell még a `email:beolvas` az időzített feladatok közé. A
+`Feldolgozott` és a `Besorolatlan` mappát a parancs maga létrehozza, ha a
+szolgáltató engedi.
 
 A cégek beküldési címe a Beállítások képernyőn látszik, és a
 `email:beolvas --proba` is kiírja mindet.

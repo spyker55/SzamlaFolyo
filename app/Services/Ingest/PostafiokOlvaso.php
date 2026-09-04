@@ -60,6 +60,13 @@ final class PostafiokOlvaso
         $kliens = $this->kliens($beallitas);
         $kliens->connect();
 
+        // A célmappák hiánya eddig némán bukott: a `move()` elszállt, a levél
+        // olvasottként az INBOX-ban maradt, és a besorolatlan pont ott vegyült
+        // el a többivel. Egyszer megpróbáljuk létrehozni őket.
+        foreach (['processed_folder', 'unmatched_folder'] as $kulcs) {
+            $this->mappaBiztositas($kliens, (string) $beallitas[$kulcs]);
+        }
+
         $mappa = $kliens->getFolderByPath((string) $beallitas['folder']);
         $levelek = $mappa->query()->unseen()->limit($maxLevel)->get();
 
@@ -323,6 +330,22 @@ final class PostafiokOlvaso
         }
 
         return $ki;
+    }
+
+    private function mappaBiztositas(Client $kliens, string $nev): void
+    {
+        if ($nev === '') {
+            return;
+        }
+
+        try {
+            if ($kliens->getFolderByPath($nev, soft_fail: true) === null) {
+                $kliens->createFolder($nev);
+            }
+        } catch (\Throwable) {
+            // Ha a szolgáltató nem engedi, a levél olvasottként az INBOX-ban
+            // marad. Kellemetlen, de nem indok az egész futás megállítására.
+        }
     }
 
     private function athelyez(Message $level, string $mappa): void

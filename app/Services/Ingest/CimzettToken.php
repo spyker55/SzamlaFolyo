@@ -68,7 +68,11 @@ final class CimzettToken
                 return null;
             }
 
-            return self::ervenyesToken(substr($helyi, strlen($plusHelyi) + 1));
+            // A token után jöhet még megjegyzés (`bekuldes+<token>+marcius@`),
+            // ahogy a catch-all ágon is: az a beküldő jelölése, nem a tokené.
+            $maradek = substr($helyi, strlen($plusHelyi) + 1);
+
+            return self::ervenyesToken(explode('+', $maradek, 2)[0]);
         }
 
         if ($cimDomain !== strtolower($domain)) {
