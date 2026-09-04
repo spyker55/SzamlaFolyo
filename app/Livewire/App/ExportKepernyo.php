@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Response;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Az export. A képernyő sorrendje szándékos: előbb látod, mi megy ki, aztán
@@ -52,7 +52,16 @@ class ExportKepernyo extends Component
         $this->igDatum = Ido::most()->endOfMonth()->toDateString();
     }
 
-    public function eredetikZip(): ?StreamedResponse
+    /**
+     * Az eredeti bizonylatok ZIP-ben.
+     *
+     * A visszatérési típus **`BinaryFileResponse`**, és ez nem részletkérdés: a
+     * `Response::download()` ilyet ad, a korábbi `?StreamedResponse` deklaráció
+     * viszont nem rokona ennek, tehát a metódus típushibával szállt el, mielőtt
+     * bármi letöltődött volna. A böngésző ebből csak annyit mutatott, hogy
+     * elromlott valami — a gomb pedig soha nem működött.
+     */
+    public function eredetikZip(): ?BinaryFileResponse
     {
         $dokumentumok = $this->dokumentumok();
 
@@ -67,7 +76,7 @@ class ExportKepernyo extends Component
             ->deleteFileAfterSend();
     }
 
-    public function exportal(): ?StreamedResponse
+    public function exportal(): void
     {
         $ceg = app(Berlo::class)->kotelezo();
         $dokumentumok = $this->dokumentumok();
@@ -75,7 +84,7 @@ class ExportKepernyo extends Component
         if ($dokumentumok->isEmpty()) {
             $this->addError('export', 'Ebben az időszakban nincs exportálható tétel.');
 
-            return null;
+            return;
         }
 
         $export = app(ExportKeszito::class)->keszit($ceg, $dokumentumok, $this->formatum, [
@@ -94,8 +103,6 @@ class ExportKepernyo extends Component
         ));
 
         $this->redirect(route('archivum', absolute: false), navigate: true);
-
-        return null;
     }
 
     /** @return Collection<int, Document> */
