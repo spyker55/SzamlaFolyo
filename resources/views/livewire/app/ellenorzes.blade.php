@@ -248,12 +248,19 @@
                 <p class="text-xs text-slate-400">
                     Jóváhagyás után a tétel az exportra vár.
                 </p>
-                <button type="submit" class="btn btn-primary">
-                    Jóváhagyás
-                    @if ($hatravan > 1)
-                        <span class="text-blue-200">és következő</span>
-                    @endif
-                </button>
+                @if ($this->szerkeszthet())
+                    <button type="submit" class="btn btn-primary">
+                        Jóváhagyás
+                        @if ($hatravan > 1)
+                            <span class="text-blue-200">és következő</span>
+                        @endif
+                    </button>
+                @else
+                    {{-- A megtekintő elolvashatja az iratot, de nem hagyja jóvá.
+                         A mezők látszanak, csak a mentés nem megy — ezt inkább
+                         mondjuk ki, mint hogy egy néma 403-ba fusson bele. --}}
+                    <span class="text-xs text-slate-500">Megtekintőként nem tudod jóváhagyni.</span>
+                @endif
             </div>
         </form>
     </div>

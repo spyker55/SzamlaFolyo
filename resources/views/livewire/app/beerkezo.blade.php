@@ -27,7 +27,9 @@
         </p>
     @endif
 
-    {{-- Feltöltés --}}
+    {{-- Feltöltés. Megtekintőnek nincs itt dolga: a szerver úgyis
+         visszautasítaná, felkínálni pedig félrevezető. --}}
+    @if ($this->szerkeszthet())
     <label for="fajlok"
            class="mb-6 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2
                   border-dashed border-slate-300 bg-white/70 px-6 py-10 text-center transition
@@ -38,6 +40,7 @@
         <span class="mt-1 text-xs text-slate-500">PDF, JPG, PNG vagy WEBP — legfeljebb 20 MB darabonként</span>
         <span wire:loading wire:target="fajlok,feltoltes" class="mt-2 text-xs text-blue-700">Feltöltés folyamatban…</span>
     </label>
+    @endif
 
     @if ($feltoltesiHibak)
         <div class="alert alert-hiba mb-4">
@@ -100,11 +103,15 @@
                             @if ($d->status === \App\Enums\DokumentumAllapot::EllenorzesreVar)
                                 <a href="{{ route('ellenorzes', $d) }}" wire:navigate class="btn btn-primary btn-sm">Ellenőrzés</a>
                             @elseif ($d->status === \App\Enums\DokumentumAllapot::Hiba)
-                                <button wire:click="ujra({{ $d->id }})" class="btn btn-secondary btn-sm">Újra</button>
+                                @if ($this->szerkeszthet())
+                                    <button wire:click="ujra({{ $d->id }})" class="btn btn-secondary btn-sm">Újra</button>
+                                @endif
                             @endif
-                            <button wire:click="torol({{ $d->id }})"
-                                    wire:confirm="Biztosan törlöd? A fájl is törlődik."
-                                    class="btn btn-ghost btn-sm">Törlés</button>
+                            @if ($this->szerkeszthet())
+                                <button wire:click="torol({{ $d->id }})"
+                                        wire:confirm="Biztosan törlöd? A fájl is törlődik."
+                                        class="btn btn-ghost btn-sm">Törlés</button>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

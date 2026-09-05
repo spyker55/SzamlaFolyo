@@ -88,12 +88,17 @@
                 Eredeti bizonylatok letöltése (ZIP)
             </button>
 
-            <button type="button" wire:click="exportal"
-                    wire:confirm="Elkészítjük az exportot. Az eredeti fájlok ezután törlődnek. Folytatod?"
-                    class="btn btn-primary" @disabled($darab === 0)>
-                <span wire:loading.remove wire:target="exportal">Export elkészítése</span>
-                <span wire:loading wire:target="exportal">Készül…</span>
-            </button>
+            {{-- Az eredetik letöltése olvasás: ugyanaz az adat, amit a
+                 megtekintő egyesével amúgy is megnyithat. Az export viszont
+                 megváltoztatja a tételeket és törli az eredeti fájlokat. --}}
+            @if ($this->szerkeszthet())
+                <button type="button" wire:click="exportal"
+                        wire:confirm="Elkészítjük az exportot. Az eredeti fájlok ezután törlődnek. Folytatod?"
+                        class="btn btn-primary" @disabled($darab === 0)>
+                    <span wire:loading.remove wire:target="exportal">Export elkészítése</span>
+                    <span wire:loading wire:target="exportal">Készül…</span>
+                </button>
+            @endif
 
             @if ($eredetikLetoltve)
                 <span class="text-xs text-emerald-700">Az eredetik letöltve.</span>

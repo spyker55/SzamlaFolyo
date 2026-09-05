@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\Szerep;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Livewire\Concerns\Uzenetek;
 use App\Models\ActivityLog;
 use App\Models\Company;
@@ -23,7 +24,7 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Beallitasok extends Component
 {
-    use Uzenetek;
+    use Jogosultsag, Uzenetek;
 
     public string $cegNev = '';
 
@@ -54,7 +55,7 @@ class Beallitasok extends Component
 
     public function cegMentes(): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $adatok = $this->validate([
             'cegNev' => ['required', 'string', 'min:2', 'max:255'],
@@ -88,7 +89,7 @@ class Beallitasok extends Component
      */
     public function tagFelvetel(): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $adatok = $this->validate([
             'ujTagEmail' => ['required', 'email', 'max:255'],
@@ -103,6 +104,7 @@ class Beallitasok extends Component
 
             return;
         }
+
 
         // A csomag felhasználószáma. Két dolog múlik a sorrenden. Egy: a
         // korlátot a **műveletben** kell megfogni, nem a képernyőn elrejtett
@@ -142,7 +144,7 @@ class Beallitasok extends Component
 
     public function tagEltavolitas(int $userId): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $ceg = app(Berlo::class)->kotelezo();
 
@@ -160,7 +162,7 @@ class Beallitasok extends Component
 
     public function elofizetes(string $csomag): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $priceId = config("szamlafolyo.plans.{$csomag}.price_id");
         $stripe = app(StripeSzolgaltatas::class);
@@ -184,7 +186,7 @@ class Beallitasok extends Component
 
     public function portal(): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $stripe = app(StripeSzolgaltatas::class);
 
@@ -210,7 +212,7 @@ class Beallitasok extends Component
      */
     public function tulhasznalatValt(): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $ceg = app(Berlo::class)->kotelezo();
         $uj = ! $ceg->overage_enabled;
@@ -244,7 +246,7 @@ class Beallitasok extends Component
      */
     public function plafonMentes(): void
     {
-        $this->kellSzerep(fn (Szerep $s) => $s->adminisztralhat());
+        $this->kellTulajdonos();
 
         $this->validate([
             'tulhasznalatPlafon' => ['nullable', 'integer', 'min:0', 'max:10000000'],
@@ -259,14 +261,6 @@ class Beallitasok extends Component
         $this->uzenet($ertek === null
             ? 'A kereten felüli feldolgozásnak mostantól nincs felső határa.'
             : 'A kereten felüli feldolgozás felső határa '.Osszeg::formaz($ertek).' Ft.');
-    }
-
-    private function kellSzerep(callable $feltetel): void
-    {
-        $ceg = app(Berlo::class)->kotelezo();
-        $szerep = auth()->user()?->szerepe($ceg);
-
-        abort_unless($szerep !== null && $feltetel($szerep), 403);
     }
 
     public function render()

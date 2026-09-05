@@ -70,7 +70,9 @@
                             {{ \App\Support\Osszeg::formaz($t->gross_amount, $t->currency) }}
                         </td>
                         <td class="td text-right">
-                            <button wire:click="javitasra({{ $t->id }})" class="btn btn-ghost btn-sm">Javítás</button>
+                            @if ($this->szerkeszthet())
+                                <button wire:click="javitasra({{ $t->id }})" class="btn btn-ghost btn-sm">Javítás</button>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

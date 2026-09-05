@@ -6,6 +6,7 @@ namespace App\Livewire\App;
 
 use App\Enums\DokumentumAllapot;
 use App\Enums\DokumentumTipus;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Models\Document;
 use App\Services\Export\Oszlopok;
 use Livewire\Attributes\Layout;
@@ -20,7 +21,7 @@ use Livewire\WithPagination;
 #[Layout('components.layouts.app')]
 class Tetelek extends Component
 {
-    use WithPagination;
+    use Jogosultsag, WithPagination;
 
     #[Url(as: 'q')]
     public string $kereses = '';
@@ -35,6 +36,8 @@ class Tetelek extends Component
 
     public function javitasra(int $id): void
     {
+        $this->kellSzerkeszto();
+
         $dokumentum = Document::query()
             ->where('status', DokumentumAllapot::Jovahagyva->value)
             ->whereNull('export_id')

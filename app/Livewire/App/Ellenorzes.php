@@ -7,6 +7,7 @@ namespace App\Livewire\App;
 use App\Enums\AfaKategoria;
 use App\Enums\DokumentumAllapot;
 use App\Enums\DokumentumTipus;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Models\Document;
 use App\Models\DocumentCorrection;
 use App\Services\Extraction\Konfidencia;
@@ -31,6 +32,8 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Ellenorzes extends Component
 {
+    use Jogosultsag;
+
     public Document $dokumentum;
 
     /** @var array<string, mixed> */
@@ -124,6 +127,8 @@ class Ellenorzes extends Component
 
     public function jovahagyas(): void
     {
+        $this->kellSzerkeszto();
+
         $mezok = $this->ellenorzottMezok();
         $bontas = $this->parseoltBontas();
 

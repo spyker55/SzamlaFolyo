@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\DokumentumAllapot;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Livewire\Concerns\Uzenetek;
 use App\Models\ActivityLog;
 use App\Models\Document;
@@ -22,7 +23,7 @@ use Livewire\Component;
 #[Layout('components.layouts.app')]
 class Archivum extends Component
 {
-    use Uzenetek;
+    use Jogosultsag, Uzenetek;
 
     public ?int $nyitottExportId = null;
 
@@ -33,6 +34,8 @@ class Archivum extends Component
 
     public function visszahiv(int $dokumentumId): void
     {
+        $this->kellSzerkeszto();
+
         $dokumentum = Document::query()
             ->where('status', DokumentumAllapot::Exportalva->value)
             ->findOrFail($dokumentumId);
@@ -49,6 +52,8 @@ class Archivum extends Component
 
     public function tetelTorles(int $dokumentumId): void
     {
+        $this->kellTulajdonos();
+
         $dokumentum = Document::query()
             ->where('status', DokumentumAllapot::Exportalva->value)
             ->findOrFail($dokumentumId);
@@ -65,6 +70,8 @@ class Archivum extends Component
      */
     public function exportTorles(int $exportId): void
     {
+        $this->kellTulajdonos();
+
         $export = Export::query()->findOrFail($exportId);
 
         DB::transaction(function () use ($export): void {

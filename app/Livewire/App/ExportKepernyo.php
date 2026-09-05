@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\DokumentumTipus;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Models\Document;
 use App\Services\Export\ExportKeszito;
 use App\Services\Export\Oszlopok;
@@ -25,6 +26,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 #[Layout('components.layouts.app')]
 class ExportKepernyo extends Component
 {
+    use Jogosultsag;
+
     public string $formatum = 'xlsx';
 
     public string $tolDatum = '';
@@ -78,6 +81,8 @@ class ExportKepernyo extends Component
 
     public function exportal(): void
     {
+        $this->kellSzerkeszto();
+
         $ceg = app(Berlo::class)->kotelezo();
         $dokumentumok = $this->dokumentumok();
 

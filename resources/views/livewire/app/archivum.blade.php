@@ -31,9 +31,12 @@
                             <button wire:click="nyit({{ $export->id }})" class="btn btn-ghost btn-sm">
                                 {{ $nyitottExportId === $export->id ? 'Bezár' : 'Tételek' }}
                             </button>
-                            <button wire:click="exportTorles({{ $export->id }})"
-                                    wire:confirm="Az export és mind a {{ $export->documents_count }} tétele véglegesen törlődik. Biztos?"
-                                    class="btn btn-ghost btn-sm text-red-700">Törlés</button>
+                            {{-- A végleges törlés tulajdonosi jog: ezt már semmi nem hozza vissza. --}}
+                            @if ($this->adminisztralhat())
+                                <button wire:click="exportTorles({{ $export->id }})"
+                                        wire:confirm="Az export és mind a {{ $export->documents_count }} tétele véglegesen törlődik. Biztos?"
+                                        class="btn btn-ghost btn-sm text-red-700">Törlés</button>
+                            @endif
                         </div>
                     </div>
 
@@ -61,10 +64,14 @@
                                             {{ \App\Support\Osszeg::formaz($t->gross_amount, $t->currency) }}
                                         </td>
                                         <td class="td text-right whitespace-nowrap">
-                                            <button wire:click="visszahiv({{ $t->id }})" class="btn btn-ghost btn-sm">Visszahívás</button>
-                                            <button wire:click="tetelTorles({{ $t->id }})"
-                                                    wire:confirm="A tétel véglegesen törlődik. Biztos?"
-                                                    class="btn btn-ghost btn-sm text-red-700">Törlés</button>
+                                            @if ($this->szerkeszthet())
+                                                <button wire:click="visszahiv({{ $t->id }})" class="btn btn-ghost btn-sm">Visszahívás</button>
+                                            @endif
+                                            @if ($this->adminisztralhat())
+                                                <button wire:click="tetelTorles({{ $t->id }})"
+                                                        wire:confirm="A tétel véglegesen törlődik. Biztos?"
+                                                        class="btn btn-ghost btn-sm text-red-700">Törlés</button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

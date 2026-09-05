@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\App;
 
 use App\Enums\DokumentumAllapot;
+use App\Livewire\Concerns\Jogosultsag;
 use App\Models\ActivityLog;
 use App\Models\Document;
 use App\Services\Billing\Kvota;
@@ -20,7 +21,7 @@ use Livewire\WithFileUploads;
 #[Layout('components.layouts.app')]
 class Beerkezo extends Component
 {
-    use WithFileUploads;
+    use Jogosultsag, WithFileUploads;
 
     /** @var array<int, TemporaryUploadedFile> */
     public array $fajlok = [];
@@ -34,6 +35,8 @@ class Beerkezo extends Component
 
     public function feltoltes(): void
     {
+        $this->kellSzerkeszto();
+
         $ceg = app(Berlo::class)->kotelezo();
         $tarolo = app(FajlTarolo::class);
         $this->feltoltesiHibak = [];
@@ -78,6 +81,8 @@ class Beerkezo extends Component
 
     public function ujra(int $id): void
     {
+        $this->kellSzerkeszto();
+
         $dokumentum = Document::query()->findOrFail($id);
 
         if ($dokumentum->status !== DokumentumAllapot::Hiba) {
@@ -93,6 +98,8 @@ class Beerkezo extends Component
 
     public function torol(int $id): void
     {
+        $this->kellSzerkeszto();
+
         $dokumentum = Document::query()->findOrFail($id);
 
         // Jóváhagyott vagy exportált iratot innen nem lehet törölni: annak az
