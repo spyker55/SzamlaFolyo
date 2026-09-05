@@ -72,14 +72,14 @@
                     <button wire:click="elofizetes('{{ $kulcs }}')" class="btn {{ $aktiv ? 'btn-primary' : 'btn-secondary' }}">
                         {{ $csomag['nev'] }} —
                         {{ \App\Support\Osszeg::formaz($csomag['ar_havi']) }} Ft/hó
-                        <span class="text-xs opacity-70">· {{ $csomag['documents'] }} db/hó · {{ $csomag['users'] }} fő</span>
+                        <span class="text-xs opacity-70">· {{ $csomag['documents'] }} db/hó · {{ $csomag['users'] === null ? 'korlátlan' : $csomag['users'] }} fő</span>
                     </button>
                 @endforeach
                 @if ($ceg->stripe_customer_id)
                     <button wire:click="portal" class="btn btn-ghost">Számlázás kezelése</button>
                 @endif
             </div>
-            <p class="mt-2 text-xs text-slate-400">A feltüntetett árak nettó árak.</p>
+            <p class="mt-2 text-xs text-slate-400"><x-afa-megjegyzes/></p>
         @else
             <p class="text-xs text-slate-400">A csomagot a cég tulajdonosa tudja módosítani.</p>
         @endif

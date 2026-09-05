@@ -380,7 +380,7 @@
         --}}
         <div class="mx-auto mt-12 max-w-3xl space-y-3 text-center text-sm text-vaszon/60">
             <p>
-                A feltüntetett árak nettó árak, a keret minden csomagnál havi.
+                <x-afa-megjegyzes/> A keret minden csomagnál havi.
                 Ha elfogy a havi keret, a feldolgozás
                 <strong class="text-vaszon/80">alapból megáll</strong> — a beküldött iratok megvárják a következő
                 időszakot. Darabonkénti továbbszámlázás csak akkor van, ha külön bekapcsolod, és akkor is

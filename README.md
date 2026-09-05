@@ -113,7 +113,7 @@ szerződéses ígéret.
 
 |  | Start | Flow | Pro |
 |---|---:|---:|---:|
-| Havi nettó | 1 990 Ft | 4 990 Ft | 9 990 Ft |
+| Havi díj | 1 990 Ft | 4 990 Ft | 9 990 Ft |
 | Dokumentum / hó | 50 | 200 | 500 |
 | Felhasználó | 2 | 5 | korlátlan |
 | Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
