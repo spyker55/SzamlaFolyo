@@ -98,6 +98,7 @@ final class JogiOldalakTest extends TestCase
             'elhagyja a szervert',
             'modellhívás nélkül',
             'nem jár adattovábbítással harmadik félhez',
+            'nem használja modelltanításra',
             'Nemzeti Adatvédelmi és Információszabadság Hatóság',
         ] as $allitas) {
             $valasz->assertSee($allitas);

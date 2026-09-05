@@ -98,6 +98,15 @@ elrontani), mindkét adószám átment az ellenőrző számjegyen, a névre pedi
 az iraton semmiért nem tudunk jótállni. „Kézzel írott-e ez a papír" ellenőrizhető
 tény — szemben a magabiztossággal, ami háromszor is használhatatlan volt.
 
+**A bizonylat csak adatot nem tároló szolgáltatóhoz mehet.** A kiolvasási kérés
+`provider.data_collection = "deny"`-t köt ki, ezért az OpenRouter kihagyja az
+útválasztásból azt, aki a tartalmat megőrizné vagy tanulna belőle. **Nem
+kapcsolható ki `.env`-ből, és ez szándékos**: az adatkezelési tájékoztató
+ígéretet tesz róla, egy átbillenthető ígéret pedig rosszabb a semminél, mert az
+olvasó nem látja, épp melyik állapotban van. Ha egyszer nem marad választható
+szolgáltató, a kérés hibával áll meg, és a dokumentum újrapróbálható — a
+csendben átengedett adatot viszont már nem lehet visszakérni.
+
 **Az e-mailes beérkeztetés hitelesítetlen írási út.** Ezért három szabály nem
 opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
 e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a
@@ -241,12 +250,6 @@ ott külön is számít: nézetben hívott `env()` a `config:cache` után `null`
 
 **Az ÁSZF és az adatkezelési tájékoztató nem esett át jogi
 felülvizsgálaton.**
-
-**Az OpenRouter felé nincs kikötve az adatmegőrzés tiltása.** A kérésbe
-felvehető a `provider.data_collection = "deny"`, amivel a kiolvasás csak olyan
-szolgáltatóhoz kerülhet, amelyik nem tárolja a tartalmat — ettől a
-tájékoztató erősebbet is ígérhetne, mint amit ma ígér. Cserébe szűkül a
-választható szolgáltatók köre, ezért mérés nélkül nem kapcsoltuk be.
 
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
 könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az

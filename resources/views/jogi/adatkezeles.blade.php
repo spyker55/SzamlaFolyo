@@ -146,6 +146,11 @@
             állunk. <strong>Felhasználói nevet, e-mail címet, jelszót nem küldünk.</strong>
         </li>
         <li>
+            A kérésben kikötjük, hogy az irat <strong>csak olyan szolgáltatóhoz kerülhet, amelyik a
+            tartalmat nem tárolja és nem használja modelltanításra</strong>. Amelyik ezt nem vállalja,
+            azt az útválasztás kihagyja; ha egy sem marad, a kiolvasás inkább hibával áll meg.
+        </li>
+        <li>
             Az e-számla XML feldolgozása <strong>modellhívás nélkül</strong> történik: az ilyen irat
             tartalma nem hagyja el a szervert.
         </li>

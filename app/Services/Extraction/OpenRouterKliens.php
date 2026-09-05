@@ -44,6 +44,20 @@ final class OpenRouterKliens
 
         $keres = [
             'model' => (string) config('openrouter.model'),
+
+            // A bizonylat idegen cégek adatait viszi magával, ezért csak olyan
+            // szolgáltatóhoz mehet, amelyik nem tárolja és nem tanul belőle.
+            // Az OpenRouter a többit ilyenkor kihagyja az útválasztásból.
+            //
+            // **Nem kapcsolható ki .env-ből, és ez szándékos.** Az adatkezelési
+            // tájékoztató ígéretet tesz erről; egy átbillenthető ígéret pedig
+            // rosszabb, mint a semmilyen, mert az olvasó nem látja, épp melyik
+            // állapotban van. Ha egyszer nem marad választható szolgáltató, a
+            // kérés hibával áll meg — a dokumentum a Beérkezőben marad, és
+            // újrapróbálható. Ez a helyes irány: a csendben átengedett adatot
+            // már nem lehet visszakérni.
+            'provider' => ['data_collection' => 'deny'],
+
             'messages' => [
                 ['role' => 'system', 'content' => Prompt::rendszer($cegNev, $cegAdoszam)],
                 ['role' => 'user', 'content' => [$resz, ['type' => 'text', 'text' => Prompt::felhasznalo()]]],
