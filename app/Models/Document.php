@@ -90,6 +90,19 @@ class Document extends Model
         $query->whereIn('status', DokumentumAllapot::beerkezoErtekek());
     }
 
+    /**
+     * Az iratok, amikről az embernek kell döntenie.
+     *
+     * Ez a szám ül a menü „Beérkező" pontján és a mobil hamburger pöttyén —
+     * ezért van egy helyen, és nem a nézetben, kétszer leírva.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeEmberreVar(Builder $query): void
+    {
+        $query->whereIn('status', DokumentumAllapot::emberreVarErtekek());
+    }
+
     /** @param  Builder<self>  $query */
     public function scopeExportalhato(Builder $query): void
     {

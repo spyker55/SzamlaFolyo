@@ -75,6 +75,14 @@
     background-color: var(--color-vaszon);
     color: var(--color-slate-800);
   }
+
+  /*
+    Az Alpine csak a betöltése után veszi át a rejtést. Enélkül a mobil fiók
+    minden oldalbetöltéskor felvillanna kinyitva, mielőtt becsukódik.
+  */
+  [x-cloak] {
+    display: none !important;
+  }
 }
 
 @layer components {

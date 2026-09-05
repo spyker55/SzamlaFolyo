@@ -36,6 +36,22 @@ enum DokumentumAllapot: string
         };
     }
 
+    /**
+     * Amiért a menü jelez: az irat **emberre vár**.
+     *
+     * Az ellenőrzésre váró és a hibás iratról is a felhasználónak kell
+     * döntenie. A sorban állótól és a feldolgozás alattitól nincs mit kérni —
+     * azok maguktól továbbmennek, és ha bejelentkeznének a jelzőbe, a szám
+     * folyton mozogna anélkül, hogy bárkinek dolga lenne vele.
+     */
+    public static function emberreVarErtekek(): array
+    {
+        return [
+            self::EllenorzesreVar->value,
+            self::Hiba->value,
+        ];
+    }
+
     /** A Beérkezőben látszó, még nem kész állapotok. */
     public static function beerkezoErtekek(): array
     {

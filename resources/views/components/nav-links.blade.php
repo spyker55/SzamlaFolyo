@@ -1,32 +1,28 @@
-@props(['compact' => false])
+{{--
+    A menüpontok. Egyetlen alak van belőlük: ugyanaz a lista ül a nagy képernyő
+    oldalsávjában és a mobil fiókban. Korábban volt egy „compact" változat is a
+    felső csúszkához — a csúszkával együtt az is eltűnt.
+
+    A jelzőszámot kívülről kapja. Az elrendezés két helyen mutatja (a menüpont
+    mellett és a hamburgeren), és nem akarunk kétszer számolni ugyanazt.
+--}}
+@props(['varakozo' => 0])
 
 @php
-    $ceg = app(\App\Support\Berlo::class)->ceg();
-    $varakozo = $ceg
-        ? \App\Models\Document::query()
-            ->whereIn('status', [
-                \App\Enums\DokumentumAllapot::EllenorzesreVar->value,
-                \App\Enums\DokumentumAllapot::Hiba->value,
-            ])->count()
-        : 0;
-
     $elemek = [
-        ['beerkezo',   'Beérkező',    $varakozo],
-        ['tetelek',    'Tételek',     null],
-        ['export',     'Export',      null],
-        ['archivum',   'Archívum',    null],
-        ['beallitasok','Beállítások', null],
+        ['beerkezo', 'Beérkező', $varakozo],
+        ['tetelek', 'Tételek', null],
+        ['export', 'Export', null],
+        ['archivum', 'Archívum', null],
+        ['beallitasok', 'Beállítások', null],
     ];
 @endphp
 
 @foreach ($elemek as [$utvonal, $cimke, $jelzo])
     <a href="{{ route($utvonal) }}" wire:navigate
        @class([
-           'nav-item' => ! $compact,
-           'nav-item-aktiv' => ! $compact && request()->routeIs($utvonal),
-           'shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap' => $compact,
-           'bg-blue-50 text-blue-800' => $compact && request()->routeIs($utvonal),
-           'text-slate-600' => $compact && ! request()->routeIs($utvonal),
+           'nav-item',
+           'nav-item-aktiv' => request()->routeIs($utvonal),
        ])>
         <span>{{ $cimke }}</span>
         @if ($jelzo)
