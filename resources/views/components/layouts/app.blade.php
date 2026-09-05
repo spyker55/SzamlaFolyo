@@ -134,6 +134,14 @@
 
             {{ $slot }}
         </main>
+
+        {{-- A jogi oldalak belépve is elérhetők maradnak. --}}
+        <footer class="border-t border-slate-200 px-4 py-5 lg:px-8">
+            <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
+                <x-jogi-linkek link-osztaly="hover:text-slate-900"/>
+                <span class="ml-auto">© {{ date('Y') }} SzámlaFolyó</span>
+            </div>
+        </footer>
     </div>
 </div>
 

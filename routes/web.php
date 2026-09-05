@@ -32,6 +32,15 @@ Route::get('/', function () {
         : view('nyitolap');
 })->name('kezdolap');
 
+/*
+ * A jogi oldalak. Hitelesítés nélkül is elérhetők, és belépve is ugyanezek
+ * jönnek: az ÁSZF-et a regisztráció **előtt** kell tudni elolvasni, különben
+ * fiók kellene ahhoz, amihez a fiók feltétele kötődik.
+ */
+foreach (['aszf', 'adatkezeles', 'impresszum'] as $oldal) {
+    Route::view('/'.$oldal, 'jogi.'.$oldal)->name($oldal);
+}
+
 Route::middleware('guest')->group(function (): void {
     Route::get('/bejelentkezes', Bejelentkezes::class)->name('bejelentkezes');
     Route::get('/regisztracio', Regisztracio::class)->name('regisztracio');

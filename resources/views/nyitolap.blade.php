@@ -413,6 +413,7 @@
                 <a href="{{ route('bejelentkezes') }}" class="transition-colors hover:text-blue-700">Bejelentkezés</a>
                 <a href="{{ route('regisztracio') }}" class="transition-colors hover:text-blue-700">Regisztráció</a>
                 <a href="mailto:{{ config('szamlafolyo.kapcsolat_email') }}" class="transition-colors hover:text-blue-700">Kapcsolat</a>
+                <x-jogi-linkek link-osztaly="transition-colors hover:text-blue-700"/>
             </div>
         </div>
 

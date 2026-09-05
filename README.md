@@ -211,6 +211,17 @@ a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
 ## Hátralék
 
+**A három jogi oldal szövege.** Az ÁSZF, az adatkezelési tájékoztató és az
+impresszum útvonala, láblécbeli linkje és kerete kész — a **szöveg** nincs meg.
+Amíg nincs, az oldalak kimondják, hogy készülnek, és adnak egy címet, ahol
+kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem tettünk beléjük: azt
+a látogató elhinné, és egy hamis ÁSZF rosszabb a hiányzónál. A kitöltés a
+`resources/views/jogi/` alatt van; az adatkezelési és az impresszum fájl
+fejlécében ott a lista arról, mit kell a szövegnek tartalmaznia — az elsőben
+az, amit ez a rendszer ténylegesen csinál az adatokkal (magyar szerver,
+OpenRouter mint adattovábbítás, az eredetik törlése export után, a beküldési
+postafiók olvasása, a Stripe).
+
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
 könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az
 ügyfelenkénti szétválasztást pedig az export adószámszűrője adja meg. Ez
@@ -249,6 +260,8 @@ válogat, nem az ellenőrzésnél vádol.
 | `app/Services/Billing/` | Keretszámolás és Stripe |
 | `app/Livewire/` | A nyolc képernyő |
 | `resources/views/nyitolap.blade.php` | A nyilvános oldal (`/`), a próbaidő és a csomagok számait a konfigurációból véve |
+| `resources/views/jogi/` | ÁSZF, adatkezelés, impresszum — hitelesítés nélkül is olvashatók |
+| `design/logo/` | A logó designcsomagja, ahogy érkezett: a jel geometriája és a márkaszínek forrása |
 | `resources/css/app.css` | A dizájnrendszer — minden ismétlődő elem itt van definiálva egyszer |
 
 ## Fejlesztés
