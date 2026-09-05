@@ -1,13 +1,20 @@
-@props(['class' => 'h-7 w-7', 'mono' => false])
-{{-- Egy lap, amin átfolyik az adat. Kézzel rajzolva: két path miatt nincs
-     szükség ikoncsomagra és a vele járó letöltésre.
+@props(['class' => 'h-7 w-7'])
+{{--
+    A márkajel: tömör terrakotta négyzet, benne krém dokumentum levágott
+    lapsarokkal, a szövegsorok helyén két hullám — a lapon átfolyó adat.
 
-     A `mono` változat a két saját színt elhagyja, és a szülőtől örökölt
-     színnel rajzol — így használható színes háttéren is (a nyitólap
-     jelvényében fehérrel), ahol a márkaszín önmagára rajzolódna. --}}
-<svg {{ $attributes->merge(['class' => $class]) }} viewBox="0 0 24 24" fill="none"
-     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-     aria-hidden="true">
-    <path d="M6 3h8l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" @class(['text-blue-700' => ! $mono])/>
-    <path d="M8.5 13.5c1.5-1.6 3.5-1.6 5 0s3.5 1.6 5 0" @class(['text-blue-500' => ! $mono])/>
+    A geometria a designcsomagból való (`design/logo/`), pixelre ugyanaz: 56-os
+    viewBox, ezek a path-ok, ezek a hexák. Ezért nem `currentColor`: a jelet nem
+    szabad átszínezni, elforgatni, lekerekíteni vagy árnyékolni — a saját
+    hátterét hozza magával, tehát színes felületen is megáll magában.
+
+    32 pixel alatt a `public/favicon.svg` egyszerűsített változata való ide (egy
+    hullám, vastagabb vonal); a felületen ekkora jel nem fordul elő.
+--}}
+<svg {{ $attributes->merge(['class' => $class]) }} viewBox="0 0 56 56"
+     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="56" height="56" fill="#be6846"/>
+    <path d="M14 11 H34 L42 19 V45 H14 Z" fill="#f5ece2"/>
+    <path d="M18 27 C22 23, 26 31, 30 27 S38 23, 38 27" stroke="#be6846" stroke-width="3" fill="none"/>
+    <path d="M18 35 C22 31, 26 39, 30 35 S38 31, 38 35" stroke="#be6846" stroke-width="3" fill="none"/>
 </svg>

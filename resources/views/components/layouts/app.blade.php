@@ -34,9 +34,8 @@
 
     {{-- Oldalsáv nagy képernyőn --}}
     <aside class="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block">
-        <div class="flex h-16 items-center gap-2 px-5">
-            <x-logo class="h-7 w-7"/>
-            <span class="text-base font-semibold text-slate-900">SzámlaFolyó</span>
+        <div class="flex h-16 items-center px-5">
+            <x-logo-sor jel="h-7 w-7" szoveg="text-xl"/>
         </div>
         <nav class="px-2 pb-6">
             <x-nav-links :varakozo="$varakozo"/>
@@ -59,10 +58,7 @@
              x-transition:leave-end="-translate-x-full"
              class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white">
             <div class="flex h-16 shrink-0 items-center justify-between pr-2 pl-5">
-                <div class="flex items-center gap-2">
-                    <x-logo class="h-7 w-7"/>
-                    <span class="text-base font-semibold text-slate-900">SzámlaFolyó</span>
-                </div>
+                <x-logo-sor jel="h-7 w-7" szoveg="text-xl"/>
                 <button type="button" x-on:click="menu = false" aria-label="Menü bezárása"
                         class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900">
                     <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
@@ -106,8 +102,7 @@
                         <span class="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white"></span>
                     @endif
                 </button>
-                <x-logo class="h-6 w-6"/>
-                <span class="font-semibold text-slate-900">SzámlaFolyó</span>
+                <x-logo-sor jel="h-7 w-7" szoveg="text-xl"/>
             </div>
 
             <div class="hidden text-sm text-slate-500 lg:block">

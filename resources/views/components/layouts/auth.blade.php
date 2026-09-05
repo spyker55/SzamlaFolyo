@@ -14,10 +14,8 @@
          vissza akarnak jutni. Itt is működik — de nem ez az egyetlen út,
          mert egy kattintható logó nem mondja meg magáról, hogy az. A kiírt
          link a kártya alatt van. --}}
-    <a href="{{ route('kezdolap') }}"
-       class="mb-6 flex items-center justify-center gap-2 transition-opacity hover:opacity-75">
-        <x-logo class="h-8 w-8"/>
-        <span class="text-xl font-semibold text-slate-900">SzámlaFolyó</span>
+    <a href="{{ route('kezdolap') }}" class="logo-link mb-6 flex justify-center">
+        <x-logo-sor jel="h-9 w-9" szoveg="text-2xl"/>
     </a>
 
     <div class="card card-pad">

@@ -13,7 +13,7 @@
     legmakacsabbul — az üres válasz enélkül heteken át megmaradna. Ha egyszer
     változik az ikon, ezt a számot kell növelni.
 --}}
-@php($v = '1')
+@php($v = '2')
 <link rel="icon" href="{{ asset('favicon.ico') }}?v={{ $v }}" sizes="32x32">
 <link rel="icon" href="{{ asset('favicon.svg') }}?v={{ $v }}" type="image/svg+xml">
 <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v={{ $v }}">

@@ -17,6 +17,26 @@
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI',
     Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 
+  /* A szóvédjegy betűje. Csak a logóé — a felület szövege marad DM Sans,
+     ezért egyetlen vastagságot töltünk be belőle. */
+  --font-logo: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+
+  /*
+    A márka színei, a designcsomagból (`design/logo/`) — a szóvédjegyé és a
+    hozzá tartozó egyetlen interakcióé. A jel a saját krémjét és terrakottáját
+    az SVG-jében hozza: önmagában megálló asset, nem függ attól, hogy a CSS
+    megérkezett-e.
+
+    Külön nevük van, és **nem** olvadnak bele a lenti `slate`/`blue` skálákba.
+    Azok a felület jelentéshordozó színei („semleges", „kiemelt"), és száz
+    helyen hivatkozik rájuk a kód; ez a három viszont az arculat, ahol a hexa
+    maga a specifikáció. A kettő ma közel áll egymáshoz, de nem ugyanaz — és ha
+    a felület hangolása egyszer elmozdul, a logó nem mozdulhat vele.
+  */
+  --color-marka: #be6846;
+  --color-marka-melyebb: #a34b2b;
+  --color-marka-tinta: #3a3634;
+
   /*
     A paletta.
 
@@ -173,6 +193,30 @@
 
   .empty {
     @apply rounded-xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center text-sm text-slate-500;
+  }
+
+  /*
+    A logó. A jel a saját SVG-jében hozza a színeit; itt a szóvédjegy áll, és
+    az az egy interakció, amit a designcsomag megenged.
+  */
+  .logo-sor {
+    @apply inline-flex items-center gap-2.5;
+  }
+  .logo-szoveg {
+    @apply font-logo font-extrabold tracking-[-0.035em] text-marka-tinta;
+    line-height: 1;
+  }
+  .logo-folyo {
+    @apply text-marka;
+    transition: color 120ms ease;
+  }
+  /* Linkben állva a `Folyó` rész mélyül el — a jel soha nem változik. */
+  a:hover .logo-folyo {
+    color: var(--color-marka-melyebb);
+  }
+  .logo-link:focus-visible {
+    outline: 2px solid var(--color-marka);
+    outline-offset: 2px;
   }
 
   .nav-item {

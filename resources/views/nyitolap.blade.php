@@ -20,11 +20,10 @@
 <nav class="fixed top-0 z-50 w-full border-b border-zsalya/20 bg-vaszon/90 backdrop-blur-md">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-20 items-center justify-between">
-            <a href="#" class="flex flex-shrink-0 items-center gap-3">
-                <span class="flex h-10 w-10 -skew-x-6 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/30">
-                    <x-logo class="h-6 w-6 text-white" :mono="true"/>
-                </span>
-                <span class="text-2xl font-extrabold tracking-tight text-slate-800">Számla<span class="text-blue-700">Folyó</span></span>
+            {{-- A jel a saját négyzetét hozza: nem ül dobozban, nincs
+                 megdöntve, lekerekítve vagy árnyékolva. --}}
+            <a href="#" class="logo-link flex flex-shrink-0">
+                <x-logo-sor jel="h-10 w-10" szoveg="text-2xl"/>
             </a>
 
             <div class="hidden items-center space-x-8 md:flex">
@@ -401,11 +400,8 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="mb-8 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
             <div>
-                <div class="mb-2 flex items-center gap-3">
-                    <span class="flex h-8 w-8 -skew-x-6 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-md shadow-blue-500/30">
-                        <x-logo class="h-5 w-5 text-white" :mono="true"/>
-                    </span>
-                    <span class="text-xl font-extrabold tracking-tight text-slate-800">Számla<span class="text-blue-700">Folyó</span></span>
+                <div class="mb-2">
+                    <x-logo-sor jel="h-8 w-8" szoveg="text-xl"/>
                 </div>
                 <p class="max-w-xs text-sm leading-relaxed text-slate-600">
                     Dokumentumból ellenőrzött, könyvelésre kész adat — percek alatt.

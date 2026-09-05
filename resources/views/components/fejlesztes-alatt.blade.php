@@ -11,9 +11,8 @@
     <dialog id="fejlesztes-alatt"
             class="max-w-md rounded-xl border border-slate-200 p-0 shadow-xl backdrop:bg-slate-900/40">
         <div class="p-6">
-            <div class="mb-3 flex items-center gap-2">
-                <x-logo class="h-6 w-6"/>
-                <span class="font-semibold text-slate-900">SzámlaFolyó</span>
+            <div class="mb-3">
+                <x-logo-sor jel="h-7 w-7" szoveg="text-lg"/>
             </div>
 
             <h2 class="mb-2 text-base font-semibold text-slate-900">
