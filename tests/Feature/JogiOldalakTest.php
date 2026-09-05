@@ -54,7 +54,6 @@ final class JogiOldalakTest extends TestCase
     public static function keszuloOldalak(): array
     {
         return [
-            'ÁSZF' => ['/aszf'],
             'adatkezelés' => ['/adatkezeles'],
         ];
     }
@@ -70,6 +69,49 @@ final class JogiOldalakTest extends TestCase
             ->assertOk()
             ->assertSee('jelenleg készül')
             ->assertSee(config('szamlafolyo.kapcsolat_email'));
+    }
+
+    /**
+     * Az ÁSZF **számai a configból jönnek**, nem a szövegbe írva. Ezért a
+     * teszt sem azt nézi, hogy „1990" ott van-e, hanem hogy egy megváltozott
+     * ár átüt-e a lapon: egy kézzel bemásolt szám különben csendben elcsúszna
+     * attól, amit a rendszer valóban ad — és egy szerződésben ez nem
+     * elírás, hanem az ígéret és a teljesítés szétválása.
+     */
+    public function test_az_aszf_a_configbol_veszi_a_szamokat(): void
+    {
+        config([
+            'szamlafolyo.plans.kicsi.ar_havi' => 2490,
+            'szamlafolyo.plans.kicsi.documents' => 70,
+            'szamlafolyo.trial.days' => 21,
+        ]);
+
+        $this->get('/aszf')
+            ->assertOk()
+            ->assertDontSee('jelenleg készül')
+            ->assertSee('2 490 Ft')
+            ->assertSee('21 napos');
+    }
+
+    /**
+     * A vállalás lényege: a kiolvasás tervezet, a jóváhagyás az emberé, és a
+     * bizonylatok jogszabályi megőrzése az ügyfélé marad attól, hogy mi
+     * törlünk. Ha ezek kikopnak a szövegből, az nem stiláris kérdés.
+     */
+    public function test_az_aszf_kimondja_a_lenyeget(): void
+    {
+        $valasz = $this->get('/aszf')->assertOk();
+
+        foreach ([
+            'A gépi kiolvasás eredménye tervezet',
+            'kizárólag a Polgári Törvénykönyv szerinti vállalkozások',
+            'nem minősül könyvelési, adótanácsadási vagy jogi szolgáltatásnak',
+            'A bizonylatok jogszabályi megőrzése az Előfizető kötelezettsége',
+            'adatfeldolgozóként jár el',
+            'alanyi adómentes',
+        ] as $vallalas) {
+            $valasz->assertSee($vallalas);
+        }
     }
 
     /**

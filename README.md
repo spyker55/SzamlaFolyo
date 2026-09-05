@@ -106,7 +106,7 @@ szerződéses ígéret.
 |---|---:|---:|---:|
 | Havi nettó | 1 990 Ft | 4 990 Ft | 9 990 Ft |
 | Dokumentum / hó | 50 | 200 | 500 |
-| Felhasználó | 2 | 5 | 10 |
+| Felhasználó | 2 | 5 | korlátlan |
 | Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
 | Extra dokumentum | 49 Ft | 29 Ft | 24 Ft |
 
@@ -221,16 +221,24 @@ a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
 ## Hátralék
 
-**Az ÁSZF és az adatkezelési tájékoztató szövege.** Az impresszum kész; a
-másik kettőnek megvan az útvonala, a láblécbeli linkje és a kerete, de a
-**szöveg** nincs meg. Amíg nincs, az a két oldal kimondja, hogy készül, és ad
-egy címet, ahol kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem
-tettünk beléjük: azt a látogató elhinné, és egy hamis ÁSZF rosszabb a
-hiányzónál. A kitöltés a `resources/views/jogi/` alatt van; mindkét fájl
-fejlécében ott a lista arról, mit kell a szövegnek tartalmaznia — az
-adatkezelésiben az, amit ez a rendszer ténylegesen csinál az adatokkal (magyar
-szerver, OpenRouter mint adattovábbítás, az eredetik törlése export után, a
-beküldési postafiók olvasása, a Stripe).
+**Az adatkezelési tájékoztató szövege.** Az impresszum és az ÁSZF kész; a
+harmadiknak megvan az útvonala, a láblécbeli linkje és a kerete, de a **szöveg**
+nincs meg. Amíg nincs, az oldal kimondja, hogy készül, és ad egy címet, ahol
+kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem tettünk bele: azt a
+látogató elhinné. A fájl fejlécében ott a lista arról, mit kell tartalmaznia —
+azt, amit ez a rendszer ténylegesen csinál az adatokkal (magyar szerver,
+OpenRouter mint adattovábbítás, az eredetik törlése export után, a beküldési
+postafiók olvasása, a Stripe). Az ÁSZF 11. pontja már hivatkozik rá az
+adatkezelő/adatfeldolgozó szereposztással, tehát a kettőnek egyeznie kell.
+
+**Az ÁSZF számai a configból jönnek.** Ár, darabkeret, felhasználószám,
+próbaidő, megőrzési plafon, feltöltési méret: egyik sincs a szövegbe írva. Az
+árlistán egy elcsúszott szám kellemetlen, egy szerződésben viszont az ígéret
+csúszik el a teljesítéstől. Amit kézzel kell átírni, az a hatálybalépés
+dátuma (`$hatalyos` a `resources/views/jogi/aszf.blade.php` tetején) — nem
+minden fájlmentés új szerződéses változat.
+
+**Az ÁSZF nem esett át jogi felülvizsgálaton.**
 
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
 könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az
