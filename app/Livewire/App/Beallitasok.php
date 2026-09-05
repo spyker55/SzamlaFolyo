@@ -105,6 +105,24 @@ class Beallitasok extends Component
             return;
         }
 
+        /*
+         * Máshol dolgozó fiókot nem veszünk át.
+         *
+         * A termék egy felhasználónak egy céget mutat. Amíg ezt nem néztük meg,
+         * a felvétel **elvehetett** valakit: a `User::ceg()` a legkorábbi
+         * tagságot adja vissza, de a régi, azonosító szerinti sorrendben egy
+         * kisebb sorszámú cég egyszerűen maga alá húzta a másikét — a felvett
+         * ember a következő belépéskor idegen cég Beérkezőjét látta a sajátja
+         * helyett, és ide töltötte volna fel a saját számláit.
+         *
+         * A hívatlan felvételnek amúgy sincs értelme: a másik cégéhez tartozó
+         * fiók itt úgyis egy néma sor maradna a taglistán. Inkább mondjuk meg.
+         */
+        if ($user !== null && $user->companies()->exists()) {
+            $this->addError('ujTagEmail', 'Ez a felhasználó már egy másik céghez tartozik. Előbb ott kell kilépnie.');
+
+            return;
+        }
 
         // A csomag felhasználószáma. Két dolog múlik a sorrenden. Egy: a
         // korlátot a **műveletben** kell megfogni, nem a képernyőn elrejtett

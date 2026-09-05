@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\Szerep;
+use App\Livewire\App\Beallitasok;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\User;
 use App\Support\Berlo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
@@ -102,6 +104,65 @@ final class BerloElkulonitesTest extends TestCase
     }
 
     /** @return array{0: Company, 1: User} */
+    /**
+     * Egy tagfelvétel nem veheti el valaki más cégét.
+     *
+     * A hiba a két szabály együttállásából jött: a tulajdonos e-mail alapján,
+     * elfogadás nélkül vehetett fel bárkit, a `User::ceg()` pedig a **legkisebb
+     * cégazonosítót** adta vissza. Aki tehát később regisztrált, azt egy korábbi
+     * cég tulajdonosa egyszerűen magához húzhatta: a következő belépéskor az
+     * áldozat idegen cég Beérkezőjét látta a sajátja helyett — és oda töltötte
+     * volna fel a saját számláit.
+     *
+     * Két oldalról zárjuk. Itt az első: ilyen sor létre sem jön.
+     */
+    public function test_mashol_dolgozo_fiokot_nem_lehet_atvenni(): void
+    {
+        [$tamado, $tulajdonos] = $this->cegFelhasznaloval();
+        [, $aldozat] = $this->cegFelhasznaloval();
+
+        app(Berlo::class)->beallit($tamado);
+        $this->actingAs($tulajdonos);
+
+        Livewire::test(Beallitasok::class)
+            ->set('ujTagEmail', $aldozat->email)
+            ->set('ujTagSzerep', Szerep::Megtekinto->value)
+            ->call('tagFelvetel')
+            ->assertHasErrors('ujTagEmail');
+
+        $this->assertFalse($tamado->users()->where('users.id', $aldozat->id)->exists());
+    }
+
+    /**
+     * A második zár, a meglévő adatokra: ha egy ilyen sor mégis létezik, a
+     * felhasználó akkor is ott marad, ahol dolgozni kezdett. A cége a
+     * **legkorábbi tagsága**, nem a legkisebb sorszámú cég — itt szándékosan
+     * az utóbb létrejött tagság mutat a kisebb azonosítójú cégre.
+     */
+    public function test_a_felhasznalo_cege_a_legkorabbi_tagsaga(): void
+    {
+        $regiCeg = Company::factory()->create();     // kisebb azonosító
+        $sajatCeg = Company::factory()->create();    // nagyobb azonosító
+        $user = User::factory()->create();
+
+        $sajatCeg->users()->attach($user->id, [
+            'role' => Szerep::Tulajdonos->value,
+            'accepted_at' => now(),
+            'created_at' => now()->subDays(30),
+            'updated_at' => now()->subDays(30),
+        ]);
+
+        $regiCeg->users()->attach($user->id, [
+            'role' => Szerep::Megtekinto->value,
+            'accepted_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertTrue($regiCeg->id < $sajatCeg->id);
+        $this->assertSame($sajatCeg->id, $user->fresh()->ceg()?->id);
+    }
+
     private function cegFelhasznaloval(): array
     {
         $ceg = Company::factory()->create();

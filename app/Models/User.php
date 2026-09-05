@@ -46,7 +46,15 @@ class User extends Authenticatable
      */
     public function ceg(): ?Company
     {
-        return $this->companies()->orderBy('companies.id')->first();
+        // A **legkorábbi tagság**, nem a legkisebb cégazonosító. A különbség
+        // biztonsági: azonosító szerint egy később felvett, de kisebb sorszámú
+        // cég maga alá húzta volna azt, ahol a felhasználó addig dolgozott —
+        // vagyis egy tagfelvétel elvehette volna valaki más fiókját. A belépés
+        // sorrendjén viszont senki nem tud utólag változtatni.
+        return $this->companies()
+            ->orderBy('company_user.created_at')
+            ->orderBy('companies.id')
+            ->first();
     }
 
     public function szerepe(Company $ceg): ?Szerep
