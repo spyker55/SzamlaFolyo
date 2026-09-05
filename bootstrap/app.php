@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BiztonsagiFejlecek;
 use App\Http\Middleware\SetCompany;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'ceg' => SetCompany::class,
         ]);
+
+        // Minden válaszra, a fájlkiszolgálásra és a Livewire-kérésekre is.
+        $middleware->append(BiztonsagiFejlecek::class);
 
         // A Laravel alapból a `login` nevű útvonalra küldi a bejelentkezés
         // nélküli látogatót, a mienket viszont `bejelentkezes`-nek hívják —
