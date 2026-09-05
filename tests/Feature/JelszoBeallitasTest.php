@@ -76,4 +76,55 @@ final class JelszoBeallitasTest extends TestCase
             ->call('beallit')
             ->assertHasErrors('email');
     }
+
+    /**
+     * A visszaállító levelet nem a kérő kapja, hanem a cím tulajdonosa. Korlát
+     * nélkül tehát bárki teleszórhatná egy idegen postafiókját a mi nevünkben —
+     * és a mi levelezőnk hírnevét vinné rá.
+     *
+     * A Laravel jelszóbrókere önmagában is szüneteltet (`auth.passwords.users.throttle`,
+     * alapból 60 másodperc), de az a **felhasználó sorához** kötődik: nem létező
+     * címnél nem lép működésbe, és óránként így is hatvan levelet enged át.
+     * Ez a korlát a kérőre vonatkozik, ezért mindkét esetet lefedi.
+     */
+    public function test_ugyanarra_a_cimre_nem_lehet_vegtelenszer_kerni(): void
+    {
+        Notification::fake();
+
+        User::factory()->create(['email' => 'aron@pelda.hu']);
+
+        for ($i = 0; $i < 3; $i++) {
+            Livewire::test(ElfelejtettJelszo::class)
+                ->set('email', 'aron@pelda.hu')
+                ->call('kuldes')
+                ->assertHasNoErrors();
+        }
+
+        Livewire::test(ElfelejtettJelszo::class)
+            ->set('email', 'aron@pelda.hu')
+            ->call('kuldes')
+            ->assertHasErrors('email');
+
+    }
+
+    /**
+     * A címenkénti korlát nem fogná meg azt, aki ezer különböző címre küld
+     * egyet-egyet, ezért a gépnek is van saját kerete.
+     */
+    public function test_egy_gep_nem_szorhat_szet_akarmennyi_cimre(): void
+    {
+        Notification::fake();
+
+        for ($i = 0; $i < 10; $i++) {
+            Livewire::test(ElfelejtettJelszo::class)
+                ->set('email', "valaki{$i}@pelda.hu")
+                ->call('kuldes')
+                ->assertHasNoErrors();
+        }
+
+        Livewire::test(ElfelejtettJelszo::class)
+            ->set('email', 'meg-egy@pelda.hu')
+            ->call('kuldes')
+            ->assertHasErrors('email');
+    }
 }
