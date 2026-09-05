@@ -76,7 +76,7 @@ final class RegisztracioZarvaTest extends TestCase
             ->set('email', 'uj@example.com')
             ->set('jelszo', 'Nagyon-Hosszu-Jelszo-1')
             ->set('jelszo_megerosites', 'Nagyon-Hosszu-Jelszo-1')
-            ->set('aszf', true)
+            ->set('feltetelek', true)
             ->call('regisztracio')
             ->assertHasNoErrors();
 

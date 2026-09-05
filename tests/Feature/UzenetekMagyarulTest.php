@@ -49,7 +49,7 @@ final class UzenetekMagyarulTest extends TestCase
             'email' => 'ez-nem-email',
             'jelszo' => 'rövid',
             'jelszo_megerosites' => 'másik',
-            'aszf' => false,
+            'feltetelek' => false,
         ]);
 
         $this->assertNotEmpty($hibak);
@@ -70,7 +70,7 @@ final class UzenetekMagyarulTest extends TestCase
      */
     public function test_a_kotelezo_mezo_magyarul_szol(): void
     {
-        $hibak = $this->regisztracioHibai(['nev' => '', 'aszf' => true]);
+        $hibak = $this->regisztracioHibai(['nev' => '', 'feltetelek' => true]);
 
         $this->assertContains('Ezt a mezőt kötelező kitölteni.', $hibak);
     }
@@ -82,7 +82,7 @@ final class UzenetekMagyarulTest extends TestCase
             'email' => 'ez-nem-email',
             'jelszo' => 'rövid',
             'jelszo_megerosites' => 'rövid',
-            'aszf' => true,
+            'feltetelek' => true,
         ]);
 
         $this->assertContains('Ez nem érvényes e-mail cím.', $hibak);
@@ -98,7 +98,7 @@ final class UzenetekMagyarulTest extends TestCase
             'email' => 'foglalt@example.com',
             'jelszo' => 'Nagyon-Hosszu-Jelszo-1',
             'jelszo_megerosites' => 'Nagyon-Hosszu-Jelszo-1',
-            'aszf' => true,
+            'feltetelek' => true,
         ]);
 
         $this->assertContains('Ez már foglalt.', $hibak);

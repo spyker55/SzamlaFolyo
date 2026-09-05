@@ -9,17 +9,22 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
- * Az ÁSZF elfogadása a regisztrációnál.
+ * A feltételek elfogadása a regisztrációnál.
+ *
+ * Egy jelölés, két dokumentum: az ÁSZF-et elfogadja az ember, az adatkezelési
+ * tájékoztatót megismeri — a kettő nem ugyanaz az ige, mert a tájékoztató nem
+ * szerződés.
  *
  * A jelölőnégyzet a **műveletben** kötelező, nem a gomb letiltásával: egy
  * Livewire-akció közvetlenül is meghívható, a letiltott gomb pedig csak
  * udvariasság. Enélkül nincs mire hivatkozni, ha később vita lesz arról,
  * mit vállalt a felhasználó.
  */
-final class AszfElfogadasTest extends TestCase
+final class FeltetelekElfogadasTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -34,7 +39,7 @@ final class AszfElfogadasTest extends TestCase
     {
         $this->urlap()
             ->call('regisztracio')
-            ->assertHasErrors('aszf');
+            ->assertHasErrors('feltetelek');
 
         $this->assertSame(0, User::query()->count());
         $this->assertGuest();
@@ -45,44 +50,53 @@ final class AszfElfogadasTest extends TestCase
         $komponens = $this->urlap()->call('regisztracio');
 
         $this->assertSame(
-            'A regisztrációhoz el kell fogadnod az Általános Szerződési Feltételeket.',
-            $komponens->errors()->first('aszf'),
+            'A regisztrációhoz el kell fogadnod az ÁSZF-et és az adatkezelési tájékoztatót.',
+            $komponens->errors()->first('feltetelek'),
         );
     }
 
     public function test_elfogadassal_letrejon_a_fiok(): void
     {
         $this->urlap()
-            ->set('aszf', true)
+            ->set('feltetelek', true)
             ->call('regisztracio')
             ->assertHasNoErrors();
 
         $this->assertSame(1, User::query()->count());
     }
 
-    /** A jelölőnégyzet és az ÁSZF linkje ott van az űrlapon. */
-    public function test_az_urlap_kinalja_es_linkeli_az_aszf_et(): void
+    /** A jelölőnégyzet és mindkét dokumentum linkje ott van az űrlapon. */
+    public function test_az_urlap_mindket_dokumentumot_linkeli(): void
     {
         $this->get(route('regisztracio'))
             ->assertOk()
-            ->assertSee('wire:model="aszf"', false)
+            ->assertSee('wire:model="feltetelek"', false)
             ->assertSee('href="'.route('aszf').'"', false)
-            ->assertSee('Általános Szerződési Feltételeket');
+            ->assertSee('href="'.route('adatkezeles').'"', false)
+            ->assertSee('Általános Szerződési Feltételeket')
+            ->assertSee('Adatkezelési tájékoztatót');
     }
 
     /**
-     * Az ÁSZF új lapon nyílik. Enélkül az olvasás elvinné a látogatót az
+     * Mindkét link új lapon nyílik. Enélkül az olvasás elvinné a látogatót az
      * űrlapról, és a már beírt adatok elvesznének — vagyis épp az járna
      * rosszul, aki elolvassa, mielőtt aláírja.
      */
-    public function test_az_aszf_link_uj_lapon_nyilik(): void
+    #[DataProvider('dokumentumok')]
+    public function test_a_dokumentumok_uj_lapon_nyilnak(string $utvonal): void
     {
         $html = $this->get(route('regisztracio'))->getContent();
 
         $this->assertMatchesRegularExpression(
-            '/<a href="'.preg_quote(route('aszf'), '/').'"[^>]*target="_blank"[^>]*rel="noopener"/s',
+            '/<a href="'.preg_quote(route($utvonal), '/').'"[^>]*target="_blank"[^>]*rel="noopener"/s',
             $html,
         );
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function dokumentumok(): array
+    {
+        return ['ÁSZF' => ['aszf'], 'adatkezelés' => ['adatkezeles']];
     }
 
     private function urlap(): Testable

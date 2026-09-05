@@ -29,18 +29,25 @@
                 <input id="jelszo_megerosites" type="password" wire:model="jelszo_megerosites" class="control" autocomplete="new-password" required>
             </div>
 
-            {{-- Az ÁSZF új lapon nyílik: a félig kitöltött űrlapot ne veszítse
-                 el az, aki elolvassa, mielőtt aláírja. --}}
+            {{-- Mindkét dokumentum új lapon nyílik: a félig kitöltött űrlapot
+                 ne veszítse el az, aki elolvassa, mielőtt aláírja.
+
+                 A két ige szándékosan más. Az ÁSZF szerződés, azt elfogadja az
+                 ember; az adatkezelési tájékoztató nem szerződés, hanem
+                 tájékoztatás — azt megismerni kell, nem elfogadni. --}}
             <div>
                 <label class="flex items-start gap-2 text-sm text-slate-600">
-                    <input type="checkbox" wire:model="aszf" class="mt-0.5 rounded border-slate-300">
+                    <input type="checkbox" wire:model="feltetelek" class="mt-0.5 rounded border-slate-300">
                     <span>
                         Elfogadom az
                         <a href="{{ route('aszf') }}" target="_blank" rel="noopener"
-                           class="font-medium text-blue-700 hover:underline">Általános Szerződési Feltételeket</a>.
+                           class="font-medium text-blue-700 hover:underline">Általános Szerződési Feltételeket</a>,
+                        és megismertem az
+                        <a href="{{ route('adatkezeles') }}" target="_blank" rel="noopener"
+                           class="font-medium text-blue-700 hover:underline">Adatkezelési tájékoztatót</a>.
                     </span>
                 </label>
-                @error('aszf') <p class="fhiba">{{ $message }}</p> @enderror
+                @error('feltetelek') <p class="fhiba">{{ $message }}</p> @enderror
             </div>
 
             <button type="submit" class="btn btn-primary w-full">Fiók létrehozása</button>

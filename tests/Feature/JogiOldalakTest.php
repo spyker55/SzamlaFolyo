@@ -62,6 +62,20 @@ final class JogiOldalakTest extends TestCase
             ->assertSee(config('szamlafolyo.kapcsolat_email'));
     }
 
+    /**
+     * Vezet út vissza a főoldalra. A fejlécben ott a logó, de arról egy
+     * kattintható logó soha nem mondja meg magáról, hogy az — és ide sokan a
+     * kereső felől érkeznek, nem az oldalról.
+     */
+    #[DataProvider('oldalak')]
+    public function test_van_ut_vissza_a_fooldalra(string $utvonal): void
+    {
+        $this->get($utvonal)
+            ->assertOk()
+            ->assertSee('Vissza a főoldalra')
+            ->assertSee('href="'.route('kezdolap').'"', false);
+    }
+
     public function test_a_nyitolap_lablecebol_elerhetok(): void
     {
         $valasz = $this->get('/')->assertOk();

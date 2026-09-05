@@ -33,6 +33,15 @@
     <div class="space-y-4 text-sm leading-relaxed text-slate-700">
         {{ $slot }}
     </div>
+
+    {{-- Kiút a fejlécbeli logón kívül is. Ide sokan a regisztrációs űrlap
+         linkjéről érkeznek új lapon, de nem mind — akit a kereső hozott ide,
+         annak a lap alján kell találnia egy utat tovább. --}}
+    <p class="mt-10 text-sm">
+        <a href="{{ route('kezdolap') }}" class="font-medium text-blue-700 hover:underline">
+            ← Vissza a főoldalra
+        </a>
+    </p>
 </main>
 
 <footer class="border-t border-slate-200 bg-white">
