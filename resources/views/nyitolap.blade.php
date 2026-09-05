@@ -6,7 +6,6 @@
     <title>SzámlaFolyó — dokumentumból ellenőrzött, könyvelésre kész adat</title>
     <meta name="description" content="Küldd tovább a számlát vagy nyugtát, a SzámlaFolyó kiolvassa. Te csak azt ellenőrzöd, amiben nem biztos. Export XLSX, CSV vagy JSON formátumban.">
     <x-favicon/>
-    <x-betukeszlet/>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-full overflow-x-hidden bg-vaszon text-slate-800 antialiased">

@@ -86,7 +86,7 @@ final class JogiOldalakTest extends TestCase
     /**
      * Az adatáramlás azon pontjai, amelyeket ki kell mondani: a két szerepkör,
      * a szerverelhagyás a kiolvasásnál, hogy az e-számla nem hagyja el, és
-     * hogy a Google Fonts miatt a látogató IP-címe a Google-höz kerül.
+     * hogy az oldal puszta megnyitása nem küld adatot senkinek.
      */
     public function test_az_adatkezelesi_kimondja_az_adataramlast(): void
     {
@@ -97,7 +97,7 @@ final class JogiOldalakTest extends TestCase
             'A feltöltött bizonylatokra nézve az Előfizető az adatkezelő',
             'elhagyja a szervert',
             'modellhívás nélkül',
-            'IP-címe és böngészőjének adatai eljutnak a Google-höz',
+            'nem jár adattovábbítással harmadik félhez',
             'Nemzeti Adatvédelmi és Információszabadság Hatóság',
         ] as $allitas) {
             $valasz->assertSee($allitas);

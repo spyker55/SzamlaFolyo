@@ -236,18 +236,15 @@
         A Szolgáltató bankkártyaadatot nem lát és nem tárol: azt a Stripe kezeli a saját felületén.
     </p>
 
-    <h2 class="pt-4 text-base font-semibold text-slate-900">6. Betűtípusok</h2>
-
-    <p>
-        Az oldal betűtípusait a Google Fonts szolgáltatásból tölti be. Emiatt az oldal megnyitásakor a
-        látogató IP-címe és böngészőjének adatai eljutnak a Google-höz. A megjelenített szöveg
-        rendszerbetűvel akkor is olvasható marad, ha ez a betöltés elmarad.
-    </p>
-
-    <h2 class="pt-4 text-base font-semibold text-slate-900">7. Adatbiztonság</h2>
+    <h2 class="pt-4 text-base font-semibold text-slate-900">6. Adatbiztonság</h2>
 
     <ul class="list-disc space-y-1 pl-5">
         <li>A kapcsolat titkosított (HTTPS), a jelszavak visszafejthetetlen formában tárolódnak.</li>
+        <li>
+            A betűtípusokat és minden más eszközt a saját kiszolgálónkról szolgálunk ki: az oldal
+            megnyitása önmagában nem jár adattovábbítással harmadik félhez. Külső betűszolgáltatót,
+            látogatásmérőt és hirdetési kódot nem használunk.
+        </li>
         <li>
             A cégek adatai el vannak különítve egymástól: minden lekérdezés a belépett felhasználó cégére
             szűkül, ezt a szűkítést nem lehet megkerülni a felületről.
@@ -259,7 +256,7 @@
         <li>Az e-mailben érkezett irat soha nem kerül automatikusan jóváhagyásra.</li>
     </ul>
 
-    <h2 class="pt-4 text-base font-semibold text-slate-900">8. Az érintett jogai</h2>
+    <h2 class="pt-4 text-base font-semibold text-slate-900">7. Az érintett jogai</h2>
 
     <p>
         Az érintett kérheti a rá vonatkozó adatokhoz való hozzáférést, azok helyesbítését, törlését vagy
@@ -282,7 +279,7 @@
         illetve bírósághoz.
     </p>
 
-    <h2 class="pt-4 text-base font-semibold text-slate-900">9. A tájékoztató módosítása</h2>
+    <h2 class="pt-4 text-base font-semibold text-slate-900">8. A tájékoztató módosítása</h2>
 
     <p>
         A Szolgáltató a jelen tájékoztatót módosíthatja, ha az adatkezelés módja megváltozik — például új

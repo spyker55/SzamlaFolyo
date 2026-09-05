@@ -66,7 +66,13 @@ final class LogoTest extends TestCase
      */
     public function test_a_szovedjegy_betuje_be_van_toltve(): void
     {
-        $this->get('/')->assertOk()->assertSee('family=Archivo:wght@800', false);
+        // A betű helyben van (lásd `BetukHelybenTest`), ezért a stíluslapban
+        // kell megjelennie, nem az oldal fejlécében egy külső hivatkozásként.
+        $manifest = json_decode((string) file_get_contents(public_path('build/manifest.json')), true);
+        $css = (string) file_get_contents(public_path('build/'.$manifest['resources/css/app.css']['file']));
+
+        $this->assertMatchesRegularExpression('/font-family:\s*[\'"]?Archivo/', $css);
+        $this->assertMatchesRegularExpression('/font-weight:\s*800/', $css);
     }
 
     /**

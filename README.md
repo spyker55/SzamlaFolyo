@@ -60,6 +60,15 @@ javított mező pirosan maradna, a frissen elrontott meg tisztán. A tárolt gé
 verdikt ettől érintetlen marad a `document_extractions` sorban — az az
 audit-nyom, abból derül ki utólag, mit hibázott a modell.
 
+**Az oldal megnyitása nem küld adatot senkinek.** A betűk helyben vannak
+(`@fontsource*` a `package.json`-ban, a woff2-t a Vite adja ki), nincs
+látogatásmérő, nincs hirdetési kód, és ezért süti-hozzájáruló ablak sincs —
+nincs mihez hozzájárulni. A Google Fonts korábban minden oldalletöltéskor
+elküldte a látogató IP-címét a Google-nek, azét is, aki be sem lépett; ezt egy
+magyar számlafeldolgozónak nincs miért vállalnia. A `BetukHelybenTest` mind a
+négy elrendezésre külön őrzi, mert egy bemásolt `<link>` a leggyakoribb módja
+annak, hogy ez visszakerüljön.
+
 **A szolgáltatás kizárólag vállalkozásoknak szól, és ez nem csak mondat.**
 A fogyasztóvédelmi jog kógens: hiába köti ki az ÁSZF, ha a rendszer beenged egy
 magánszemélyt, rá attól még a fogyasztói szabályok érvényesek (elállási jog,
@@ -232,13 +241,6 @@ ott külön is számít: nézetben hívott `env()` a `config:cache` után `null`
 
 **Az ÁSZF és az adatkezelési tájékoztató nem esett át jogi
 felülvizsgálaton.**
-
-**A Google Fonts a látogató IP-címét a Google-höz küldi.** A betűtípusok ma a
-Google szerveréről töltődnek (`components/betukeszlet.blade.php`), így minden
-oldalletöltés adattovábbítás egy amerikai szolgáltatóhoz — az adatkezelési
-tájékoztató 6. pontja ezt ki is mondja. A megoldás a betűk helyben tárolása:
-két woff2 fájl a `public/` alá és egy `@font-face` az `app.css`-be, utána a
-tájékoztató 6. pontja törölhető. Addig a szöveg legalább igaz.
 
 **Az OpenRouter felé nincs kikötve az adatmegőrzés tiltása.** A kérésbe
 felvehető a `provider.data_collection = "deny"`, amivel a kiolvasás csak olyan
