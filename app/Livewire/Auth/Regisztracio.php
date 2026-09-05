@@ -22,6 +22,13 @@ class Regisztracio extends Component
 
     public string $jelszo_megerosites = '';
 
+    /**
+     * Az ÁSZF elfogadása. Nem az űrlap dísze: enélkül nincs mire hivatkozni,
+     * ha később vita lesz arról, mit vállalt a felhasználó — ezért a jelölés a
+     * **műveletben** kötelező, nem a gomb letiltásával.
+     */
+    public bool $aszf = false;
+
     /** Nyitva van-e a nyilvános regisztráció. A nézet ebből dönt. */
     public function nyitva(): bool
     {
@@ -40,6 +47,11 @@ class Regisztracio extends Component
             'nev' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'jelszo' => ['required', 'string', 'confirmed:jelszo_megerosites', Password::defaults()],
+            'aszf' => ['accepted'],
+        ], messages: [
+            // Saját mondat, nem a sablon: a magyar ragozás egy `:attribute`
+            // helyettesítéssel itt nem jönne ki helyesen.
+            'aszf.accepted' => 'A regisztrációhoz el kell fogadnod az Általános Szerződési Feltételeket.',
         ], attributes: [
             'nev' => 'név',
             'email' => 'e-mail cím',

@@ -263,6 +263,7 @@ válogat, nem az ellenőrzésnél vádol.
 | `resources/views/jogi/` | ÁSZF, adatkezelés, impresszum — hitelesítés nélkül is olvashatók |
 | `design/logo/` | A logó designcsomagja, ahogy érkezett: a jel geometriája és a márkaszínek forrása |
 | `resources/css/app.css` | A dizájnrendszer — minden ismétlődő elem itt van definiálva egyszer |
+| `lang/hu/validation.php` | A validációs üzenetek magyarul. Enélkül a képernyőn a nyers kulcs jelent meg (`validation.required`) |
 
 ## Fejlesztés
 
