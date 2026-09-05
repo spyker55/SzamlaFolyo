@@ -49,17 +49,68 @@ final class JogiOldalakTest extends TestCase
         $this->actingAs($this->belepett())->get($utvonal)->assertOk()->assertSee($cim);
     }
 
+    /** A még megíratlan szövegek. Ahogy elkészülnek, innen esnek ki. */
+    /** @return array<string, array{0: string}> */
+    public static function keszuloOldalak(): array
+    {
+        return [
+            'ÁSZF' => ['/aszf'],
+            'adatkezelés' => ['/adatkezeles'],
+        ];
+    }
+
     /**
      * Amíg a szöveg nincs meg, ezt ki is mondjuk. Egy odavetett „mintaszöveg"
      * rosszabb lenne a hiányánál: a látogató elhinné.
      */
-    #[DataProvider('oldalak')]
+    #[DataProvider('keszuloOldalak')]
     public function test_addig_megmondja_hogy_keszul(string $utvonal): void
     {
         $this->get($utvonal)
             ->assertOk()
             ->assertSee('jelenleg készül')
             ->assertSee(config('szamlafolyo.kapcsolat_email'));
+    }
+
+    /**
+     * Az impresszum kész, és a benne közölt adatok azonosítanak: ha bármelyik
+     * kiesik a lapról, az nem szépséghiba, hanem hiányos közzététel
+     * (Ekertv. 4. §). Ezért soronként ellenőrizzük, nem csak azt, hogy az
+     * oldal betölt.
+     */
+    public function test_az_impresszum_kesz(): void
+    {
+        $valasz = $this->get('/impresszum')->assertOk()->assertDontSee('jelenleg készül');
+
+        foreach ([
+            'Nyeste Krisztián egyéni vállalkozó',
+            '3000 Hatvan, István király utca 7.',
+            'Nemzeti Adó- és Vámhivatal',
+            '62574956',
+            '92220155-1-30',
+            '+36 70 604 3043',
+            'Nethely Kft.',
+            '1115 Budapest, Halmi utca 29.',
+            '01-09-961790',
+        ] as $adat) {
+            $valasz->assertSee($adat);
+        }
+
+        $valasz->assertSee(config('szamlafolyo.kapcsolat_email'));
+    }
+
+    /**
+     * Az EU online vitarendezési platformja az (EU) 2024/3228 rendelet nyomán
+     * 2025. július 20-án megszűnt. A magyar impresszum-sablonok javában máig
+     * ott a linkje — ez az állítás azt őrzi, hogy egy későbbi másolással se
+     * kerüljön vissza egy halott hatósági útra mutató hivatkozás.
+     */
+    public function test_nincs_benne_a_megszunt_odr_platform(): void
+    {
+        $this->get('/impresszum')
+            ->assertOk()
+            ->assertDontSee('ec.europa.eu/consumers/odr')
+            ->assertDontSee('vitarendezési platform');
     }
 
     /**

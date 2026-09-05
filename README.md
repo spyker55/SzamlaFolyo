@@ -221,16 +221,16 @@ a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
 ## Hátralék
 
-**A három jogi oldal szövege.** Az ÁSZF, az adatkezelési tájékoztató és az
-impresszum útvonala, láblécbeli linkje és kerete kész — a **szöveg** nincs meg.
-Amíg nincs, az oldalak kimondják, hogy készülnek, és adnak egy címet, ahol
-kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem tettünk beléjük: azt
-a látogató elhinné, és egy hamis ÁSZF rosszabb a hiányzónál. A kitöltés a
-`resources/views/jogi/` alatt van; az adatkezelési és az impresszum fájl
-fejlécében ott a lista arról, mit kell a szövegnek tartalmaznia — az elsőben
-az, amit ez a rendszer ténylegesen csinál az adatokkal (magyar szerver,
-OpenRouter mint adattovábbítás, az eredetik törlése export után, a beküldési
-postafiók olvasása, a Stripe).
+**Az ÁSZF és az adatkezelési tájékoztató szövege.** Az impresszum kész; a
+másik kettőnek megvan az útvonala, a láblécbeli linkje és a kerete, de a
+**szöveg** nincs meg. Amíg nincs, az a két oldal kimondja, hogy készül, és ad
+egy címet, ahol kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem
+tettünk beléjük: azt a látogató elhinné, és egy hamis ÁSZF rosszabb a
+hiányzónál. A kitöltés a `resources/views/jogi/` alatt van; mindkét fájl
+fejlécében ott a lista arról, mit kell a szövegnek tartalmaznia — az
+adatkezelésiben az, amit ez a rendszer ténylegesen csinál az adatokkal (magyar
+szerver, OpenRouter mint adattovábbítás, az eredetik törlése export után, a
+beküldési postafiók olvasása, a Stripe).
 
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
 könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az
