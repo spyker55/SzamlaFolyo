@@ -60,6 +60,16 @@ javított mező pirosan maradna, a frissen elrontott meg tisztán. A tárolt gé
 verdikt ettől érintetlen marad a `document_extractions` sorban — az az
 audit-nyom, abból derül ki utólag, mit hibázott a modell.
 
+**A szolgáltatás kizárólag vállalkozásoknak szól, és ez nem csak mondat.**
+A fogyasztóvédelmi jog kógens: hiába köti ki az ÁSZF, ha a rendszer beenged egy
+magánszemélyt, rá attól még a fogyasztói szabályok érvényesek (elállási jog,
+békéltető testület). A gyakorlati szűrő az adószám — fogyasztónak nincs —,
+ezért a cégnyitás **érvényes magyar adószámot** követel
+(`App\Livewire\App\CegLetrehozas`). Itt szigorúbb a mérce, mint a
+bizonylatokon: az `Adoszam` osztály alapból megengedő, mert egy külföldi
+*szállító* adószáma nem magyar alakú és attól még helyes — az a szabály
+viszont a partnerre szól, ez pedig a saját cégünkre.
+
 **Az ÁFA-bontás szerkeszthető és exportálható.** A sorok összege a legerősebb
 jelünk: ez fogja meg azt a hibát, amikor a modell egy tételsor összegét írja be
 végösszegnek. Ezért az ember javíthatja is (`Ellenorzes::parseoltBontas()`), és a
