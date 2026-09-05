@@ -696,5 +696,22 @@ tárhelyen nincs Node.js. Ha a CSS-t vagy a JS-t módosítod, futtasd az
 ### Külső szolgáltatások
 
 - **OpenRouter** — a kiolvasás. `OPENROUTER_API_KEY` és `OPENROUTER_MODEL`.
+
+  A fiók *Settings → Privacy* lapján két blokk van, és **ellentétes a
+  logikájuk** — ez könnyen félreolvasható:
+
+  - **Data Training**: a kapcsoló bekapcsolva *megengedi* az adott végpontot.
+    Mind a négy legyen **kikapcsolva** — így nem kerül a kérés olyan
+    szolgáltatóhoz, amelyik tanul belőle vagy közzéteszi a promptot.
+  - **Zero Data Retention**: a kapcsoló bekapcsolva *kikényszeríti* a ZDR-t az
+    adott körre. Ma mind ki van kapcsolva, és ez tudatos: a kódbeli
+    `data_collection = "deny"` már kizárja az adatot tároló szolgáltatókat, a
+    ZDR bekapcsolása viszont szűkítené az útválasztást (a Google-nél például
+    kizárná az AI Studiót, csak a Vertexet hagyva). Ha egyszer egy ügyfél
+    szerződésben kér ZDR-t, itt lehet szigorítani — utána `kiolvasas:proba`,
+    mert elfogyhat alóla a szolgáltató.
+
+  A „1% data discount" **munkaterületenként külön** kérdez rá: új munkaterület
+  létrehozásakor újra meg kell nézni.
 - **Stripe** — előfizetés. A csomagok darabkerete a `config/szamlafolyo.php`-ban
   van az ár-azonosítókhoz kötve; a webhook címe `/stripe/webhook`.
