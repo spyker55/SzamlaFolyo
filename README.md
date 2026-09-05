@@ -221,24 +221,30 @@ a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
 ## Hátralék
 
-**Az adatkezelési tájékoztató szövege.** Az impresszum és az ÁSZF kész; a
-harmadiknak megvan az útvonala, a láblécbeli linkje és a kerete, de a **szöveg**
-nincs meg. Amíg nincs, az oldal kimondja, hogy készül, és ad egy címet, ahol
-kérdezni lehet. Odavetett „mintaszöveget" szándékosan nem tettünk bele: azt a
-látogató elhinné. A fájl fejlécében ott a lista arról, mit kell tartalmaznia —
-azt, amit ez a rendszer ténylegesen csinál az adatokkal (magyar szerver,
-OpenRouter mint adattovábbítás, az eredetik törlése export után, a beküldési
-postafiók olvasása, a Stripe). Az ÁSZF 11. pontja már hivatkozik rá az
-adatkezelő/adatfeldolgozó szereposztással, tehát a kettőnek egyeznie kell.
-
-**Az ÁSZF számai a configból jönnek.** Ár, darabkeret, felhasználószám,
-próbaidő, megőrzési plafon, feltöltési méret: egyik sincs a szövegbe írva. Az
+**A három jogi oldal szövege kész** (ÁSZF, adatkezelési tájékoztató,
+impresszum), és a számaik a configból jönnek: ár, darabkeret, felhasználószám,
+próbaidő, megőrzési plafon, postafiók-takarítás, a kiolvasó modell neve. Az
 árlistán egy elcsúszott szám kellemetlen, egy szerződésben viszont az ígéret
-csúszik el a teljesítéstől. Amit kézzel kell átírni, az a hatálybalépés
-dátuma (`$hatalyos` a `resources/views/jogi/aszf.blade.php` tetején) — nem
-minden fájlmentés új szerződéses változat.
+csúszik el a teljesítéstől — az adatkezelésiben pedig a tájékoztató kezd
+hazudni, nem a program. Amit kézzel kell átírni, az a hatálybalépés dátuma
+(`$hatalyos` a `resources/views/jogi/` alatt). A `config()` és nem `env()`
+ott külön is számít: nézetben hívott `env()` a `config:cache` után `null`.
 
-**Az ÁSZF nem esett át jogi felülvizsgálaton.**
+**Az ÁSZF és az adatkezelési tájékoztató nem esett át jogi
+felülvizsgálaton.**
+
+**A Google Fonts a látogató IP-címét a Google-höz küldi.** A betűtípusok ma a
+Google szerveréről töltődnek (`components/betukeszlet.blade.php`), így minden
+oldalletöltés adattovábbítás egy amerikai szolgáltatóhoz — az adatkezelési
+tájékoztató 6. pontja ezt ki is mondja. A megoldás a betűk helyben tárolása:
+két woff2 fájl a `public/` alá és egy `@font-face` az `app.css`-be, utána a
+tájékoztató 6. pontja törölhető. Addig a szöveg legalább igaz.
+
+**Az OpenRouter felé nincs kikötve az adatmegőrzés tiltása.** A kérésbe
+felvehető a `provider.data_collection = "deny"`, amivel a kiolvasás csak olyan
+szolgáltatóhoz kerülhet, amelyik nem tárolja a tartalmat — ettől a
+tájékoztató erősebbet is ígérhetne, mint amit ma ígér. Cserébe szűkül a
+választható szolgáltatók köre, ezért mérés nélkül nem kapcsoltuk be.
 
 **Irodai csomag.** Ma egy fiók egy céget kezel, és az árlista is így szól. Egy
 könyvelőiroda ezért egyetlen fiókban dolgozza fel az összes ügyfelét, az

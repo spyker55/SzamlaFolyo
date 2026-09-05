@@ -49,26 +49,59 @@ final class JogiOldalakTest extends TestCase
         $this->actingAs($this->belepett())->get($utvonal)->assertOk()->assertSee($cim);
     }
 
-    /** A még megíratlan szövegek. Ahogy elkészülnek, innen esnek ki. */
-    /** @return array<string, array{0: string}> */
-    public static function keszuloOldalak(): array
+    /**
+     * Mind a három szöveg megvan. Ez az állítás azt őrzi, hogy egyik oldal se
+     * essen vissza a „készül" állapotba egy elrontott átszerkesztéstől.
+     */
+    #[DataProvider('oldalak')]
+    public function test_egyik_oldal_sem_placeholder(string $utvonal): void
     {
-        return [
-            'adatkezelés' => ['/adatkezeles'],
-        ];
+        $this->get($utvonal)->assertOk()->assertDontSee('jelenleg készül');
     }
 
     /**
-     * Amíg a szöveg nincs meg, ezt ki is mondjuk. Egy odavetett „mintaszöveg"
-     * rosszabb lenne a hiányánál: a látogató elhinné.
+     * Az adatkezelési tájékoztató megőrzési idői **abból a configból** jönnek,
+     * amiből a `fajl:selejtez` is dolgozik. Ha kézzel volnának beírva, a
+     * takarítás és az ígéret külön életet kezdene élni — és a tájékoztató az,
+     * ami hazudni kezdene, nem a program.
+     *
+     * A `config()` és nem `env()` külön is számít: egy nézetben hívott `env()`
+     * `config:cache` után `null`, vagyis élesben nulla napot ígérnénk.
      */
-    #[DataProvider('keszuloOldalak')]
-    public function test_addig_megmondja_hogy_keszul(string $utvonal): void
+    public function test_az_adatkezelesi_a_configbol_veszi_a_megorzest(): void
     {
-        $this->get($utvonal)
+        config([
+            'inbox.imap.keep_days' => 9,
+            'inbox.imap.unmatched_keep_days' => 21,
+            'openrouter.model' => 'peldagyarto/proba-modell',
+        ]);
+
+        $this->get('/adatkezeles')
             ->assertOk()
-            ->assertSee('jelenleg készül')
-            ->assertSee(config('szamlafolyo.kapcsolat_email'));
+            ->assertSee('9 napig')
+            ->assertSee('21 napig')
+            ->assertSee('peldagyarto/proba-modell');
+    }
+
+    /**
+     * Az adatáramlás azon pontjai, amelyeket ki kell mondani: a két szerepkör,
+     * a szerverelhagyás a kiolvasásnál, hogy az e-számla nem hagyja el, és
+     * hogy a Google Fonts miatt a látogató IP-címe a Google-höz kerül.
+     */
+    public function test_az_adatkezelesi_kimondja_az_adataramlast(): void
+    {
+        $valasz = $this->get('/adatkezeles')->assertOk();
+
+        foreach ([
+            'A fiók adataira nézve a Szolgáltató az adatkezelő',
+            'A feltöltött bizonylatokra nézve az Előfizető az adatkezelő',
+            'elhagyja a szervert',
+            'modellhívás nélkül',
+            'IP-címe és böngészőjének adatai eljutnak a Google-höz',
+            'Nemzeti Adatvédelmi és Információszabadság Hatóság',
+        ] as $allitas) {
+            $valasz->assertSee($allitas);
+        }
     }
 
     /**
