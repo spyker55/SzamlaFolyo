@@ -83,6 +83,35 @@ final class BejaratTest extends TestCase
             ->assertRedirect(route('beerkezo'));
     }
 
+    /** @return array<string, array{0: string}> */
+    public static function vendegKepernyok(): array
+    {
+        return [
+            'bejelentkezés' => ['/bejelentkezes'],
+            'regisztráció' => ['/regisztracio'],
+            'elfelejtett jelszó' => ['/elfelejtett-jelszo'],
+            'új jelszó' => ['/jelszo-beallitas/proba-token'],
+        ];
+    }
+
+    /**
+     * Minden vendégképernyőről vezet út vissza a nyilvános oldalra.
+     *
+     * Aki a „Bejelentkezés" gombra kattint a nyitólapon, még nem biztos, hogy
+     * be akar lépni — lehet, hogy csak az árakat kereste. Idáig zsákutca volt:
+     * a bejelentkező kártyáról a böngésző vissza gombján kívül nem vezetett
+     * sehova. Az utat a közös elrendezés adja, ezért mind a négy képernyőt
+     * megnézzük: ha valaki saját elrendezést ír egynek, ez elbukik.
+     */
+    #[DataProvider('vendegKepernyok')]
+    public function test_minden_vendegkepernyorol_van_ut_a_nyitolapra(string $utvonal): void
+    {
+        $this->get($utvonal)
+            ->assertOk()
+            ->assertSee('Vissza a főoldalra')
+            ->assertSee('href="'.route('kezdolap').'"', false);
+    }
+
     /** Cég nélkül csak a cégnyitó képernyő érhető el — de az igen. */
     public function test_ceg_nelkuli_felhasznalot_a_cegnyitora_kuldi(): void
     {
