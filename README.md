@@ -525,6 +525,33 @@ elhasalhat, és az már önmagában elég ok a kivételre.
 Ez akkor is működik, amikor a cron levele használhatatlan — és volt rá példa,
 hogy az volt.
 
+#### Ha a cron PHP-ja egyetlen kiterjesztést sem tölt be
+
+Ez a valódi eset volt, és a tünetei megtévesztőek. A naplóban ez állt:
+
+```
+production.ERROR: Class "PDO" not found
+  #13 app/Console/Commands/DokumentumFeldolgoz.php(32): Model::query()
+```
+
+Nem egy kiterjesztés hiányzott, hanem **mind**: a `PDO`, a `pdo_pgsql`, az
+`mbstring` és az `iconv` is. Debian/Ubuntu alatt ezeket nem a `php.ini` tölti
+be, hanem a `conf.d/*.ini` fájlok (`10-pdo.ini`, `20-mbstring.ini`,
+`20-iconv.ini`, …) — ha az a könyvtár nincs beolvasva, egyszerre esik ki az
+összes. A `kornyezet:ellenoriz` ezért kéri külön a `pdo`-t és a `pdo_pgsql`-t:
+ha csak az utóbbi hiányzik, nincs Postgres-illesztő; ha az előbbi is, akkor a
+`conf.d` a néma.
+
+Amit érdemes megpróbálni, mielőtt az ügyfélszolgálatot írod: add meg a
+keresési könyvtárat a cron parancsában, a bináris **elé**:
+
+```
+PHP_INI_SCAN_DIR=/etc/php/8.3/cli/conf.d <php> <projekt>/artisan …
+```
+
+Ha a vezérlőpult a parancsot shellen át futtatja, ez megoldja. Ha nem
+értelmezi a környezeti változót, marad az ügyfélszolgálat.
+
 #### A `Symfony\Polyfill\Mbstring\iconv()` hiba
 
 ```

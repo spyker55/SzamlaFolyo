@@ -26,7 +26,13 @@ final class KornyezetEllenoriz extends Command
 
     /** Ezek nélkül az alkalmazás nem működik. */
     private const KOTELEZO_KITERJESZTESEK = [
-        'pdo_pgsql' => 'adatbázis',
+        // A `pdo` külön szerepel a `pdo_pgsql` mellett, mert a hiányuk mást
+        // jelent. Ha csak a `pdo_pgsql` nincs, a PHP-ban nincs Postgres-illesztő.
+        // Ha a `pdo` sincs, akkor a futtató PHP **egyetlen kiterjesztést sem**
+        // tölt be — a `conf.d` nincs beolvasva —, és ilyenkor az összes többi
+        // sor is pirosodni fog. A kettő különbsége mondja meg, hol keresd.
+        'pdo' => 'adatbázis (alap)',
+        'pdo_pgsql' => 'adatbázis (PostgreSQL)',
         'mbstring' => 'szövegkezelés',
         // Az `iconv` akkor is kell, ha a kód sosem hívja közvetlenül: `mbstring`
         // nélkül a `symfony/polyfill-mbstring` lép a helyére, az pedig belül
@@ -204,7 +210,11 @@ final class KornyezetEllenoriz extends Command
      */
     private function adatbazisTanacs(string $uzenet): string
     {
-        $u = mb_strtolower($uzenet);
+        // `strtolower`, nem `mb_strtolower`. Ez a parancs pont azt a
+        // környezetet hivatott megvizsgálni, amiből hiányozhat az `mbstring`
+        // — ott a polyfill lépne be, és az `iconv` hiányában maga a
+        // vizsgálat hasalna el. A minták amúgy is ASCII hibaüzenetek.
+        $u = strtolower($uzenet);
 
         $hitelesitesiHiba = str_contains($u, 'login rejected')
             || str_contains($u, 'authentication failed')
