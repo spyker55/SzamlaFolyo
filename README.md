@@ -597,10 +597,25 @@ feladatnak, és olvasd el a levelet, amit küld:
 <php> -m
 ```
 
-A kimenet a cron **saját** környezetének modullistája. Ha nincs benne az `mbstring`
-és az `iconv`, azokat a nethely admin felületén a „PHP beállítások" alatt kell
-bekapcsolni — vagy a cront kell arra a PHP-ra állítani, amelyiken megvannak (a
-`./deploy.sh --check` kiírja, melyiket használja a telepítés).
+A kimenet a cron **saját** környezetének modullistája.
+
+**Ha az `mbstring` és az `iconv` a vezérlőpultban be van kapcsolva, és a cron
+mégsem látja őket, az nem ellentmondás.** A „PHP beállítások" a *weboldal*
+PHP-kezelőjét konfigurálja. Egy cron, ami közvetlenül egy binárist hív
+(`/usr/bin/php8.3 …`), megkerüli ezt a kezelőt, és a rendszer alap ini-jét kapja
+— ott pedig a bekapcsolt kiterjesztés nincs benne. Ugyanezért futhat a parancs
+tisztán SSH-ból: a shell környezete (`$HOME`, `PHPRC`) más ini-t hozhat, mint az
+ütemezőé.
+
+Ezért a cronba **azt a PHP-t kell írni, amelyikkel a telepítés is fut**, nem egy
+kézzel választott binárist:
+
+```bash
+./deploy.sh --check      # → PHP: /eleresi/ut/php (8.4.x)
+```
+
+A `deploy.sh` a futása végén ki is írja mind a négy időzített feladatot, már a
+helyes értelmezővel behelyettesítve — a legbiztosabb, ha onnan másolod ki őket.
 
 Ezt a `composer.json` nem tudja megfogni, ezért nincs is ott: a composer mindig
 azzal a PHP-val ellenőriz, amelyikkel ő maga fut — vagyis a deployéval, nem a
