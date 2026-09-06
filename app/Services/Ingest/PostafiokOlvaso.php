@@ -126,11 +126,13 @@ final class PostafiokOlvaso
     /**
      * Mit lát a rendszer a postafiókban — módosítás nélkül.
      *
-     * A „nem érkezik meg a számla" bejelentés öt különböző dolgot jelenthet, és
-     * a különbség nem látszik a felületen: nem is jött be levél (akkor a
+     * A „nem érkezik meg a számla" bejelentés hat különböző dolgot jelenthet,
+     * és a különbség nem látszik a felületen: nem is jött be levél (akkor a
      * levelezés a hibás, nem az alkalmazás), rossz mappát nézünk, a címzettben
-     * nincs token, a tokenhez nincs cég, vagy a melléklet nem támogatott
-     * típus. Ez a lekérdezés mind az ötöt megkülönbözteti.
+     * nincs token, a tokenhez nincs cég, a melléklet nem támogatott típus,
+     * vagy a levél **már olvasott**, és így az `olvas()` `unseen()` szűrője
+     * kihagyja. Ez a lekérdezés mind a hatot megkülönbözteti — a `whereAll()`
+     * szándékos, épp az utolsó eset miatt.
      *
      * Semmit nem jelöl olvasottnak és nem mozgat: a `--proba` futtatható
      * nyugodtan, akkor is, ha a cron már átment a fiókon.
@@ -159,7 +161,12 @@ final class PostafiokOlvaso
 
         $levelek = [];
 
-        foreach ($mappa->query()->whereAll()->setFetchOrder('desc')->limit($darab)->get() as $level) {
+        // A `setFetchFlags` kimondva: az „olvasott-e" jelzés ezen múlik, és a
+        // könyvtár alapértéke egy config-változással elmozdulhat. Némán hamis
+        // választ adni erre rosszabb, mint nem válaszolni.
+        $lekerdezes = $mappa->query()->whereAll()->setFetchOrder('desc')->setFetchFlags(true)->limit($darab);
+
+        foreach ($lekerdezes->get() as $level) {
             $fejlecek = $this->fejlecek($level);
 
             $token = CimzettToken::kereses(
@@ -181,6 +188,12 @@ final class PostafiokOlvaso
                 'token' => $token,
                 'ceg' => $token === null ? null : Company::query()->where('inbox_token', $token)->value('name'),
                 'mellekletek' => $mellekletek,
+                // A hatodik ok, ami eddig hiányzott a listáról: az `olvas()`
+                // csak az olvasatlan leveleket veszi fel, tehát egy webmailen
+                // megnyitott levelet a cron soha nem dolgoz fel. Ez a
+                // legmegtévesztőbb eset — aki utánanéz, hogy megjött-e a
+                // levél, épp a megnézéssel rontja el.
+                'olvasott' => $level->hasFlag('Seen'),
             ];
         }
 

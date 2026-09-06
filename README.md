@@ -545,9 +545,16 @@ hozzá cég, és mely mellékleteket fogadná el.
 | „nincs érvényes beküldési token" | rossz címre ment, vagy a továbbküldés levágta a fejlécet |
 | „ehhez nincs cég" | a token jó alakú, de nem szerepel az adatbázisban |
 | „nincs feldolgozható melléklet" | nem támogatott fájltípus (docx, zip) |
+| „a levél olvasott" | a beolvasó csak olvasatlant vesz fel — lásd lentebb |
 
 Ha a mappa üresnek látszik, mert a cron már átmozgatta a leveleket, nézz bele a
 feldolgozottakba is: `IMAP_FOLDER=Feldolgozott <php> <projekt>/artisan email:beolvas --proba`.
+
+**Az olvasott levél a legmegtévesztőbb eset.** A beolvasó csak az olvasatlan
+leveleket veszi fel (`->unseen()`), ezért egy webmailen megnyitott levél örökre
+az INBOX-ban marad, és a cron soha nem dolgozza fel — pont az rontja el, aki
+utánanéz, megjött-e a levél. A `--proba` ezt külön kiírja. A megoldás: jelöld
+olvasatlanra a webmailen, és a következő futás felveszi.
 
 A besorolatlan levél a `Besorolatlan` mappába kerül (`IMAP_UNMATCHED_FOLDER`), és
 `warning` szinten a naplóba is bekerül a megvizsgált címekkel — a feldolgozottak

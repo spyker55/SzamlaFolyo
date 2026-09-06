@@ -49,10 +49,11 @@ final class EmailBeolvas extends Command
     /**
      * A „nem érkezik meg a számla" bejelentés lefordítása konkrét okra.
      *
-     * Öt különböző dolgot jelenthet, és a felületen egyik sem látszik: nem is
+     * Hat különböző dolgot jelenthet, és a felületen egyik sem látszik: nem is
      * jött be levél, rossz mappát nézünk, a címzettben nincs token, a tokenhez
-     * nincs cég, vagy a melléklet nem támogatott típus. Ez mind az ötöt
-     * megkülönbözteti — módosítás nélkül, tehát akárhányszor futtatható.
+     * nincs cég, a melléklet nem támogatott típus, vagy a levél már olvasott,
+     * és így a beolvasó kihagyja. Ez mind a hatot megkülönbözteti — módosítás
+     * nélkül, tehát akárhányszor futtatható.
      */
     private function proba(PostafiokOlvaso $olvaso): int
     {
@@ -130,6 +131,15 @@ final class EmailBeolvas extends Command
                 '    melléklet: %s',
                 $level['mellekletek'] === [] ? '<fg=red>nincs feldolgozható</>' : implode(', ', $level['mellekletek']),
             ));
+
+            // Az `olvas()` csak olvasatlan levelet vesz fel. Egy webmailen
+            // megnyitott levél ezért örökre az INBOX-ban marad — és pont az
+            // néz bele a fiókba, aki azt ellenőrzi, megjött-e a levél.
+            if ($level['olvasott']) {
+                $this->line('    <fg=yellow>⚠ a levél olvasott — a cron ezt nem fogja feldolgozni</>');
+                $this->line('    <fg=gray>  jelöld olvasatlanra a webmailen, és a következő futás felveszi</>');
+            }
+
             $this->line('');
         }
 
