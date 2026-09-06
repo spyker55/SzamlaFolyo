@@ -26,31 +26,33 @@ final class DokumentumFeldolgoz extends Command
 
     public function handle(Sorkezelo $sorkezelo): int
     {
-        $keret = (int) $this->option('limit');
-        $osszes = 0;
+        return $this->futtat(function () use ($sorkezelo): int {
+            $keret = (int) $this->option('limit');
+            $osszes = 0;
 
-        $cegIdk = Document::query()
-            ->withoutGlobalScopes()
-            ->whereIn('status', [DokumentumAllapot::Feltoltve->value, DokumentumAllapot::FeldolgozasAlatt->value])
-            ->distinct()
-            ->pluck('company_id');
+            $cegIdk = Document::query()
+                ->withoutGlobalScopes()
+                ->whereIn('status', [DokumentumAllapot::Feltoltve->value, DokumentumAllapot::FeldolgozasAlatt->value])
+                ->distinct()
+                ->pluck('company_id');
 
-        foreach ($cegIdk as $cegId) {
-            if ($osszes >= $keret) {
-                break;
+            foreach ($cegIdk as $cegId) {
+                if ($osszes >= $keret) {
+                    break;
+                }
+
+                $ceg = Company::query()->find($cegId);
+
+                if ($ceg === null) {
+                    continue;
+                }
+
+                $osszes += $sorkezelo->tobbet($ceg, $keret - $osszes);
             }
 
-            $ceg = Company::query()->find($cegId);
+            $this->osszegzes("Feldolgozva: {$osszes} dokumentum.");
 
-            if ($ceg === null) {
-                continue;
-            }
-
-            $osszes += $sorkezelo->tobbet($ceg, $keret - $osszes);
-        }
-
-        $this->osszegzes("Feldolgozva: {$osszes} dokumentum.");
-
-        return self::SUCCESS;
+            return self::SUCCESS;
+        });
     }
 }

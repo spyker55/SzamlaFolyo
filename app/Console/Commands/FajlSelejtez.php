@@ -27,28 +27,30 @@ final class FajlSelejtez extends Command
 
     public function handle(FajlTarolo $tarolo): int
     {
-        $osszes = 0;
+        return $this->futtat(function () use ($tarolo): int {
+            $osszes = 0;
 
-        foreach (Company::query()->cursor() as $ceg) {
-            $napok = $ceg->megorzesiNapok();
+            foreach (Company::query()->cursor() as $ceg) {
+                $napok = $ceg->megorzesiNapok();
 
-            $dokumentumok = Document::query()
-                ->withoutGlobalScopes()
-                ->where('company_id', $ceg->id)
-                ->where('status', DokumentumAllapot::Exportalva->value)
-                ->whereNotNull('storage_path')
-                ->whereNull('file_deleted_at')
-                ->where('updated_at', '<=', now()->subDays($napok))
-                ->cursor();
+                $dokumentumok = Document::query()
+                    ->withoutGlobalScopes()
+                    ->where('company_id', $ceg->id)
+                    ->where('status', DokumentumAllapot::Exportalva->value)
+                    ->whereNotNull('storage_path')
+                    ->whereNull('file_deleted_at')
+                    ->where('updated_at', '<=', now()->subDays($napok))
+                    ->cursor();
 
-            foreach ($dokumentumok as $dokumentum) {
-                $tarolo->torol($dokumentum);
-                $osszes++;
+                foreach ($dokumentumok as $dokumentum) {
+                    $tarolo->torol($dokumentum);
+                    $osszes++;
+                }
             }
-        }
 
-        $this->osszegzes("Törölve: {$osszes} eredeti fájl.");
+            $this->osszegzes("Törölve: {$osszes} eredeti fájl.");
 
-        return self::SUCCESS;
+            return self::SUCCESS;
+        });
     }
 }

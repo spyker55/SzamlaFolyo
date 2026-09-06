@@ -26,15 +26,17 @@ final class TulhasznalatElszamol extends Command
 
     public function handle(Tulhasznalat $tulhasznalat): int
     {
-        $eredmeny = $tulhasznalat->elszamol();
+        return $this->futtat(function () use ($tulhasznalat): int {
+            $eredmeny = $tulhasznalat->elszamol();
 
-        $this->osszegzes(sprintf(
-            '%d cég · %d kredit számlázva · %d hiba.',
-            $eredmeny['cegek'],
-            $eredmeny['kreditek'],
-            $eredmeny['hibak'],
-        ));
+            $this->osszegzes(sprintf(
+                '%d cég · %d kredit számlázva · %d hiba.',
+                $eredmeny['cegek'],
+                $eredmeny['kreditek'],
+                $eredmeny['hibak'],
+            ));
 
-        return $eredmeny['hibak'] > 0 ? self::FAILURE : self::SUCCESS;
+            return $eredmeny['hibak'] > 0 ? self::FAILURE : self::SUCCESS;
+        });
     }
 }

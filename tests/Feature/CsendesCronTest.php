@@ -84,4 +84,43 @@ final class CsendesCronTest extends TestCase
         $this->assertStringNotContainsString('Ez cronban néma.', $kimenet);
         $this->assertStringContainsString('Ez viszont mindig kimegy.', $kimenet);
     }
+
+    /**
+     * A kezeletlen kivétel sem szökhet a Symfony hibakiírójához.
+     *
+     * Az a kiíró a terminál szélességéhez tördel, és ehhez
+     * `mb_convert_encoding()`-ot hív. Egy hiányos PHP-n (osztott tárhelyen a
+     * cron környezete könnyen ilyen, miközben ugyanaz a bináris SSH-ból
+     * teljes) **maga a kiíró hasal el**, és az eredeti hiba sosem jut el a
+     * cron leveléig — helyette egy idegen névteret megnevező fatal error
+     * érkezik, ötpercenként. Ez éles hiba volt, nem elméleti.
+     *
+     * Ezért a `futtat()` maga fogja meg és írja ki egyszerűen. A tesztgép
+     * PHP-ja teljes, tehát a tördelést nem tudjuk itt elrontani — azt
+     * ellenőrizzük, ami rajtunk múlik: a kivétel nem jut ki, a parancs
+     * hibával tér vissza, és az üzenet olvasható.
+     */
+    public function test_a_kivetel_nem_jut_el_a_symfony_kiirojaig(): void
+    {
+        Artisan::registerCommand(new class extends Command
+        {
+            use CsendesCron;
+
+            protected $signature = 'teszt:elszallo';
+
+            public function handle(): int
+            {
+                return $this->futtat(function (): int {
+                    throw new \RuntimeException('A valódi ok, amit látni akarunk.');
+                });
+            }
+        });
+
+        $kod = Artisan::call('teszt:elszallo');
+        $kimenet = Artisan::output();
+
+        $this->assertSame(1, $kod);
+        $this->assertStringContainsString('RuntimeException', $kimenet);
+        $this->assertStringContainsString('A valódi ok, amit látni akarunk.', $kimenet);
+    }
 }

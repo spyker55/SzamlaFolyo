@@ -505,6 +505,65 @@ cd /tmp && <php> <projekt>/artisan dokumentum:feldolgoz --limit=1
 A `cd /tmp` szándékos: pont azt bizonyítja, hogy a parancs a munkakönyvtártól
 függetlenül működik.
 
+### Ha egy időzített feladat hibalevelet küld
+
+**Előbb a naplót nézd, ne a levelet.** A Laravel a kezeletlen kivételt *előbb*
+naplózza, mint ahogy kiírná (`HandleExceptions::handleException()` sorrendje:
+`report()`, aztán `renderForConsole()`), tehát a valódi ok mindig ott áll:
+
+```bash
+tail -50 <projekt>/storage/logs/laravel.log
+```
+
+Ez akkor is működik, amikor a cron levele használhatatlan — és volt rá példa,
+hogy az volt.
+
+#### A `Symfony\Polyfill\Mbstring\iconv()` hiba
+
+```
+PHP Fatal error: Uncaught Error: Call to undefined function
+Symfony\Polyfill\Mbstring\iconv() in vendor/symfony/polyfill-mbstring/Mbstring.php:1068
+#2 vendor/symfony/console/Application.php(1297): mb_convert_encoding()
+#3 Application->splitStringByWidth()
+#4 Application->doRenderThrowable()
+```
+
+Ez a levél **kétszeresen félrevezet**. Egyrészt idegen névteret nevez meg a
+valódi ok helyett: a futtató PHP-ból hiányzik az `mbstring`, ezért a
+`symfony/polyfill-mbstring` lép a helyére, az pedig belül `iconv()`-ot hív, ami
+szintén hiányzik. Másrészt — és ez a rosszabb — nézd meg a `doRenderThrowable`
+sort: a polyfill **egy másik kivétel kirajzolása közben** hasal el, a Console a
+terminálszélességhez tördeléshez hívja a `mb_convert_encoding()`-ot. Az igazi
+hiba megtörtént, de sosem íródott ki.
+
+Az időzített parancsok ezért maguk fogják meg a kivételt
+(`CsendesCron::futtat()`) és egyszerűen írják ki, hogy ne a tördelő kiíró
+fusson rá egy hiányos PHP-n. A régi levelekben viszont még a maszk áll — ott a
+naplóban keresd az okot.
+
+**A hiányzó kiterjesztés akkor is előfordul, ha parancssorból minden működik.**
+Osztott tárhelyen ugyanaz a `php8.3` bináris más `php.ini`-t olvashat SSH-ból és
+a vezérlőpult ütemezőjéből. A vezérlőpult „PHP beállítások" felülete a
+*weboldal* PHP-kezelőjét konfigurálja; egy cron, ami közvetlenül egy binárist
+hív, megkerüli azt, és a rendszer alap ini-jét kapja — ott a bekapcsolt
+kiterjesztés nincs benne.
+
+A cron PHP-járól csak maga a cron tud beszámolni. Vedd fel ideiglenesen
+ötpercesnek, és olvasd el a levelét:
+
+```
+<php> -i
+```
+
+Négy sort keress: `Loaded Configuration File`, `Scan this dir for additional
+.ini files`, `Additional ini files parsed` (ha itt `(none)` áll, a `conf.d` nem
+látszik) és `disable_functions`. A `kornyezet:ellenoriz` ugyanezt a kérdést
+válaszolja meg arról a PHP-ról, amelyikkel épp fut — kiírja a binárist és a
+betöltött `php.ini`-t is.
+
+Ha az eltérés a tárhelyen belül nem javítható, az a szolgáltató
+ügyfélszolgálatának szól; az `-i` kimenete a bizonyíték hozzá.
+
 ### Megőrzési idő
 
 Az eredeti fájlok az export elkészültével törlődnek a szerverről. Alapból
