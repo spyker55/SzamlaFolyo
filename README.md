@@ -1,6 +1,6 @@
 # SzámlaFolyó
 
-Bizonylat be, adat ki. A felhasználó feltölti vagy e-mailben beküldi a
+Bizonylat be, adat ki. A felhasználó feltölti a
 számláit, az AI kiolvassa a típusukat és a mezőiket, az ember egy képernyőn
 ellenőrzi — ahol a bizonytalan mezők színnel ki vannak emelve —, majd az egész
 xlsx, csv vagy json formátumban a könyvelőhöz megy. Ami kiment, az az
@@ -14,7 +14,7 @@ archívumba kerül, ahonnan visszahívható vagy törölhető.
 **Nincs háttér-worker.** Osztott tárhelyen nem futhat hosszú életű folyamat,
 ezért a feldolgozási sort két dolog hajtja: a böngésző (amíg valaki nézi a
 Beérkezőt, `wire:poll` néhány másodpercenként egy dokumentumot kiolvas) és a
-cron (az e-mailben érkezett iratokért és az elakadt futásokért). Mindkettő
+cron (az elakadt és a félbemaradt futásokért). Mindkettő
 ugyanazt a claimet használja — egy feltételes `UPDATE ... WHERE status =
 'feltoltve'` —, ezért nem tudják ugyanazt az iratot kétszer feldolgozni.
 Lásd `app/Services/Extraction/Sorkezelo.php`.
@@ -126,10 +126,15 @@ olvasó nem látja, épp melyik állapotban van. Ha egyszer nem marad választha
 szolgáltató, a kérés hibával áll meg, és a dokumentum újrapróbálható — a
 csendben átengedett adatot viszont már nem lehet visszakérni.
 
-**Az e-mailes beérkeztetés hitelesítetlen írási út.** Ezért három szabály nem
-opcionális: a **címzett** tokenje dönti el a céget (soha nem a feladó),
-e-mailből érkező irat soha nem kerül automatikusan jóváhagyásra, és a
-feldolgozás idempotens (`message_id` cégenként egyedi).
+**Nincs többé hitelesítetlen írási út.** Volt: az e-mailes beérkeztetés bárkitől
+fogadott mellékletet, aki ismerte a hozzá tartozó címet. Az egész út kikerült a
+termékből — bizonylat csak belépett felhasználótól, a saját cégébe kerülhet be.
+
+A hozzá tartozó **védelmek viszont maradnak**, mert az indokuk változott, nem az
+érvényességük: a feltöltött fájl így is idegen fájl. A MIME-típust a tartalomból
+állapítjuk meg (nem a kliens állításából), az XML-t soha nem szolgáljuk ki XML
+típussal (`DokumentumFajlController`), az XML-értelmező pedig külső entitás
+nélkül olvas. Egy belépett felhasználó ugyanazt a fájlt fel tudja tölteni.
 
 ### Árazás
 
@@ -147,7 +152,7 @@ szerződéses ígéret.
 | Saját darabár (ár ÷ darab) | 39,80 Ft | 24,95 Ft | 19,98 Ft |
 | Extra dokumentum | 49 Ft | 29 Ft | 24 Ft |
 
-**Egy fiók egy cég**, egy kerettel és egy beküldési címmel. Egy könyvelőiroda
+**Egy fiók egy cég**, egy kerettel. Egy könyvelőiroda
 ezért az összes ügyfelét egy fiókban dolgozza fel, és az ügyfelenkénti
 szétválasztást az export vevő-adószám szűrője adja meg — nem cégek
 adminisztrálása. Ez tudatos csere: kevesebb fogalom a felhasználónak.
@@ -225,7 +230,7 @@ nyitott — épp a legdrágább oldalon. Ismeretlen ár mostantól a legkisebb c
 keretét kapja, és `warning` szinten a naplóba kerül.
 
 **A keret fölött alapból megállunk.** A tulajdonos a Beállításokban külön
-bekapcsolhatja a darabonként számlázott feldolgozást; addig a beküldött iratok
+bekapcsolhatja a darabonként számlázott feldolgozást; addig a feltöltött iratok
 megvárják a következő időszakot. Váratlan számlát senki ne kapjon attól, hogy egy
 hónapban többet dolgozott — a kapcsolás ezért külön naplóbejegyzést is kap.
 
@@ -260,7 +265,7 @@ a hangolást. A figyelmeztetés akkor ér valamit, ha kilóg a környezetéből.
 
 **A három jogi oldal szövege kész** (ÁSZF, adatkezelési tájékoztató,
 impresszum), és a számaik a configból jönnek: ár, darabkeret, felhasználószám,
-próbaidő, megőrzési plafon, postafiók-takarítás, a kiolvasó modell neve. Az
+próbaidő, megőrzési plafon, a kiolvasó modell neve. Az
 árlistán egy elcsúszott szám kellemetlen, egy szerződésben viszont az ígéret
 csúszik el a teljesítéstől — az adatkezelésiben pedig a tájékoztató kezd
 hazudni, nem a program. Amit kézzel kell átírni, az a hatálybalépés dátuma
@@ -304,7 +309,6 @@ válogat, nem az ellenőrzésnél vádol.
 | `app/Services/Extraction/` | Prompt (verziózva), séma, OpenRouter-hívás, validátorok, konfidencia, sorkezelő |
 | `app/Services/Export/` | Oszlopdefiníciók egy helyen + xlsx/csv/json író |
 | `app/Support/AfaBontas.php` | Az ÁFA-bontás számtana: kulcsértelmezés, származtatott bruttó, kulcsonkénti összegzés |
-| `app/Services/Ingest/` | Címzett-token feloldás és IMAP-olvasó |
 | `app/Services/Billing/` | Keretszámolás és Stripe |
 | `app/Livewire/` | A nyolc képernyő |
 | `resources/views/nyitolap.blade.php` | A nyilvános oldal (`/`), a próbaidő és a csomagok számait a konfigurációból véve |
@@ -340,8 +344,8 @@ Ezen a tárhelyen **az SSH alapértelmezett PHP-je 7.4, a webcímé viszont 8.4*
 A Laravel 12 PHP 8.2+-t kér, tehát a csupasz `php artisan` vagy `composer install`
 a rossz értelmezőt indítaná — és ez a fajta hiba a legdrágább: a `composer` régi
 csomagverziókat oldana fel, az `artisan` fatalt dobna, a **cron pedig némán nem
-csinálna semmit**. Az első visszajelzés az lenne, hogy egy ügyfél e-mailben
-beküldött bizonylata nem jelenik meg.
+csinálna semmit**. Az első visszajelzés az lenne, hogy egy feltöltött bizonylat
+kiolvasása sosem indul el.
 
 Ezért a `deploy.sh` **maga keresi meg** a megfelelő PHP-t (`php8.4`, `ea-php84`,
 `/opt/php*/bin/php` és társai), és megáll, ha nem talál 8.2+-t. Megnézni,
@@ -452,9 +456,8 @@ mezőkbe megy, a parancs pedig a **Kezelő → „Egyedi parancs"** mezőbe. Ne 
 
 | Mit csinál | Időzítés | Parancs |
 |---|---|---|
-| Beérkeztetés e-mailből | `*/5 * * * *` | `<php> <projekt>/artisan email:beolvas` |
 | Kiolvasás, elakadt futások | `*/5 * * * *` | `<php> <projekt>/artisan dokumentum:feldolgoz --limit=5` |
-| Selejtezés (fájlok és régi levelek) | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
+| Selejtezés (lejárt eredeti fájlok) | `17 3 * * *` | `<php> <projekt>/artisan fajl:selejtez` |
 | Túlhasználat elszámolása | `41 4 * * *` | `<php> <projekt>/artisan tulhasznalat:elszamol` |
 
 **Átirányítás (`> /dev/null`) ne legyen bennük, és értesítési címet érdemes
@@ -468,9 +471,7 @@ is), tehát az átirányítás épp a bajt nyelné el, és a cron némán romlan
 Ezért a parancsok maguk hallgatnak, ha nincs mondanivalójuk
 (`App\Console\Commands\Concerns\CsendesCron`): terminálból futtatva kiírják az
 összegzést, cronból nem, hibát viszont mindig. Így az értesítési címre **csak
-akkor érkezik levél, ha tényleg baj van**. Ugyanezért nem hiba a hiányzó
-beérkeztető postafiók sem: az beállítás, nem üzemzavar, tehát a napi takarítás
-nem szól érte (`PostafiokOlvaso::beallitva()`).
+akkor érkezik levél, ha tényleg baj van**.
 
 A parancsban **nincs `cd` és nincs `&&`**. Az `artisan` a saját helyéből (`__DIR__`)
 oldja fel az útvonalakat, ezért abszolút úttal hívva bármelyik munkakönyvtárból
@@ -488,169 +489,18 @@ cd /tmp && <php> <projekt>/artisan dokumentum:feldolgoz --limit=1
 A `cd /tmp` szándékos: pont azt bizonyítja, hogy a parancs a munkakönyvtártól
 függetlenül működik.
 
-### Az e-mailes beérkeztetés bekapcsolása
-
-Négy dolog kell hozzá, és mind a négy nélkül a cím **működőnek látszik, de a
-levél sehova nem érkezik meg** — a feladó sem kap hibát. A Beállítások képernyő
-ezért ki is írja, ha a postafiók még nincs beállítva.
-
-**A rövidebb út a plusz-címzés**, mert ehhez DNS-t sem kell módosítani: a fődomén
-MX-e már megvan. Egy sima postafiók kell (`bekuldes@<domain>`), és:
-
-```
-INBOX_MODE=plus
-INBOX_PLUS_ADDRESS=bekuldes@<domain>
-IMAP_HOST=…  IMAP_USERNAME=…  IMAP_PASSWORD=…
-```
-
-A cím így `bekuldes+<token>@<domain>` lesz. Két perc alatt kipróbálható: küldj
-levelet a `bekuldes+teszt@<domain>` címre, és nézd meg, megjön-e a fiókba. (A
-nethelynél működik.)
-
-**A catch-all aldomén a másik út**, szebb címekkel (`<token>@bekuldes.<domain>`),
-de három dolgon múlik egyszerre:
-
-1. **MX-rekord** az aldoménre — **az MX nem öröklődik**, a fődoméné nem
-   vonatkozik rá. Ha van `*` A rekord, az aldomén feloldódik a webszerverre, és a
-   levél oda próbál kézbesíteni, majd visszapattan: néma hiba.
-2. **Catch-all postafiók** az aldoménre (`*@bekuldes.<domain>` → egy fiók).
-3. `INBOX_MODE=catchall` és `INBOX_DOMAIN=bekuldes.<domain>`.
-
-Mindkét úthoz kell még a `email:beolvas` az időzített feladatok közé. A
-`Feldolgozott` és a `Besorolatlan` mappát a parancs maga létrehozza, ha a
-szolgáltató engedi.
-
-A cégek beküldési címe a Beállítások képernyőn látszik, és a
-`email:beolvas --proba` is kiírja mindet.
-
-### Ha nem érkezik meg az e-mailben küldött számla
-
-A bejelentés öt különböző dolgot jelenthet, és a felületen egyik sem látszik.
-Ez a parancs megkülönbözteti őket — **semmit nem jelöl olvasottnak és nem
-mozgat**, tehát akkor is nyugodtan futtatható, ha a cron már átment a fiókon:
-
-```bash
-<php> <projekt>/artisan email:beolvas --proba
-```
-
-Kiírja a cégek beküldési címét, a fiók mappáit, és a legutóbbi levelekre
-soronként, hogy mely címeket találta a fejlécekben, kijött-e belőlük token, van-e
-hozzá cég, és mely mellékleteket fogadná el.
-
-| Amit mutat | Hol a hiba |
-|---|---|
-| „A postafiók nem érhető el" | `IMAP_HOST`, `IMAP_USERNAME`, `IMAP_PASSWORD` |
-| „A(z) … mappa nem létezik" | `IMAP_FOLDER` — a kiírt mappalistából válassz |
-| „A(z) … mappa üres" | a levél be sem jött: MX-rekord, catch-all átirányítás, spam mappa |
-| „nincs érvényes beküldési token" | rossz címre ment, vagy a továbbküldés levágta a fejlécet |
-| „ehhez nincs cég" | a token jó alakú, de nem szerepel az adatbázisban |
-| „nincs feldolgozható melléklet" | nem támogatott fájltípus (docx, zip) |
-| „a levél olvasott" | a beolvasó csak olvasatlant vesz fel — lásd lentebb |
-
-Ha a mappa üresnek látszik, mert a cron már átmozgatta a leveleket, nézz bele a
-feldolgozottakba is: `IMAP_FOLDER=Feldolgozott <php> <projekt>/artisan email:beolvas --proba`.
-
-**Az olvasott levél a legmegtévesztőbb eset.** A beolvasó csak az olvasatlan
-leveleket veszi fel (`->unseen()`), ezért egy webmailen megnyitott levél örökre
-az INBOX-ban marad, és a cron soha nem dolgozza fel — pont az rontja el, aki
-utánanéz, megjött-e a levél. A `--proba` ezt külön kiírja. A megoldás: jelöld
-olvasatlanra a webmailen, és a következő futás felveszi.
-
-A besorolatlan levél a `Besorolatlan` mappába kerül (`IMAP_UNMATCHED_FOLDER`), és
-`warning` szinten a naplóba is bekerül a megvizsgált címekkel — a feldolgozottak
-közé keverve pont az veszne el, amit keresni kell.
-
-### Ha a cron `Symfony\Polyfill\Mbstring\iconv()` hibát küld
-
-Ez a hibalevél **kétszeresen félrevezet**, ezért külön szakaszt kap.
-
-```
-PHP Fatal error: Uncaught Error: Call to undefined function
-Symfony\Polyfill\Mbstring\iconv() in vendor/symfony/polyfill-mbstring/Mbstring.php:1068
-#2 vendor/symfony/console/Application.php(1297): mb_convert_encoding()
-#3 Application->splitStringByWidth()
-#4 Application->doRenderThrowable()
-```
-
-Először: a hiba **nem a kódunkban van**. A cron PHP-jéből hiányzik az `mbstring`,
-ezért a `symfony/polyfill-mbstring` lép a helyére — az pedig belül `iconv()`-ot
-hív, ami szintén hiányzik. A hibaüzenet egy idegen névteret nevez meg, és semmit
-nem árul el a valódi okról.
-
-Másodszor, és ez a rosszabb: nézd meg a `doRenderThrowable` sort a veremben. Ott a
-polyfill **egy másik kivétel kirajzolása közben** hasal el — a Symfony Console a
-terminálszélességhez tördeléshez hívja a `mb_convert_encoding()`-ot. Vagyis az
-igazi hiba megtörtént, de sosem íródott ki: **ez az üzenet elnyeli az összes
-többit.** Amíg ez fennáll, minden cron-hiba ugyanígy néz ki, függetlenül attól,
-mi történt valójában.
-
-**A kritikus rész: ez akkor is előfordulhat, ha parancssorból minden működik.**
-Osztott tárhelyen ugyanaz a `php8.3` bináris más `php.ini`-t olvashat SSH-ból és a
-vezérlőpult ütemezőjéből, és akkor a kiterjesztések listája is más. A
-`kornyezet:ellenoriz` ezért kiírja, melyik binárissal és melyik `php.ini` alapján
-válaszol — de csak arról a PHP-ról tud, amelyikkel épp fut.
-
-A cron PHP-járól maga a cron tud beszámolni. Vedd fel ideiglenesen ötperces
-feladatnak, és olvasd el a levelet, amit küld:
-
-```
-<php> -m
-```
-
-A kimenet a cron **saját** környezetének modullistája.
-
-**Ha az `mbstring` és az `iconv` a vezérlőpultban be van kapcsolva, és a cron
-mégsem látja őket, az nem ellentmondás.** A „PHP beállítások" a *weboldal*
-PHP-kezelőjét konfigurálja. Egy cron, ami közvetlenül egy binárist hív
-(`/usr/bin/php8.3 …`), megkerüli ezt a kezelőt, és a rendszer alap ini-jét kapja
-— ott pedig a bekapcsolt kiterjesztés nincs benne. Ugyanezért futhat a parancs
-tisztán SSH-ból: a shell környezete (`$HOME`, `PHPRC`) más ini-t hozhat, mint az
-ütemezőé.
-
-Ezért a cronba **azt a PHP-t kell írni, amelyikkel a telepítés is fut**, nem egy
-kézzel választott binárist:
-
-```bash
-./deploy.sh --check      # → PHP: /eleresi/ut/php (8.4.x)
-```
-
-A `deploy.sh` a futása végén ki is írja mind a négy időzített feladatot, már a
-helyes értelmezővel behelyettesítve — a legbiztosabb, ha onnan másolod ki őket.
-
-Ezt a `composer.json` nem tudja megfogni, ezért nincs is ott: a composer mindig
-azzal a PHP-val ellenőriz, amelyikkel ő maga fut — vagyis a deployéval, nem a
-cronéval.
-
 ### Megőrzési idő
 
-Egyetlen postafiókba érkezik minden cég beküldése; a tokent a *címzés* hordozza,
-a szétosztás az alkalmazásban történik. Ebből következik, hogy a fiók magától
-nem ürül — és a benne álló levél a **melléklettel együtt** ugyanannak a
-számlának egy teljes másolata. Enélkül a takarítás nélkül két baj van: betelik a
-tárhely, és hazuggá válik a fájlok törlése is, hiszen a másolat túléli.
+Az eredeti fájlok az export elkészültével törlődnek a szerverről. Alapból
+azonnal; a cég tulajdonosa a Beállítások képernyőn állíthat türelmi időt,
+**legfeljebb hét napot** (`Company::MEGORZES_MAX_NAP`).
 
-Ezért a `fajl:selejtez` (napi egyszer) a fiókot is takarítja:
+A plafon szándékosan alacsony. Az eredeti fájl a kiolvasás után már nem kell
+semmihez — az adat az adatbázisban van, a könyvelő az exportot kapja —, viszont
+amíg ott van, addig idegen cégek számláit tároljuk egy osztott tárhelyen. Ami
+nincs meg, azt nem is lehet kiszivárogtatni.
 
-| Mit | Alap | Beállítás |
-|---|---|---|
-| Eredeti fájlok export után | 0 nap, **legfeljebb 7** | Beállítások képernyő cégenként |
-| `Feldolgozott` mappa | 7 nap | `INBOX_KEEP_DAYS` |
-| `Besorolatlan` mappa | 14 nap | `INBOX_UNMATCHED_KEEP_DAYS` |
-
-Három szabály, amitől ez nem tud kárt okozni:
-
-- **A beérkező mappát soha nem takarítjuk.** Egy elgépelt
-  `IMAP_PROCESSED_FOLDER=INBOX` különben a még fel nem dolgozott leveleket
-  vinné el, némán. (`PostafiokOlvaso::takarithato()`, saját teszttel.)
-- **A `0` nap kikapcsolás**, mindkét mappára külön.
-- A feldolgozottakra a fájlok plafonja is vonatkozik (`Company::MEGORZES_MAX_NAP`,
-  7 nap): ott ugyanaz az irat fekszik, ami már bent van az alkalmazásban, tehát
-  nem élhet tovább nála. A `Besorolatlan` kap hosszabb türelmi időt, mert abból
-  **nem lett** irat — az az egyetlen példány, és emberi ránézést kér.
-
-A megőrzés az `InboundEmail` sorra (feladó, tárgy, `message_id`) nem vonatkozik:
-az néhány száz bájt, és ez az idempotencia alapja — nélküle ugyanaz a levél
-újrakézbesítve második tételt csinálna.
+A takarítást a `fajl:selejtez` végzi, naponta egyszer.
 
 ### Ellenőrzés telepítés után
 
@@ -775,8 +625,6 @@ tárhelyen nincs Node.js. Ha a CSS-t vagy a JS-t módosítod, futtasd az
   hogy ez bizonyított maradjon. Amit tudni kell: a PostgreSQL 11 2023 novembere
   óta **lejárt támogatású**, biztonsági javítást nem kap. Érdemes rákérdezni a
   szolgáltatónál, terveznek-e frissítést.
-- **Catch-all postafiók** egy aldoménre (`*@bekuldes.<domain>` → egy fiók).
-  Ha nincs catch-all, `INBOX_MODE=plus` mellett plusz-címzés is működik.
 - **PHP 8.2+** a webcímhez, `pdo_pgsql`, `mbstring`, `intl`, `gd`, `zip`,
   `fileinfo` kiterjesztésekkel.
 

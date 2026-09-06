@@ -38,9 +38,14 @@ final class DokumentumFajlController
      *
      * Az XML-t **soha nem** adjuk ki XML típussal. Az irat az ellenőrző
      * képernyőn azonos eredetű iframe-ben jelenik meg, a böngésző pedig az
-     * XML-t megjeleníti — egy `<?xml-stylesheet?>` utasítással beküldött fájl
-     * így a mi nevünkben futtatna szkriptet. A beküldés e-mailen keresztül
-     * hitelesítés nélkül is nyitva áll, tehát ezt fel kell tételezni.
+     * XML-t megjeleníti — egy `<?xml-stylesheet?>` utasítással feltöltött fájl
+     * így a mi nevünkben futtatna szkriptet.
+     *
+     * Ez a védelem az e-mailes beküldés megszüntetése után is **marad**. Az
+     * indoka változott, nem az érvényessége: a hitelesítetlen írási út eltűnt,
+     * de a feltöltés így is idegen fájl, és egy belépett felhasználó ugyanezt
+     * a fájlt fel tudja tölteni. A saját cégére nézve is, más cégére nézve is
+     * kár, ha lefut.
      *
      * Sima szövegként (a `nosniff` mellett) semmi nem fut belőle, olvasni
      * viszont ugyanúgy lehet — egy e-számlánál ez amúgy is hasznosabb nézet.

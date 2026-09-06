@@ -58,11 +58,6 @@ class Document extends Model
         return $this->belongsTo(Export::class);
     }
 
-    public function inboundEmail(): BelongsTo
-    {
-        return $this->belongsTo(InboundEmail::class);
-    }
-
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');

@@ -6,8 +6,8 @@
     adatfeldolgozó, más modell, más megőrzési idő —, ezt a lapot **ugyanabban
     a commitban** kell módosítani, mint a kódot.
 
-    A számok itt is a configból jönnek (megőrzési plafon, postafiók-takarítás),
-    hogy ne csússzanak el attól, amit a `fajl:selejtez` ténylegesen csinál.
+    A számok itt is a configból és a kódból jönnek (megőrzési plafon), hogy ne
+    csússzanak el attól, amit a `fajl:selejtez` ténylegesen csinál.
 
     Két szerepkör van, és ezt nem szabad összemosni: a **fiók** adataira nézve
     a Szolgáltató adatkezelő, a **feltöltött bizonylatokra** nézve az Előfizető
@@ -17,13 +17,11 @@
     Jogi felülvizsgálaton nem esett át.
 --}}
 @php
-    $hatalyos = '2026. szeptember 6.';
+    $hatalyos = '2026. szeptember 7.';
 
     $megorzesMax = \App\Models\Company::MEGORZES_MAX_NAP;
     // Configból, nem `env()`-ből: a nézetben hívott `env()` `config:cache`
-    // után `null`-t ad, és a tájékoztató csendben nulla napot ígérne.
-    $postafiokNap = (int) config('inbox.imap.keep_days');
-    $besorolatlanNap = (int) config('inbox.imap.unmatched_keep_days');
+    // után `null`-t ad, és a tájékoztató csendben mást ígérne.
     $modell = (string) config('openrouter.model');
     $email = config('szamlafolyo.kapcsolat_email');
 @endphp
@@ -96,12 +94,6 @@
                     <td class="py-2">Lásd a 4. pontot</td>
                 </tr>
                 <tr class="border-b border-slate-200">
-                    <td class="py-2 pr-4">Beérkező levelek adatai (feladó címe, tárgy, időpont)</td>
-                    <td class="py-2 pr-4">A beküldés visszakövethetősége, kétszeres feldolgozás elkerülése</td>
-                    <td class="py-2 pr-4">Szerződés teljesítése</td>
-                    <td class="py-2">A szerződés megszűnéséig</td>
-                </tr>
-                <tr class="border-b border-slate-200">
                     <td class="py-2 pr-4">A visszafordíthatatlan műveletek naplója (export, törlés, tag felvétele)</td>
                     <td class="py-2 pr-4">Utólagos visszakövethetőség a cégen belül</td>
                     <td class="py-2 pr-4">Jogos érdek: elszámoltathatóság</td>
@@ -135,8 +127,8 @@
 
     <ol class="list-decimal space-y-2 pl-5">
         <li>
-            A bizonylat a böngészőből vagy a cég beküldési e-mail címére érkezik, és a magyarországi
-            kiszolgálón tárolódik.
+            A bizonylat a böngészőből, feltöltéssel érkezik, és a magyarországi kiszolgálón
+            tárolódik.
         </li>
         <li>
             A kiolvasáshoz a bizonylat tartalma — a PDF vagy a kép — <strong>elhagyja a szervert</strong>:
@@ -174,12 +166,6 @@
             cégenként állítható türelmi idővel.
         </li>
         <li>
-            <strong>A beküldési postafiók levelei:</strong> a feldolgozottak legfeljebb
-            {{ $postafiokNap }} napig, a besorolhatatlanok legfeljebb {{ $besorolatlanNap }} napig
-            maradnak meg, azután törlődnek. Enélkül a levélben álló melléklet a törölt fájl teljes
-            másolataként élne tovább.
-        </li>
-        <li>
             <strong>Kiolvasott és jóváhagyott adatok, fiókadatok:</strong> a szerződés megszűnéséig, azt
             követően ésszerű időn belül törölve.
         </li>
@@ -192,8 +178,8 @@
     <p class="pt-2">
         <strong>A fiók törlésekor</strong> — amit a felhasználó a Beállítások képernyőről bármikor
         elindíthat — a felhasználói fiók azonnal törlődik. Ha ezzel a cégnek nem marad felhasználója,
-        vele együtt törlődnek a cég bizonylatai, a kiolvasott adatok, az exportok, a naplóbejegyzések, a
-        beérkezett levelek és a szerveren lévő fájlok is, a Stripe-előfizetést pedig azonnal lemondjuk.
+        vele együtt törlődnek a cég bizonylatai, a kiolvasott adatok, az exportok, a naplóbejegyzések
+        és a szerveren lévő fájlok is, a Stripe-előfizetést pedig azonnal lemondjuk.
         A törlés nem vonható vissza, és a törölt adatokról nem tartunk fenn másolatot.
     </p>
 
@@ -271,10 +257,10 @@
             szűkül, ezt a szűkítést nem lehet megkerülni a felületről.
         </li>
         <li>
-            A beküldési e-mail cím kitalálhatatlan tokent tartalmaz; a beérkezett levelet mindig a
-            <em>címzett</em> alapján soroljuk céghez, soha nem a feladó alapján.
+            Bizonylat csak belépett felhasználótól, a saját cégébe kerülhet be: nincs olyan út,
+            amelyen hitelesítés nélkül lehetne iratot elhelyezni a rendszerben.
         </li>
-        <li>Az e-mailben érkezett irat soha nem kerül automatikusan jóváhagyásra.</li>
+        <li>Feltöltött irat soha nem kerül automatikusan jóváhagyásra — ellenőrzésre vár.</li>
     </ul>
 
     <h2 class="pt-4 text-base font-semibold text-slate-900">7. Az érintett jogai</h2>

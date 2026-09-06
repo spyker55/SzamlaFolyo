@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Console\Commands\Concerns\CsendesCron;
+use Illuminate\Console\Command;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,14 +51,37 @@ final class CsendesCronTest extends TestCase
         $this->assertNotSame('', trim(Artisan::output()), "A(z) {$parancs} `-v` mellett sem szólalt meg.");
     }
 
-    /** A hiba viszont mindig kimegy — ez az, amiért az értesítési cím létezik. */
+    /**
+     * A hiba viszont mindig kimegy — ez az, amiért az értesítési cím létezik.
+     *
+     * Magát a tulajdonságot ellenőrizzük, egy eldobható parancson, nem egy
+     * konkrét parancs hibaágát. Eddig az `email:beolvas` szolgáltatta a
+     * hibát; azzal együtt a teszt is elveszett volna, pedig nem az a parancs
+     * volt a lényeg, hanem hogy a `CsendesCron` az **összegzést** hallgatja
+     * el, a hibát soha.
+     */
     public function test_a_hiba_cronban_is_kimegy(): void
     {
-        config(['inbox.imap.host' => '', 'inbox.imap.username' => '']);
+        Artisan::registerCommand(new class extends Command
+        {
+            use CsendesCron;
 
-        $kod = Artisan::call('email:beolvas');
+            protected $signature = 'teszt:csendes-hiba';
+
+            public function handle(): int
+            {
+                $this->osszegzes('Ez cronban néma.');
+                $this->error('Ez viszont mindig kimegy.');
+
+                return self::FAILURE;
+            }
+        });
+
+        $kod = Artisan::call('teszt:csendes-hiba');
+        $kimenet = Artisan::output();
 
         $this->assertSame(1, $kod);
-        $this->assertStringContainsString('postafiók nem olvasható', Artisan::output());
+        $this->assertStringNotContainsString('Ez cronban néma.', $kimenet);
+        $this->assertStringContainsString('Ez viszont mindig kimegy.', $kimenet);
     }
 }

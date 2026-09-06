@@ -60,27 +60,42 @@ final class JogiOldalakTest extends TestCase
     }
 
     /**
-     * Az adatkezelési tájékoztató megőrzési idői **abból a configból** jönnek,
-     * amiből a `fajl:selejtez` is dolgozik. Ha kézzel volnának beírva, a
-     * takarítás és az ígéret külön életet kezdene élni — és a tájékoztató az,
-     * ami hazudni kezdene, nem a program.
+     * Az adatkezelési tájékoztató a **kódból** veszi az adatait, nem kézzel
+     * beírt számokból. Ha kézzel volnának, a program és az ígéret külön életet
+     * kezdene élni — és a tájékoztató az, ami hazudni kezdene, nem a program.
      *
      * A `config()` és nem `env()` külön is számít: egy nézetben hívott `env()`
-     * `config:cache` után `null`, vagyis élesben nulla napot ígérnénk.
+     * `config:cache` után `null`, vagyis élesben üres ígéret maradna.
+     *
+     * A postafiók megőrzési idői innen az e-mailes beküldéssel együtt kerültek
+     * ki; a modell neve és a fájlplafon maradt, mert azok most is igazak.
      */
-    public function test_az_adatkezelesi_a_configbol_veszi_a_megorzest(): void
+    public function test_az_adatkezelesi_a_kodbol_veszi_az_adatait(): void
     {
-        config([
-            'inbox.imap.keep_days' => 9,
-            'inbox.imap.unmatched_keep_days' => 21,
-            'openrouter.model' => 'peldagyarto/proba-modell',
-        ]);
+        config(['openrouter.model' => 'peldagyarto/proba-modell']);
 
         $this->get('/adatkezeles')
             ->assertOk()
-            ->assertSee('9 napig')
-            ->assertSee('21 napig')
-            ->assertSee('peldagyarto/proba-modell');
+            ->assertSee('peldagyarto/proba-modell')
+            ->assertSee(Company::MEGORZES_MAX_NAP.' napos');
+    }
+
+    /**
+     * Az e-mailes beküldés megszűnt: a jogi szövegek nem ígérhetik tovább.
+     *
+     * Ez nem stiláris kérdés. Az ÁSZF a Szolgáltatás tartalmát sorolja fel, az
+     * adatkezelési pedig azt, milyen adat keletkezik — egy megszüntetett úton
+     * egyik sem keletkezik, tehát a mondat nem elavult, hanem valótlan.
+     */
+    public function test_a_jogi_szovegek_nem_igernek_email_bekuldest(): void
+    {
+        foreach (['/aszf', '/adatkezeles'] as $utvonal) {
+            $valasz = $this->get($utvonal)->assertOk();
+
+            foreach (['beküldési e-mail', 'beküldési postafiók', 'Beérkező levelek'] as $eltunt) {
+                $valasz->assertDontSee($eltunt);
+            }
+        }
     }
 
     /**

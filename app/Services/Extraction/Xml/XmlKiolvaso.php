@@ -14,8 +14,11 @@ use Throwable;
  *
  * # Biztonság
  *
- * Az itt érkező XML **nem megbízható**: e-mailben bárki küldhet ilyet a cég
- * beküldési címére, hitelesítés nélkül. Ezért:
+ * Az itt érkező XML **nem megbízható**, és ez az e-mailes beküldés
+ * megszüntetése után is így van. Akkor azért, mert bárki küldhetett ilyet
+ * hitelesítés nélkül; most azért, mert a feltöltött fájl akkor is idegen
+ * fájl, ha belépett felhasználó hozta — a bizonylatot nem ő írta, hanem a
+ * szállítója. A védelem indoka változott, az érvényessége nem. Ezért:
  *
  * - a betöltés nem kap `LIBXML_NOENT`-et, tehát az entitásokat nem
  *   helyettesítjük be — enélkül egy `SYSTEM "file:///etc/passwd"` entitás

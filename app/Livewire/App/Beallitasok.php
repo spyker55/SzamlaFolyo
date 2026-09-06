@@ -12,7 +12,6 @@ use App\Models\Company;
 use App\Models\User;
 use App\Services\Billing\Kvota;
 use App\Services\Billing\StripeSzolgaltatas;
-use App\Services\Ingest\PostafiokOlvaso;
 use App\Support\Adoszam;
 use App\Support\Berlo;
 use App\Support\Osszeg;
@@ -303,32 +302,7 @@ class Beallitasok extends Component
             'extraFt' => $ceg->csomag()['extra_ft'] ?? null,
             'sajatSzerep' => auth()->user()?->szerepe($ceg),
             'tarhelyBajt' => $this->tarhelyFoglalas($ceg),
-            'bekuldesiCim' => $this->bekuldesiCim($ceg),
-            // A cím önmagában félrevezető: ha a postafiók nincs beállítva a
-            // kiszolgálón, az arra küldött levél sehova nem érkezik meg, és
-            // ezt semmi nem mondja meg — se a feladónak, se a felhasználónak.
-            'bekuldesAktiv' => PostafiokOlvaso::beallitva(),
         ]);
-    }
-
-    /**
-     * A cég beküldési e-mail címe.
-     *
-     * A tokent a `Company` hozza létre, és eddig **sehol nem jelent meg a
-     * felületen** — vagyis a beérkeztetés a háttérben kész volt, de nem lehetett
-     * megtudni, hova kell küldeni a számlát.
-     */
-    private function bekuldesiCim(Company $ceg): string
-    {
-        if ((string) config('inbox.mode') === 'plus') {
-            $plusz = (string) config('inbox.plus_address');
-
-            return $plusz === ''
-                ? ''
-                : (string) str_replace('@', '+'.$ceg->inbox_token.'@', $plusz);
-        }
-
-        return $ceg->inbox_token.'@'.config('inbox.domain');
     }
 
     /** Mennyit foglal a cég a tárhelyből — 1,5 GB-on ez nem elméleti kérdés. */

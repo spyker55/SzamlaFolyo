@@ -8,10 +8,14 @@ use App\Services\Extraction\Xml\XmlKiolvaso;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Az XML a rendszer egyik legkitettebb pontja: a cég beküldési címére bárki
- * küldhet e-mailt, hitelesítés nélkül, és a melléklet egyenesen az
+ * Az XML a rendszer egyik legkitettebb pontja: a feltöltött fájl egyenesen az
  * értelmezőbe kerül. Ezért a támadó által megírt fájlt kell alapesetnek venni,
  * nem a jóindulatú számlát.
+ *
+ * Ez a teszt az e-mailes beküldés miatt született — az volt a hitelesítetlen
+ * írási út —, de az az út megszűnt, a teszt pedig **marad**. A bizonylatot nem
+ * a feltöltő írta, hanem a szállítója: a fájl akkor is idegen, ha belépett
+ * felhasználó hozta be.
  */
 final class XmlBiztonsagTest extends TestCase
 {

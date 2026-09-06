@@ -13,7 +13,7 @@ use Illuminate\Console\Command;
 
 /**
  * A sor hajtása cronból. A böngésző csak addig dolgozik, amíg valaki nézi a
- * Beérkezőt — az e-mailben érkezett iratokat és az elakadt futásokat ez viszi
+ * Beérkezőt — az elakadt és a félbemaradt futásokat ez viszi
  * tovább.
  */
 final class DokumentumFeldolgoz extends Command

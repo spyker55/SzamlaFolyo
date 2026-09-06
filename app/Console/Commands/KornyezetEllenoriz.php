@@ -268,8 +268,6 @@ final class KornyezetEllenoriz extends Command
     {
         $ellenorzesek = [
             'AI-kiolvasás' => (string) config('openrouter.api_key') !== '',
-            'E-mailes beérkeztetés' => (string) config('inbox.imap.host') !== ''
-                && (string) config('inbox.imap.username') !== '',
             'Stripe előfizetés' => (string) config('stripe.secret') !== '',
             'Kimenő levél (SMTP)' => (string) config('mail.mailers.smtp.host') !== '',
         ];

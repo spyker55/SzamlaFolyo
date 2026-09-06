@@ -1,16 +1,10 @@
 <div @if ($dolgozikMeg) wire:poll.3s="lepteti" @endif>
 
-    <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-            <h1 class="text-xl font-semibold text-slate-900">Beérkező</h1>
-            <p class="mt-1 text-sm text-slate-500">
-                Húzd ide a bizonylatokat, vagy küldd őket e-mailben.
-            </p>
-        </div>
-        <div class="text-right text-sm">
-            <div class="text-slate-500">Beküldési cím</div>
-            <code class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{{ $ceg->beerkezteoCim() }}</code>
-        </div>
+    <div class="mb-6">
+        <h1 class="text-xl font-semibold text-slate-900">Beérkező</h1>
+        <p class="mt-1 text-sm text-slate-500">
+            Húzd ide a bizonylatokat, vagy válaszd ki őket a gombbal.
+        </p>
     </div>
 
     @if ($akadaly)
@@ -54,7 +48,7 @@
 
     @if ($dokumentumok->isEmpty())
         <div class="empty">
-            Itt jelennek meg a feltöltött és az e-mailben beküldött bizonylatok.
+            Itt jelennek meg a feltöltött bizonylatok.
         </div>
     @else
         <div class="card overflow-hidden">
@@ -75,6 +69,9 @@
                         <td class="td">
                             <div class="font-medium text-slate-900">{{ $d->megnevezes() }}</div>
                             <div class="text-xs text-slate-400">
+                                {{-- A `source` oszlop megmarad: a megszüntetett e-mailes beküldés
+                                     előtt érkezett sorok tényleg e-mailben jöttek, és egy
+                                     megtörtént dolgot nem írunk át utólag „feltöltés"-re. --}}
                                 {{ $d->source === 'email' ? 'E-mailben érkezett' : 'Feltöltve' }} ·
                                 {{ \App\Support\Ido::datumIdo($d->created_at) }}
                             </div>

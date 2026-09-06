@@ -16,7 +16,7 @@
     sablonból. Jogi felülvizsgálaton nem esett át.
 --}}
 @php
-    $hatalyos = '2026. szeptember 6.';
+    $hatalyos = '2026. szeptember 7.';
 
     $csomagok = config('szamlafolyo.plans');
     $probaNap = (int) config('szamlafolyo.trial.days');
@@ -74,8 +74,7 @@
 
     <ul class="list-disc space-y-1 pl-5">
         <li>
-            bizonylatokat tölthet fel a böngészőből, vagy elküldheti azokat a cégéhez rendelt, saját
-            beküldési e-mail címre;
+            bizonylatokat tölthet fel a böngészőből;
         </li>
         <li>
             a kiolvasott adatokat egy ellenőrző képernyőn átnézheti és javíthatja — a rendszer megjelöli
@@ -116,15 +115,14 @@
     <h2 class="pt-4 text-base font-semibold text-slate-900">5. A fiók, a cég és a felhasználók</h2>
 
     <p>
-        Egy fiókhoz egy cég tartozik, egy darabkerettel és egy beküldési e-mail címmel. A céget létrehozó
+        Egy fiókhoz egy cég tartozik, egy darabkerettel. A céget létrehozó
         felhasználó a tulajdonos: ő hívhat meg további felhasználókat, ő módosíthatja a beállításokat és
         az előfizetést. A meghívott felhasználók a szerepkörük szerinti jogokat kapják.
     </p>
 
     <p>
         A belépési adatok megőrzése az Előfizető felelőssége; a fiókjában végzett műveletekért az
-        Előfizető felel. A beküldési e-mail cím kitalálhatatlan tokent tartalmaz — aki ismeri, a cég
-        nevében tud iratot beküldeni —, ezért azt csak arra jogosultakkal szabad megosztani.
+        Előfizető felel.
     </p>
 
     <p>
@@ -248,11 +246,6 @@
     </p>
 
     <p>
-        A beküldési postafiókba érkezett leveleket a rendszer a feldolgozás után legfeljebb hét, a
-        besorolhatatlan leveleket legfeljebb tizennégy napig őrzi, azután törli.
-    </p>
-
-    <p>
         <strong>A bizonylatok jogszabályi megőrzése az Előfizető kötelezettsége.</strong> A számviteli és
         adójogi előírások szerinti megőrzési időt a Szolgáltatás nem teljesíti és nem helyettesíti; a
         Szolgáltató általi törlés az Előfizető megőrzési kötelezettségét nem érinti. Az Előfizetőnek
@@ -268,8 +261,8 @@
     <p>
         <strong>A fiók törlése azonnali és végleges.</strong> Ha a törléssel a cégnek nem marad
         felhasználója, a Szolgáltató a törléssel egyidejűleg lemondja az előfizetést, és véglegesen
-        törli a cég bizonylatait, a kiolvasott adatokat, az exportokat és a feltöltött fájlokat; a
-        beküldési e-mail cím megszűnik. A törlés nem vonható vissza, és a törölt adatokról a
+        törli a cég bizonylatait, a kiolvasott adatokat, az exportokat és a feltöltött fájlokat.
+        A törlés nem vonható vissza, és a törölt adatokról a
         Szolgáltató nem tart fenn másolatot. A már kiállított számlák ez alól kivételt képeznek: azokat
         a Szolgáltató a számviteli előírások szerinti ideig megőrzi. A törlés az Előfizetőt terhelő
         jogszabályi megőrzési kötelezettséget nem érinti. Ha a törlés a felületről bármi okból nem

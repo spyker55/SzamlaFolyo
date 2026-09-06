@@ -49,7 +49,6 @@
                         adatokkal és exportokkal együtt, véglegesen törlődik.
                     </li>
                     <li>A feltöltött eredeti fájlok törlődnek a szerverről.</li>
-                    <li>A beküldési e-mail cím megszűnik; az oda küldött levél többé nem érkezik meg.</li>
                     @if ($terv->vanElofizetes)
                         <li>
                             <strong>Az előfizetést azonnal lemondjuk.</strong> A kifizetett időszak

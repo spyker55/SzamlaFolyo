@@ -156,23 +156,20 @@ cat <<CRON
 
 ✓ Kész.
 
-Négy időzített feladatot kell felvenni. A vezérlőpult „Időzített folyamatok"
+Három időzített feladatot kell felvenni. A vezérlőpult „Időzített folyamatok"
 felületén a Kezelő legyen **Egyedi parancs** — a „Parancssori php-cli" a
 vezérlőpult saját PHP-jét használná, ami itt 7.4, azon pedig az alkalmazás el
 sem indul.
 
 Az időzítés és a parancs külön mezőbe megy:
 
-  1) Beérkeztetés e-mailből          időzítés:  */5 * * * *
-     $PHP $PROJEKT/artisan email:beolvas
-
-  2) Kiolvasás és elakadt futások    időzítés:  */5 * * * *
+  1) Kiolvasás és elakadt futások    időzítés:  */5 * * * *
      $PHP $PROJEKT/artisan dokumentum:feldolgoz --limit=5
 
-  3) Lejárt fájlok selejtezése       időzítés:  17 3 * * *
+  2) Lejárt fájlok selejtezése       időzítés:  17 3 * * *
      $PHP $PROJEKT/artisan fajl:selejtez
 
-  4) Túlhasználat elszámolása        időzítés:  41 4 * * *
+  3) Túlhasználat elszámolása        időzítés:  41 4 * * *
      $PHP $PROJEKT/artisan tulhasznalat:elszamol
 
 Átirányítás (\`> /dev/null\`) NE legyen bennük: a parancsok maguk hallgatnak, ha

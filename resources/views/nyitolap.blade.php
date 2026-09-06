@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SzámlaFolyó — dokumentumból ellenőrzött, könyvelésre kész adat</title>
-    <meta name="description" content="Küldd tovább a számlát vagy nyugtát, a SzámlaFolyó kiolvassa. Te csak azt ellenőrzöd, amiben nem biztos. Export XLSX, CSV vagy JSON formátumban.">
+    <meta name="description" content="Töltsd fel a számlát vagy nyugtát, a SzámlaFolyó kiolvassa. Te csak azt ellenőrzöd, amiben nem biztos. Export XLSX, CSV vagy JSON formátumban.">
     <x-favicon/>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -68,7 +68,7 @@
                 </h1>
 
                 <p class="mb-8 text-lg leading-relaxed text-slate-600 sm:text-xl">
-                    <strong class="font-bold text-slate-800">Küldd tovább a számlát vagy nyugtát. A SzámlaFolyó kiolvassa.</strong>
+                    <strong class="font-bold text-slate-800">Töltsd fel a számlát vagy nyugtát. A SzámlaFolyó kiolvassa.</strong>
                     Te csak azt ellenőrzöd, amiben nem biztos. Export, és kész. Nem funkciókat halmozunk,
                     hanem a legkisebb, leggyorsabb munkafolyamatot adjuk.
                 </p>
@@ -210,7 +210,7 @@
             <div aria-hidden="true" class="absolute top-12 right-[10%] left-[10%] hidden h-0.5 bg-zsalya/20 md:block"></div>
 
             @foreach ([
-                ['Beküldés', 'Töltsd fel a fájlokat, vagy küldd tovább őket a cégedhez tartozó e-mail címre.', 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+                ['Feltöltés', 'Húzd be a fájlokat a Beérkezőbe — PDF, kép vagy e-számla XML, egyszerre több is.', 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'],
                 ['Kiolvasás', 'Az e-számla XML-jét gép olvassa, modell nélkül. Papír vagy szkennelt PDF esetén jön az AI.', 'M13 10V3L4 14h7v7l9-11h-7z'],
                 ['Ellenőrzés', 'Megjelöljük, ami bizonytalan vagy ellentmondásos. Amit nem jelöltünk meg, azzal nincs dolgod.', 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
                 ['Export', 'Egy kattintás, és letöltöd XLSX, CSV vagy JSON formátumban a könyveléshez.', 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'],
@@ -347,7 +347,6 @@
                                 ? '<strong>Korlátlan felhasználó</strong>'
                                 : '<strong>'.$cs['users'].' felhasználó</strong>',
                             'Extra dokumentum: '.$cs['extra_ft'].' Ft',
-                            'Feltöltés + saját beküldési e-mail cím',
                             'Számla, nyugta, külföldi bizonylat',
                             'E-számla XML modellhívás nélkül',
                             'Bizonytalan mezők megjelölése',

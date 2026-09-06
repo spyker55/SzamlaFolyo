@@ -18,7 +18,6 @@ class CompanyFactory extends Factory
             'name' => $this->faker->company().' Kft.',
             'tax_number' => '10773381-2-44',
             'default_currency' => 'HUF',
-            'inbox_token' => bin2hex(random_bytes(8)),
             'trial_ends_at' => now()->addDays(14),
             'file_retention_days' => 0,
         ];

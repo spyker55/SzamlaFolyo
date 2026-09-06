@@ -12,9 +12,12 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Egyetlen tölcsér, amin minden beérkező fájl átmegy — a böngészőből feltöltött
- * és az e-mail mellékleteként érkezett is. Azért egy helyen, hogy a
- * duplikátum-szabály és a méretkorlát ne csússzon szét a két út között.
+ * Egyetlen tölcsér, amin minden beérkező fájl átmegy.
+ *
+ * Egy hívója maradt (a böngészőből való feltöltés), de az osztály megmarad
+ * annak, ami: itt dől el a MIME-típus a **tartalomból**, a méretkorlát és a
+ * duplikátum-szabály. Ezek nem a képernyő dolgai, és nem szabad, hogy egy
+ * jövőbeli második út mellettük menjen el.
  */
 final class FajlTarolo
 {
@@ -33,7 +36,6 @@ final class FajlTarolo
         ?string $mime = null,
         string $forras = 'upload',
         ?int $feltoltoId = null,
-        ?int $inboundEmailId = null,
     ): Document {
         $meret = strlen($tartalom);
         $maxMeret = (int) config('szamlafolyo.upload.max_bytes');
@@ -79,7 +81,6 @@ final class FajlTarolo
             'size_bytes' => $meret,
             'sha256' => $sha256,
             'uploaded_by' => $feltoltoId,
-            'inbound_email_id' => $inboundEmailId,
             'duplicate_of_id' => $eredeti?->id,
         ]);
         $dokumentum->company_id = $ceg->id;

@@ -8,8 +8,9 @@ return [
     |---------------------------------------------------------------------------
     | Feltöltés
     |---------------------------------------------------------------------------
-    | A méret- és típuskorlát egy helyen áll: a böngészőből érkező feltöltés és
-    | az e-mailes beérkeztetés ugyanezt olvassa, hogy a két út ne csússzon szét.
+    | A méret- és típuskorlát egy helyen áll, a `FajlTarolo`-ban olvasva. Egy
+    | hívója van, de a korlát a konfigurációé marad: nem képernyő-beállítás,
+    | hanem a rendszer határa.
     */
 
     'upload' => [

@@ -26,10 +26,6 @@ class Company extends Model
      * kell semmihez — az adat az adatbázisban van, a könyvelő az exportot
      * kapja —, viszont amíg ott van, addig egy idegen cég számláit tároljuk
      * egy osztott tárhelyen. Ami nincs meg, azt nem is lehet kiszivárogtatni.
-     *
-     * Ugyanez a plafon vonatkozik a beérkeztető postafiókra is: a levélben
-     * ugyanannak a számlának a másolata ül, és hiába töröljük itt a fájlt, ha
-     * ott megmarad. Lásd `PostafiokOlvaso::takarit()`.
      */
     public const MEGORZES_MAX_NAP = 7;
 
@@ -48,22 +44,8 @@ class Company extends Model
     protected static function booted(): void
     {
         static::creating(function (self $ceg): void {
-            $ceg->inbox_token ??= self::ujToken();
             $ceg->trial_ends_at ??= now()->addDays((int) config('szamlafolyo.trial.days'));
         });
-    }
-
-    /**
-     * 64 bitnyi véletlen, kisbetűs hexa. Ez a cím kitalálhatatlan része: aki
-     * nem kapta meg, nem tud a cég nevében iratot beküldeni.
-     */
-    public static function ujToken(): string
-    {
-        do {
-            $token = bin2hex(random_bytes(8));
-        } while (self::query()->where('inbox_token', $token)->exists());
-
-        return $token;
     }
 
     /**
@@ -100,19 +82,6 @@ class Company extends Model
         $pivot = $this->users()->where('users.id', $user->id)->first()?->pivot;
 
         return $pivot ? Szerep::tryFrom((string) $pivot->role) : null;
-    }
-
-    /** A beérkeztető cím, ahogy a felhasználónak megmutatjuk. */
-    public function beerkezteoCim(): string
-    {
-        if (config('inbox.mode') === 'plus') {
-            $alap = (string) config('inbox.plus_address');
-            [$helyi, $domain] = array_pad(explode('@', $alap, 2), 2, '');
-
-            return sprintf('%s+%s@%s', $helyi, $this->inbox_token, $domain);
-        }
-
-        return sprintf('%s@%s', $this->inbox_token, (string) config('inbox.domain'));
     }
 
     public function probaidosE(): bool

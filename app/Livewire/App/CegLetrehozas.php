@@ -77,7 +77,7 @@ class CegLetrehozas extends Component
             return $ceg;
         });
 
-        session()->flash('siker', "A(z) „{$ceg->name}” cég elkészült. A beküldési cím: {$ceg->beerkezteoCim()}");
+        session()->flash('siker', "A(z) „{$ceg->name}” cég elkészült. Töltsd fel az első bizonylatot a Beérkezőben.");
 
         $this->redirect(route('beerkezo', absolute: false), navigate: true);
     }
