@@ -317,6 +317,40 @@ helyét. Akkor lesz értelme visszahozni, ha a rendszer a feldolgozás *előtt*
 köti ügyfélhez a bizonylatot; addig a kiolvasott adószám az exportnál
 válogat, nem az ellenőrzésnél vádol.
 
+**Egy fájlban több bizonylat.** Ez nem kivétel, hanem a fő eset: aki
+lapadagolós szkennerrel dolgozik, annak egy havi köteg egy PDF. Ma a modell
+felismeri (`tobb_irat_gyanu`, `Prompt.php`), visszaadja az **elsőt**, és az
+Ellenőrzés kiír egy sávot, hogy a többit külön kell feltölteni. A Beérkező
+listájában viszont nem látszik — ott csak az állapotjelvény van —, tehát a
+köteg megnyitásig ugyanúgy néz ki, mint bármelyik másik sor.
+
+A kreditszabály ráadásul kétszer terheli. A `Kiolvaso` minden futásra
+felszámolja az oldalarányos kreditet, akkor is, ha az eredmény egyetlen
+figyelmeztetés: egy hatoldalas, három számlát tartalmazó köteg így 2 kredit,
+a szétvágott három darab további 3 — öt kredit három számláért. **Amíg a
+szétbontás nincs kész, a `tobb_irat_gyanu`-val végződő futás ne kerüljön
+kreditbe:** használható adatot nem adtunk érte. Visszaélésre nem ad teret, a
+modell dönti el, nem a feltöltő.
+
+A megoldás nem az, hogy az ember vágja szét. A modell adja meg az
+oldalhatárokat, a rendszer pedig bizonylatonként futtat külön kiolvasást
+**ugyanarra a fájlra**, oldaltartománnyal — minden bizonylat külön sor az
+exportban. Fájlt nem vágunk: osztott tárhelyen nincs `pdftk`, az FPDI ingyenes
+ága pedig a PDF 1.4-nél megáll. Az előnézet enélkül is a helyére ugrik, az
+iframe már ma `#view=FitH`-sel nyílik, és a `#page=N&view=FitH` odaviszi.
+
+Az ára máshol van: a `Document` ma egyszerre jelent *fájlt* és *bizonylatot*,
+és ezt a kettőt szét kell választani. Érinti a Beérkezőt, az Ellenőrzést, az
+exportot és a kvótát — és a selejtezést is: az eredeti fájl csak akkor
+törölhető, ha a benne lévő **összes** bizonylat exportálva van, különben az
+egyik exportja elviszi a többi mögül a papírt.
+
+Egy kérdés nyitva marad, és árazási ígéret, nem technika: ha egy hatoldalas
+köteg három számlává válik, az két kredit (oldalarányos, ahogy ma) vagy három
+(bizonylatonként)? A mai szabály azért oldalarányos, hogy a nagy csomag margója
+ne tűnjön el; a bizonylatonkénti viszont az, amit a vevő a felületen lát. A
+kettő itt szétválik, és a `Kredit::szabaly()` szövege az árlistán is ott áll.
+
 ## Felépítés
 
 | Hol | Mi |
