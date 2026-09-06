@@ -224,6 +224,20 @@
         @endif
     </div>
 
+    {{-- Fiók törlése --}}
+    <div class="card card-pad">
+        <h2 class="mb-1 font-medium text-slate-900">Fiók törlése</h2>
+        <p class="mb-3 text-sm text-slate-500">
+            A saját fiókod bármikor megszüntethető. Ha te vagy az egyetlen felhasználó a cégben, a
+            cég adatai is törlődnek, és az előfizetést lemondjuk — előtte érdemes exportot készíteni.
+        </p>
+        {{-- Külön képernyőre visz, nem itt kérdez rá: a visszavonhatatlan
+             műveletnek ne egy adószám-mező legyen a szomszédja. --}}
+        <a href="{{ route('fiok.torles') }}" wire:navigate class="btn btn-secondary text-red-700">
+            Fiók törlése…
+        </a>
+    </div>
+
     {{-- Tárhely --}}
     <div class="card card-pad">
         <h2 class="mb-1 font-medium text-slate-900">Tárhely</h2>

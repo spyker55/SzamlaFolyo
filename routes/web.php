@@ -12,6 +12,7 @@ use App\Livewire\App\Beerkezo;
 use App\Livewire\App\CegLetrehozas;
 use App\Livewire\App\Ellenorzes;
 use App\Livewire\App\ExportKepernyo;
+use App\Livewire\App\FiokTorles;
 use App\Livewire\App\Tetelek;
 use App\Livewire\Auth\Bejelentkezes;
 use App\Livewire\Auth\ElfelejtettJelszo;
@@ -53,6 +54,14 @@ Route::middleware('auth')->group(function (): void {
 
     // Cég nélkül csak ez az egy képernyő érhető el.
     Route::get('/ceg-letrehozas', CegLetrehozas::class)->name('ceg.letrehozas');
+
+    /*
+     * A fiók törlése **nem** a `ceg` csoportban van, és ez szándékos: aki
+     * regisztrált, de céget sosem hozott létre, azt a middleware örökre a
+     * cégalapításra irányítaná — vagyis pont az nem tudna megszabadulni a
+     * fiókjától, akinek a legkevesebb köze van a rendszerhez.
+     */
+    Route::get('/fiok-torles', FiokTorles::class)->name('fiok.torles');
 
     Route::middleware('ceg')->group(function (): void {
         Route::get('/beerkezo', Beerkezo::class)->name('beerkezo');

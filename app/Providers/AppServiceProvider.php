@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Middleware\SetCompany;
+use App\Services\Account\ElofizetesKapu;
 use App\Services\Billing\ArKatalogus;
 use App\Services\Billing\StripeSzolgaltatas;
 use App\Services\Billing\SzamlazoKapu;
@@ -26,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         // a Stripe szolgáltatja.
         $this->app->bind(SzamlazoKapu::class, StripeSzolgaltatas::class);
         $this->app->bind(ArKatalogus::class, StripeSzolgaltatas::class);
+        $this->app->bind(ElofizetesKapu::class, StripeSzolgaltatas::class);
     }
 
     public function boot(): void

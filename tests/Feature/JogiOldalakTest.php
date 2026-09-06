@@ -149,6 +149,44 @@ final class JogiOldalakTest extends TestCase
     }
 
     /**
+     * A fióktörlés következményei mindkét szövegben szerepelnek.
+     *
+     * Ez nem formaság: a felületen egy gomb véglegesen töröl és lemond egy
+     * fizetős előfizetést. Ha a szerződés nem mondja ki, mi történik és mi
+     * nem téríthető vissza, akkor a rendszer többet tesz, mint amiről az
+     * ügyfél megállapodott — és a legkényesebb pont (az azonnali hatály)
+     * pont az, ami a felmondás általános szabályától eltér.
+     */
+    public function test_a_fioktorles_benne_van_a_jogi_szovegekben(): void
+    {
+        $aszf = $this->get('/aszf')->assertOk();
+
+        foreach ([
+            'Minden felhasználó bármikor törölheti a saját fiókját',
+            'A fiók törlése azonnali és végleges.',
+            'lemondja az előfizetést',
+            'nem téríthető vissza',
+            'addig nem törölheti a fiókját, amíg a cégben más felhasználó van',
+        ] as $vallalas) {
+            $aszf->assertSee($vallalas);
+        }
+
+        $adatkezeles = $this->get('/adatkezeles')->assertOk();
+
+        foreach ([
+            'A fiók törlésekor',
+            'azonnal lemondjuk',
+            'nem tartunk fenn másolatot',
+            // A törlés nem törölhet mindent, és ezt ki kell mondani —
+            // különben az ígéret több, mint amit teljesíteni tudunk.
+            'már kiállított',
+            'A saját fiók törléséhez nem kell megkeresést',
+        ] as $vallalas) {
+            $adatkezeles->assertSee($vallalas);
+        }
+    }
+
+    /**
      * Az impresszum kész, és a benne közölt adatok azonosítanak: ha bármelyik
      * kiesik a lapról, az nem szépséghiba, hanem hiányos közzététel
      * (Ekertv. 4. §). Ezért soronként ellenőrizzük, nem csak azt, hogy az

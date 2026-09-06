@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Billing;
 
 use App\Models\Company;
+use App\Services\Account\ElofizetesKapu;
 use Illuminate\Support\Carbon;
 use RuntimeException;
 use Stripe\Exception\InvalidRequestException;
@@ -15,7 +16,7 @@ use Stripe\StripeClient;
  * Stripe Checkoutban, a kezelés (kártyacsere, lemondás, számlák) a Stripe
  * ügyfélportálján történik. Nekünk elég az előfizetés állapotát tudni.
  */
-final class StripeSzolgaltatas implements ArKatalogus, SzamlazoKapu
+final class StripeSzolgaltatas implements ArKatalogus, ElofizetesKapu, SzamlazoKapu
 {
     private function kliens(): StripeClient
     {
@@ -106,6 +107,28 @@ final class StripeSzolgaltatas implements ArKatalogus, SzamlazoKapu
     public function elofizetes(string $id): object
     {
         return $this->kliens()->subscriptions->retrieve($id, []);
+    }
+
+    /**
+     * Az előfizetés azonnali lemondása.
+     *
+     * Nem az időszak végére időzítve: ezt a fióktörlés hívja, amivel az
+     * adatok is elmennek — a hátralévő időszakot tehát úgysem lehetne
+     * használni. Időszak végi lemondás mellett a törölt cég után hetekig
+     * futna egy élő előfizetés, és a róla érkező webhookhoz nem tartozna cég.
+     *
+     * A kiállított számlák és a Stripe-ügyfél **megmaradnak**: azok számviteli
+     * bizonylatok, a megőrzésüket jogszabály írja elő, nem mi választjuk.
+     */
+    public function elofizetestLemond(string $id): void
+    {
+        try {
+            $this->kliens()->subscriptions->cancel($id, []);
+        } catch (InvalidRequestException) {
+            // Nincs ilyen élő előfizetés — például mert a felhasználó a
+            // Stripe portálján már lemondta. A lemondás célja teljesült,
+            // tehát ez nem hiba: hibaként a törlést állítaná meg.
+        }
     }
 
     /**

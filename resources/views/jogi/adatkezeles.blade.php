@@ -17,7 +17,7 @@
     Jogi felülvizsgálaton nem esett át.
 --}}
 @php
-    $hatalyos = '2026. szeptember 5.';
+    $hatalyos = '2026. szeptember 6.';
 
     $megorzesMax = \App\Models\Company::MEGORZES_MAX_NAP;
     // Configból, nem `env()`-ből: a nézetben hívott `env()` `config:cache`
@@ -189,6 +189,22 @@
         </li>
     </ul>
 
+    <p class="pt-2">
+        <strong>A fiók törlésekor</strong> — amit a felhasználó a Beállítások képernyőről bármikor
+        elindíthat — a felhasználói fiók azonnal törlődik. Ha ezzel a cégnek nem marad felhasználója,
+        vele együtt törlődnek a cég bizonylatai, a kiolvasott adatok, az exportok, a naplóbejegyzések, a
+        beérkezett levelek és a szerveren lévő fájlok is, a Stripe-előfizetést pedig azonnal lemondjuk.
+        A törlés nem vonható vissza, és a törölt adatokról nem tartunk fenn másolatot.
+    </p>
+
+    <p>
+        Két dolog marad meg ilyenkor, és mindkettőnek jogszabályi oka van. A <strong>már kiállított
+        számlák</strong> a Stripe-nál és nálunk is megmaradnak a számviteli megőrzési idő végéig — ezt
+        nem mi választjuk, és törlési kérésre sem szüntethető meg. A cégben maradó felhasználóknál
+        pedig, ha csak egy felhasználó lép ki, a cég adatai értelemszerűen megmaradnak: azok az
+        adatkezelő Előfizetőhöz tartoznak, nem a kilépő felhasználóhoz.
+    </p>
+
     <p>
         A bizonylatok saját, jogszabályi megőrzéséről az Előfizetőnek kell gondoskodnia; a Szolgáltató
         általi törlés ezt a kötelezettséget nem teljesíti és nem helyettesíti.
@@ -266,7 +282,10 @@
     <p>
         Az érintett kérheti a rá vonatkozó adatokhoz való hozzáférést, azok helyesbítését, törlését vagy
         kezelésük korlátozását, kérheti az adatai hordozható formában történő kiadását, és tiltakozhat a
-        jogos érdeken alapuló adatkezelés ellen. A kérést a
+        jogos érdeken alapuló adatkezelés ellen. <strong>A saját fiók törléséhez nem kell megkeresést
+        küldeni:</strong> az a Beállítások képernyőről bármikor, azonnal elvégezhető, és a fenti
+        4. pontban leírtak szerint hat. Az adatok kimentésére az export szolgál, amit a fiók törlése
+        előtt érdemes elkészíteni. Minden egyéb kérést a
         <a href="mailto:{{ $email }}" class="font-medium text-blue-700 hover:underline">{{ $email }}</a>
         címen lehet előterjeszteni; arra legkésőbb egy hónapon belül válaszolunk.
     </p>

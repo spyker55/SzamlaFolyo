@@ -21,6 +21,12 @@
         @if (session('siker'))
             <div class="alert alert-siker mb-4">{{ session('siker') }}</div>
         @endif
+        {{-- Van, ami idáig sodródik: a fióktörlés a munkamenet megszüntetése
+             után hasalhat el a számlázón, és a mondatot valahol el kell
+             mondani. --}}
+        @if (session('hiba'))
+            <div class="alert alert-hiba mb-4">{{ session('hiba') }}</div>
+        @endif
         {{ $slot }}
     </div>
 

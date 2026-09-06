@@ -7,15 +7,16 @@ namespace App\Console\Commands;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Export;
+use App\Services\Account\CegTorlo;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * Egy cég végleges törlése.
+ * Egy cég végleges törlése parancssorból.
  *
- * A felületen nincs rá gomb, és ez szándékos: egy fiók egy céget kezel, tehát
- * ez nem hétköznapi művelet, hanem hibajavítás — véletlenül létrejött cégek
- * eltakarítása. Aminek nincs napi használata, annak ne legyen gombja.
+ * Ez nem a felhasználó útja: ő a Beállításokból a saját fiókját törli, és a
+ * cég abból következően szűnik meg, hogy nem maradt tagja (App\Services\
+ * Account\FiokTorlo). Ez a parancs hibajavítás — véletlenül létrejött vagy
+ * elárvult cégek eltakarítása —, ezért nincs rá gomb a felületen.
  *
  * Ami viszont **muszáj**: hogy előbb kiírja, mit fog törölni. A cégre az összes
  * bizonylata, kiolvasása, exportja és naplója rá van kötve `cascadeOnDelete`
@@ -89,15 +90,11 @@ final class CegTorol extends Command
             return self::SUCCESS;
         }
 
-        // A fájlok nem a `cascadeOnDelete` hatálya alatt vannak: azokat
-        // magunknak kell elvinnünk, különben a tárhelyen maradnak, gazdátlanul.
-        $mappa = 'iratok/'.$ceg->id;
-
-        if (Storage::disk('local')->exists($mappa)) {
-            Storage::disk('local')->deleteDirectory($mappa);
-        }
-
-        $ceg->delete();
+        // A törlés maga a `CegTorlo`-ban van, közösen a fióktörléssel. Amíg
+        // itt állt, csak az `iratok/` mappát vitte el, az `exportok/` pedig
+        // gazdátlanul a tárhelyen maradt — a fájlokról egyszer szabad
+        // megfeledkezni, kétszer nem.
+        app(CegTorlo::class)->torol($ceg);
 
         $this->info(sprintf('A(z) „%s" cég (#%d) törölve.', $ceg->name, $ceg->id));
 

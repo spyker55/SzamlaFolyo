@@ -16,7 +16,7 @@
     sablonból. Jogi felülvizsgálaton nem esett át.
 --}}
 @php
-    $hatalyos = '2026. szeptember 5.';
+    $hatalyos = '2026. szeptember 6.';
 
     $csomagok = config('szamlafolyo.plans');
     $probaNap = (int) config('szamlafolyo.trial.days');
@@ -127,6 +127,14 @@
         nevében tud iratot beküldeni —, ezért azt csak arra jogosultakkal szabad megosztani.
     </p>
 
+    <p>
+        Minden felhasználó bármikor törölheti a saját fiókját a Beállítások képernyőről. A cég adatai
+        akkor szűnnek meg, ha a cégnek nem marad felhasználója; amíg más felhasználó dolgozik benne, a
+        kilépő fiók törlése a cég adatait és az előfizetést nem érinti. A cég egyetlen tulajdonosa
+        addig nem törölheti a fiókját, amíg a cégben más felhasználó van — előbb másik tulajdonost kell
+        kijelölnie, vagy a többi felhasználót el kell távolítania.
+    </p>
+
     <h2 class="pt-4 text-base font-semibold text-slate-900">6. Próbaidő</h2>
 
     <p>
@@ -214,6 +222,15 @@
     </p>
 
     <p>
+    <p>
+        Az előfizetés a fiók törlésével is megszűnik, de ez a felmondástól eltérően
+        <strong>azonnal</strong> hatályos: a fiók törlésével az adatok is törlődnek, így a kifizetett
+        időszak hátralévő része nem használható fel, és nem téríthető vissza. Ha az Előfizető a
+        kifizetett időszakot ki akarja használni, a Stripe ügyfélportálján mondja fel az előfizetést,
+        és a fiókot csak az időszak végén törölje.
+    </p>
+
+    <p>
         Sikertelen fizetés esetén a Szolgáltató jogosult a feldolgozást felfüggeszteni. A Szolgáltató a
         szerződést harmincnapos határidővel, indokolás nélkül is felmondhatja; súlyos szerződésszegés —
         így különösen a Szolgáltatás jogellenes vagy visszaélésszerű használata — esetén azonnali
@@ -245,9 +262,20 @@
     <p>
         A szerződés megszűnése után a Szolgáltató az Előfizető adatait ésszerű időn belül törli. Az
         Előfizető a szerződés fennállása alatt bármikor exportálhatja az adatait; a megszűnést megelőző
-        adatmentés az Előfizető feladata. Fiók és adatok soron kívüli törlése a
+        adatmentés az Előfizető feladata.
+    </p>
+
+    <p>
+        <strong>A fiók törlése azonnali és végleges.</strong> Ha a törléssel a cégnek nem marad
+        felhasználója, a Szolgáltató a törléssel egyidejűleg lemondja az előfizetést, és véglegesen
+        törli a cég bizonylatait, a kiolvasott adatokat, az exportokat és a feltöltött fájlokat; a
+        beküldési e-mail cím megszűnik. A törlés nem vonható vissza, és a törölt adatokról a
+        Szolgáltató nem tart fenn másolatot. A már kiállított számlák ez alól kivételt képeznek: azokat
+        a Szolgáltató a számviteli előírások szerinti ideig megőrzi. A törlés az Előfizetőt terhelő
+        jogszabályi megőrzési kötelezettséget nem érinti. Ha a törlés a felületről bármi okból nem
+        megy, az a
         <a href="mailto:{{ $email }}" class="font-medium text-blue-700 hover:underline">{{ $email }}</a>
-        címen kérhető.
+        címen is kérhető.
     </p>
 
     <h2 class="pt-4 text-base font-semibold text-slate-900">11. Adatkezelés</h2>

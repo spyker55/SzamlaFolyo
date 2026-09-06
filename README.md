@@ -34,6 +34,25 @@ kimondja, és felkínálja az eredetik letöltését ZIP-ben. A sorrend a
 és csak ezután a törlés — fordítva egy félbemaradt export után a bizonylat is
 odalenne, meg az adat is.
 
+**A fiók a felhasználóé, a cég az utolsó emberrel szűnik meg.** A Beállítások
+alól bárki törölheti a saját fiókját. Ha ezzel a cégnek nem marad
+felhasználója, akkor a Stripe-előfizetés **azonnal** lemondásra kerül, és a
+cég minden adata — bizonylatok, kiolvasások, exportok, napló, fájlok — elmegy.
+Ha marad más, csak a kilépő fiókja szűnik meg. Az egyetlen tulajdonos addig
+nem törölhet, amíg más tag van a cégben: enélkül vagy két tulajdonos közül
+bármelyik letörölhetné a másik archívumát, vagy maradna egy fizető cég, amiben
+senki nem tud lemondani. Két sorrend kötött, és mindkettőt teszt őrzi
+(`FiokTorlesTest`):
+
+- **A Stripe megy elsőnek.** Ha a lemondás nem megy át, nem törlünk semmit. A
+  fordítottja után a felhasználó egy nem létező fiókért fizetne tovább, és
+  már felülete sem lenne, ahol lemondja.
+- **A kijelentkezés a törlés előtt van.** Az `Auth::logout()` friss „emlékezz
+  rám" tokent ír a felhasználó sorába; egy már törölt modellen ez az Eloquent
+  `exists` jelzője miatt **INSERT**-té válik, és visszahozza a fiókot. A cég
+  ilyenkor törölve marad, a felhasználó viszont feltámad — a felületen semmi
+  nem árulja el.
+
 **A gépi és az emberi érték külön él.** A `document` oszlopai az ember
 munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 érintetlenül, a kettő különbsége pedig jóváhagyáskor mezőnként a
