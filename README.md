@@ -560,6 +560,52 @@ A besorolatlan levél a `Besorolatlan` mappába kerül (`IMAP_UNMATCHED_FOLDER`)
 `warning` szinten a naplóba is bekerül a megvizsgált címekkel — a feldolgozottak
 közé keverve pont az veszne el, amit keresni kell.
 
+### Ha a cron `Symfony\Polyfill\Mbstring\iconv()` hibát küld
+
+Ez a hibalevél **kétszeresen félrevezet**, ezért külön szakaszt kap.
+
+```
+PHP Fatal error: Uncaught Error: Call to undefined function
+Symfony\Polyfill\Mbstring\iconv() in vendor/symfony/polyfill-mbstring/Mbstring.php:1068
+#2 vendor/symfony/console/Application.php(1297): mb_convert_encoding()
+#3 Application->splitStringByWidth()
+#4 Application->doRenderThrowable()
+```
+
+Először: a hiba **nem a kódunkban van**. A cron PHP-jéből hiányzik az `mbstring`,
+ezért a `symfony/polyfill-mbstring` lép a helyére — az pedig belül `iconv()`-ot
+hív, ami szintén hiányzik. A hibaüzenet egy idegen névteret nevez meg, és semmit
+nem árul el a valódi okról.
+
+Másodszor, és ez a rosszabb: nézd meg a `doRenderThrowable` sort a veremben. Ott a
+polyfill **egy másik kivétel kirajzolása közben** hasal el — a Symfony Console a
+terminálszélességhez tördeléshez hívja a `mb_convert_encoding()`-ot. Vagyis az
+igazi hiba megtörtént, de sosem íródott ki: **ez az üzenet elnyeli az összes
+többit.** Amíg ez fennáll, minden cron-hiba ugyanígy néz ki, függetlenül attól,
+mi történt valójában.
+
+**A kritikus rész: ez akkor is előfordulhat, ha parancssorból minden működik.**
+Osztott tárhelyen ugyanaz a `php8.3` bináris más `php.ini`-t olvashat SSH-ból és a
+vezérlőpult ütemezőjéből, és akkor a kiterjesztések listája is más. A
+`kornyezet:ellenoriz` ezért kiírja, melyik binárissal és melyik `php.ini` alapján
+válaszol — de csak arról a PHP-ról tud, amelyikkel épp fut.
+
+A cron PHP-járól maga a cron tud beszámolni. Vedd fel ideiglenesen ötperces
+feladatnak, és olvasd el a levelet, amit küld:
+
+```
+<php> -m
+```
+
+A kimenet a cron **saját** környezetének modullistája. Ha nincs benne az `mbstring`
+és az `iconv`, azokat a nethely admin felületén a „PHP beállítások" alatt kell
+bekapcsolni — vagy a cront kell arra a PHP-ra állítani, amelyiken megvannak (a
+`./deploy.sh --check` kiírja, melyiket használja a telepítés).
+
+Ezt a `composer.json` nem tudja megfogni, ezért nincs is ott: a composer mindig
+azzal a PHP-val ellenőriz, amelyikkel ő maga fut — vagyis a deployéval, nem a
+cronéval.
+
 ### Megőrzési idő
 
 Egyetlen postafiókba érkezik minden cég beküldése; a tokent a *címzés* hordozza,

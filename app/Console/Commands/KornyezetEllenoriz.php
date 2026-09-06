@@ -28,6 +28,13 @@ final class KornyezetEllenoriz extends Command
     private const KOTELEZO_KITERJESZTESEK = [
         'pdo_pgsql' => 'adatbázis',
         'mbstring' => 'szövegkezelés',
+        // Az `iconv` akkor is kell, ha a kód sosem hívja közvetlenül: `mbstring`
+        // nélkül a `symfony/polyfill-mbstring` lép a helyére, az pedig belül
+        // `iconv()`-ot hív. Ha mindkettő hiányzik, a hiba így hangzik:
+        // „Call to undefined function Symfony\Polyfill\Mbstring\iconv()" —
+        // ami egy idegen névteret nevez meg, és semmit nem árul el a valódi
+        // okról. Egy éles cronban ez öt percenként érkezett, napokig.
+        'iconv' => 'karakterkódolás-váltás (a levelek fejlécében is)',
         'openssl' => 'titkosítás, HTTPS',
         'curl' => 'OpenRouter- és Stripe-hívás',
         'fileinfo' => 'a feltöltött fájl valódi típusa',
@@ -87,6 +94,17 @@ final class KornyezetEllenoriz extends Command
     {
         $verzio = PHP_VERSION;
 
+        // A bináris és a betöltött ini is kell, és **nem** ugyanaz a kérdés.
+        // Osztott tárhelyen ugyanaz a `php8.3` más ini-t olvashat SSH-ból és
+        // cronból, és akkor a kiterjesztések listája is más — ilyenkor a
+        // parancssorban minden rendben van, a cron mégis elhasal. Enélkül az
+        // „ugyanaz a bináris, más eredmény" rejtvény megfejthetetlen.
+        $this->megjegyzesSor(sprintf(
+            'bináris: %s · php.ini: %s',
+            PHP_BINARY,
+            php_ini_loaded_file() ?: 'nincs betöltve',
+        ));
+
         if (version_compare($verzio, self::MIN_PHP, '>=')) {
             $this->ok("PHP {$verzio}");
 
@@ -135,7 +153,9 @@ final class KornyezetEllenoriz extends Command
         } else {
             $this->hiba(
                 'Hiányzó kiterjesztés: '.implode(', ', $hianyzo),
-                'A nethely admin felületén a „PHP beállítások" alatt kapcsolhatók be.',
+                'A nethely admin felületén a „PHP beállítások" alatt kapcsolhatók be. '
+                .'Ez a válasz arra a PHP-re vonatkozik, amivel most futsz — a cron '
+                .'másikkal futhat, azt külön kell megnézni (lásd a README-t).',
             );
         }
 
@@ -268,6 +288,11 @@ final class KornyezetEllenoriz extends Command
                 'Hibánál kiírná a konfigurációt a látogatónak. Állítsd false-ra.',
             );
         }
+    }
+
+    private function megjegyzesSor(string $uzenet): void
+    {
+        $this->line("    <fg=gray>{$uzenet}</>");
     }
 
     private function ok(string $uzenet): void
