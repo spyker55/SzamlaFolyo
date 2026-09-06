@@ -53,6 +53,22 @@ senki nem tud lemondani. Két sorrend kötött, és mindkettőt teszt őrzi
   ilyenkor törölve marad, a felhasználó viszont feltámad — a felületen semmi
   nem árulja el.
 
+**Az ÁSZF 11. pontja egyben az adatfeldolgozási szerződés.** A bizonylatokra
+nézve az Előfizető az adatkezelő, mi az adatfeldolgozó — és a GDPR 28. cikk (3)
+ezt nem hagyja egy mondattal elintézni: kötelező tartalmi elemeket ír elő
+(utasításhoz kötöttség, titoktartás, 32. cikk szerinti biztonság,
+al-adatfeldolgozó, érintetti jogok, incidens, törlés, audit). Ezért nincs külön
+aláírandó okirat: egy egyszemélyes szolgáltatónál ügyfelenkénti DPA-t
+adminisztrálni nem reális, a kötelező tartalom viszont így is teljesül.
+Al-adatfeldolgozó változása előtt tizenöt nappal e-mailben értesítünk,
+kifogásolási joggal.
+
+**Az „Archívum" nem archívum a jogszabály értelmében.** Az elkészült exportokat
+tartja nyilván, hogy visszakereshetők legyenek — munkafolyamat, nem
+bizonylatmegőrzés. A név mást sugall, mint amit csinál, ezért ezt három helyen
+mondjuk ki: az ÁSZF 10. pontjában, az Adatkezelési tájékoztató 4. pontjában és
+**magán a képernyőn**. Egy kikötés, amit a felület nem tükröz, csak dekoráció.
+
 **A gépi és az emberi érték külön él.** A `document` oszlopai az ember
 munkapéldánya; a modell nyers válasza a `document_extractions` sorban marad
 érintetlenül, a kettő különbsége pedig jóváhagyáskor mezőnként a

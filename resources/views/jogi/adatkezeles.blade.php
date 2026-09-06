@@ -140,7 +140,15 @@
         <li>
             A kérésben kikötjük, hogy az irat <strong>csak olyan szolgáltatóhoz kerülhet, amelyik a
             tartalmat nem tárolja és nem használja modelltanításra</strong>. Amelyik ezt nem vállalja,
-            azt az útválasztás kihagyja; ha egy sem marad, a kiolvasás inkább hibával áll meg.
+            azt az útválasztás kihagyja; ha egy sem marad, a kiolvasás inkább hibával áll meg. Ez a
+            kikötés a kódban van, nem a beállításokban: <code class="rounded bg-slate-100 px-1">.env</code>-ből
+            nem kapcsolható ki.
+        </li>
+        <li>
+            <strong>A feltöltött bizonylatokat mi magunk sem használjuk mesterséges intelligencia
+            tanítására</strong> — sem sajátéra, sem harmadik félére —, és külön megállapodás hiányában
+            erre nem is vagyunk jogosultak. A megőrzött nyers modellválasz és a javítások kizárólag
+            arra szolgálnak, hogy mérni tudjuk, mennyit hibázik a gépi kiolvasás.
         </li>
         <li>
             Az e-számla XML feldolgozása <strong>modellhívás nélkül</strong> történik: az ilyen irat
@@ -193,7 +201,9 @@
 
     <p>
         A bizonylatok saját, jogszabályi megőrzéséről az Előfizetőnek kell gondoskodnia; a Szolgáltató
-        általi törlés ezt a kötelezettséget nem teljesíti és nem helyettesíti.
+        általi törlés ezt a kötelezettséget nem teljesíti és nem helyettesíti. <strong>A rendszer
+        „Archívum" képernyője sem archiválás ebben az értelemben:</strong> az az elkészült exportokat
+        tartja nyilván, hogy visszakereshetők legyenek. Munkafolyamati funkció, nem bizonylatmegőrzés.
     </p>
 
     <h2 class="pt-4 text-base font-semibold text-slate-900">5. Kik férnek hozzá — adatfeldolgozók</h2>
@@ -243,6 +253,15 @@
         A Szolgáltató bankkártyaadatot nem lát és nem tárol: azt a Stripe kezeli a saját felületén.
     </p>
 
+    <p>
+        <strong>Ha a fenti kör változik</strong> — új közreműködő lép be, vagy másik modellszolgáltatóra
+        váltunk —, arról az Előfizetőket a változás előtt legalább tizenöt nappal e-mailben értesítjük.
+        Az Előfizető kifogást emelhet, és ha nem jutunk megegyezésre, a szerződést a változás
+        hatálybalépéséig felmondhatja. A részletes feltételeket az
+        <a href="{{ route('aszf') }}" class="font-medium text-blue-700 hover:underline">ÁSZF 11. pontja</a>
+        tartalmazza, amely egyben a felek közötti adatfeldolgozási szerződés.
+    </p>
+
     <h2 class="pt-4 text-base font-semibold text-slate-900">6. Adatbiztonság</h2>
 
     <ul class="list-disc space-y-1 pl-5">
@@ -261,7 +280,26 @@
             amelyen hitelesítés nélkül lehetne iratot elhelyezni a rendszerben.
         </li>
         <li>Feltöltött irat soha nem kerül automatikusan jóváhagyásra — ellenőrzésre vár.</li>
+        <li>
+            <strong>A visszafordíthatatlan műveleteket naplózzuk</strong> (export, végleges törlés, tag
+            felvétele és eltávolítása, a kereten felüli költés engedélyezése): ki, mikor, mit tett. Ez
+            utólag megmutatja, mi történt a céggel — és a napló a cég adata, a cég törlésével együtt
+            megy el.
+        </li>
+        <li>
+            A hozzáférés szerepkörhöz kötött: a Megtekintő nem tölthet fel és nem hagyhat jóvá, a
+            számlázást és a tagok kezelését csak a Tulajdonos éri el. A korlátot minden művelet maga
+            ellenőrzi, nem csak az elrejtett gomb.
+        </li>
     </ul>
+
+    <p>
+        <strong>Adatvédelmi incidens esetén</strong> — ha az adatok jogosulatlanul nyilvánosságra
+        kerülnek, elvesznek vagy megsemmisülnek — a Szolgáltató indokolatlan késedelem nélkül, de
+        legkésőbb az észleléstől számított negyvennyolc órán belül értesíti az érintett Előfizetőt,
+        és megad minden rendelkezésére álló információt. A bizonylatok tekintetében a hatóság felé
+        történő bejelentés az adatkezelő Előfizető feladata; a Szolgáltató ehhez segítséget nyújt.
+    </p>
 
     <h2 class="pt-4 text-base font-semibold text-slate-900">7. Az érintett jogai</h2>
 

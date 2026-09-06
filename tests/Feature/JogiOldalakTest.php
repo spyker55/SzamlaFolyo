@@ -202,6 +202,55 @@ final class JogiOldalakTest extends TestCase
     }
 
     /**
+     * A GDPR 28. cikk (3) szerinti adatfeldolgozási feltételek.
+     *
+     * A Szolgáltató a bizonylatokra nézve adatfeldolgozó, és ezt a szerepet a
+     * rendelet nem hagyja egy mondattal elintézni: kötelező tartalmi elemeket
+     * ír elő. Ha ezek kikopnak, a szerződés nem „rövidebb lesz", hanem
+     * hiányos — és pont az a fél marad fedezet nélkül, aki ránk bízta az
+     * ügyfelei számláit.
+     */
+    public function test_az_aszf_tartalmazza_az_adatfeldolgozasi_feltetleket(): void
+    {
+        $valasz = $this->get('/aszf')->assertOk();
+
+        foreach ([
+            'a felek közötti adatfeldolgozási',
+            // 28. cikk (3) a)–h): utasítás, titoktartás, biztonság,
+            // al-adatfeldolgozó, érintetti jogok, incidens, törlés, audit.
+            'kizárólag az Előfizető írásbeli utasítása',
+            'titoktartási kötelezettséget',
+            '32. cikke szerinti biztonsági',
+            'általános felhatalmazása',
+            'érintetti kérelmek',
+            'Adatvédelmi incidens esetén',
+            'auditot',
+        ] as $elem) {
+            $valasz->assertSee($elem);
+        }
+    }
+
+    /**
+     * Amit a dokumentumokban ki kell mondani, mert magától nem derül ki.
+     *
+     * Kettő van ilyen. Az egyik, hogy a bizonylatokat **mi magunk sem**
+     * használjuk modelltanításra — eddig csak a külső szolgáltatóra volt
+     * kikötés, a saját vállalásunk hiányzott. A másik, hogy az „Archívum"
+     * képernyő nem a jogszabályi bizonylatmegőrzés: a név mást sugall, mint
+     * amit csinál, és ezt a különbséget nekünk kell kimondani.
+     */
+    public function test_a_ket_konnyen_felreertheto_dolog_ki_van_mondva(): void
+    {
+        $aszf = $this->get('/aszf')->assertOk();
+        $aszf->assertSee('nem használja fel mesterséges intelligencia');
+        $aszf->assertSee('nem archiválás');
+
+        $adatkezeles = $this->get('/adatkezeles')->assertOk();
+        $adatkezeles->assertSee('mi magunk sem használjuk');
+        $adatkezeles->assertSee('sem archiválás ebben az értelemben');
+    }
+
+    /**
      * Az impresszum kész, és a benne közölt adatok azonosítanak: ha bármelyik
      * kiesik a lapról, az nem szépséghiba, hanem hiányos közzététel
      * (Ekertv. 4. §). Ezért soronként ellenőrizzük, nem csak azt, hogy az

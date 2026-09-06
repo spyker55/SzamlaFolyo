@@ -248,7 +248,10 @@
     <p>
         <strong>A bizonylatok jogszabályi megőrzése az Előfizető kötelezettsége.</strong> A számviteli és
         adójogi előírások szerinti megőrzési időt a Szolgáltatás nem teljesíti és nem helyettesíti; a
-        Szolgáltató általi törlés az Előfizető megőrzési kötelezettségét nem érinti. Az Előfizetőnek
+        Szolgáltató általi törlés az Előfizető megőrzési kötelezettségét nem érinti. <strong>A
+        Szolgáltatás „Archívum" képernyője ebben az értelemben nem archiválás:</strong> az az elkészült
+        exportokat tartja nyilván, hogy azok visszakereshetők legyenek — munkafolyamati funkció, nem a
+        jogszabály szerinti bizonylatmegőrzés, és azt nem is pótolja. Az Előfizetőnek
         ezért az eredeti bizonylatokat magának kell megőriznie.
     </p>
 
@@ -271,16 +274,84 @@
         címen is kérhető.
     </p>
 
-    <h2 class="pt-4 text-base font-semibold text-slate-900">11. Adatkezelés</h2>
+    <h2 class="pt-4 text-base font-semibold text-slate-900">11. Adatkezelés — adatfeldolgozási feltételek</h2>
 
     <p>
         A feltöltött bizonylatok tekintetében az Előfizető az adatkezelő, a Szolgáltató pedig
-        adatfeldolgozóként jár el: az adatokat kizárólag a Szolgáltatás nyújtásához, az Előfizető
-        utasításai szerint kezeli, azokat harmadik félnek a Szolgáltatás nyújtásához igénybe vett
-        közreműködőkön kívül nem adja át, és a szerződés megszűnésekor törli. A közreműködők köre, az
-        adatkezelés célja, jogalapja és időtartama az
-        <a href="{{ route('adatkezeles') }}" class="font-medium text-blue-700 hover:underline">Adatkezelési tájékoztatóban</a>
-        található.
+        adatfeldolgozóként jár el. <strong>Ez a pont egyben a felek közötti adatfeldolgozási
+        szerződés</strong> a GDPR 28. cikk (3) bekezdése szerint; külön okirat aláírása nem szükséges.
+        A fiók adataira (a regisztráló neve, e-mail címe, a cég adatai, az előfizetés) nézve viszont a
+        Szolgáltató önálló adatkezelő — arról az
+        <a href="{{ route('adatkezeles') }}" class="font-medium text-blue-700 hover:underline">Adatkezelési tájékoztató</a>
+        szól.
+    </p>
+
+    <p>
+        <strong>Az adatfeldolgozás tárgya és időtartama:</strong> a Szolgáltatás nyújtása, a jelen
+        szerződés hatálya alatt. <strong>Jellege és célja:</strong> a feltöltött bizonylatok tárolása,
+        gépi kiolvasása, az adatok ellenőrizhetővé tétele és exportálása. <strong>A kezelt adatok
+        típusa:</strong> a bizonylatokon szereplő adatok — így a partner neve, címe, adószáma, a
+        bizonylat számai és tételei —, amelyek személyes adatnak minősülnek, ha a partner egyéni
+        vállalkozó vagy magánszemély. <strong>Az érintettek köre:</strong> az Előfizető partnerei és
+        azok képviselői, valamint az Előfizető által felvett felhasználók.
+    </p>
+
+    <p>A Szolgáltató adatfeldolgozóként vállalja, hogy:</p>
+
+    <ol class="list-[lower-alpha] space-y-1 pl-5">
+        <li>
+            a személyes adatokat kizárólag az Előfizető írásbeli utasítása alapján kezeli — ideértve a
+            harmadik országba történő adattovábbítást is —, kivéve, ha a kezelést uniós vagy tagállami
+            jog írja elő; a Szolgáltatás rendeltetésszerű használata (feltöltés, kiolvasás, export)
+            ilyen utasításnak minősül;
+        </li>
+        <li>
+            biztosítja, hogy az adatokhoz hozzáférő személyek titoktartási kötelezettséget vállaltak
+            vagy jogszabályon alapuló titoktartási kötelezettség alatt állnak;
+        </li>
+        <li>
+            megteszi a GDPR 32. cikke szerinti biztonsági intézkedéseket; ezek felsorolása az
+            Adatkezelési tájékoztató „Adatbiztonság" pontjában található;
+        </li>
+        <li>
+            további adatfeldolgozót az Előfizető <strong>általános felhatalmazása</strong> alapján vesz
+            igénybe. A mindenkori al-adatfeldolgozók az Adatkezelési tájékoztatóban név szerint
+            szerepelnek. Új al-adatfeldolgozó igénybevétele előtt a Szolgáltató az Előfizetőt
+            <strong>legalább tizenöt nappal korábban</strong> e-mailben értesíti; az Előfizető ez ellen
+            kifogást emelhet, és ha a felek nem jutnak megegyezésre, a szerződést a változás
+            hatálybalépéséig felmondhatja. A további adatfeldolgozókra a Szolgáltató ugyanezeket a
+            kötelezettségeket telepíti;
+        </li>
+        <li>
+            az Előfizetőt a technikai lehetőségeihez mérten segíti az érintetti kérelmek (hozzáférés,
+            helyesbítés, törlés, korlátozás, hordozhatóság, tiltakozás) teljesítésében; ha ilyen kérelem
+            közvetlenül a Szolgáltatóhoz érkezik, azt továbbítja az Előfizetőnek, és önállóan nem jár el;
+        </li>
+        <li>
+            segíti az Előfizetőt a GDPR 32–36. cikke szerinti kötelezettségei teljesítésében.
+            <strong>Adatvédelmi incidens esetén a Szolgáltató indokolatlan késedelem nélkül, de
+            legkésőbb az észleléstől számított negyvennyolc órán belül</strong> értesíti az Előfizetőt,
+            és megad minden rendelkezésére álló információt;
+        </li>
+        <li>
+            a szerződés megszűnésekor — az Előfizető választása szerint — az adatokat törli vagy
+            visszaadja, és a meglévő másolatokat törli, kivéve, ha jogszabály a megőrzést előírja
+            (ilyen a Szolgáltató által kiállított számla);
+        </li>
+        <li>
+            az Előfizető rendelkezésére bocsát minden olyan információt, amely a jelen pont szerinti
+            kötelezettségek igazolásához szükséges, és lehetővé teszi az Előfizető vagy az általa
+            megbízott ellenőr által végzett auditot. Az ellenőrzést előzetesen egyeztetett időpontban,
+            a Szolgáltatás működésének indokolatlan zavarása nélkül kell lefolytatni.
+        </li>
+    </ol>
+
+    <p>
+        <strong>A Szolgáltató az Előfizető bizonylatait nem használja fel mesterséges intelligencia
+        modell tanítására</strong>, sem sajátéra, sem harmadik félére, és erre külön megállapodás
+        hiányában nem is jogosult. A gépi kiolvasáshoz igénybe vett szolgáltató felé a Szolgáltató
+        kiköti, hogy a bizonylat tartalma nem tárolható és tanításra nem használható; erről az
+        Adatkezelési tájékoztató 3. pontja szól részletesen.
     </p>
 
     <h2 class="pt-4 text-base font-semibold text-slate-900">12. Rendelkezésre állás és karbantartás</h2>

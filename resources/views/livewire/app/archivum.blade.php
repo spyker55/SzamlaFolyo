@@ -1,8 +1,15 @@
 <div>
     <x-uzenet :uzenet="$uzenet" :tipus="$uzenetTipus ?? 'siker'"/>
     <h1 class="text-xl font-semibold text-slate-900">Archívum</h1>
-    <p class="mt-1 mb-6 text-sm text-slate-500">
+    {{-- A név megtévesztő tud lenni, ezért a képernyő maga mondja ki, mi ez.
+         Az ÁSZF 10. pontja és az Adatkezelési tájékoztató 4. pontja ugyanezt
+         írja — egy kikötés, amit a felület nem tükröz, csak dekoráció. --}}
+    <p class="mt-1 text-sm text-slate-500">
         A korábbi exportok. Egy tétel visszahívható, vagy véglegesen törölhető.
+    </p>
+    <p class="mt-1 mb-6 text-xs text-slate-400">
+        Ez az elkészült exportok nyilvántartása, nem bizonylatarchívum: a számviteli megőrzésről
+        neked kell gondoskodnod.
     </p>
 
     @if ($exportok->isEmpty())
