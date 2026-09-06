@@ -512,8 +512,15 @@ naplózza, mint ahogy kiírná (`HandleExceptions::handleException()` sorrendje:
 `report()`, aztán `renderForConsole()`), tehát a valódi ok mindig ott áll:
 
 ```bash
-tail -50 <projekt>/storage/logs/laravel.log
+ls -la <projekt>/storage/logs/
+tail -80 <projekt>/storage/logs/laravel-$(date +%F).log
 ```
+
+A fájl neve **dátumos**, mert a `LOG_CHANNEL=daily`: `laravel.log` nincs, és a
+„No such file or directory" ilyenkor nem azt jelenti, hogy nincs napló. Az
+`ls -la` egyben a jogosultságokat is megmutatja — ha a fájlok más
+rendszerfelhasználóé, mint amelyikkel a cron fut, akkor a naplózás maga is
+elhasalhat, és az már önmagában elég ok a kivételre.
 
 Ez akkor is működik, amikor a cron levele használhatatlan — és volt rá példa,
 hogy az volt.
